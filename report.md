@@ -353,3 +353,46 @@ early snapshots already staging (step 20 = all dots, step 50 = all e's). Every s
 is written as reached and the manifest is prefix-valid, so stopping at dawn is safe.
 If the run dies (sleep/reboot): `node tools/make-arc.js A --resume` continues
 byte-exactly; then `node tools/make-arc-zips.js` builds newborn-arc.zip.
+
+---
+
+# Mega merge addendum (2026-07-07)
+
+The claude.ai artifact session produced a "mega edition" (shell + the three apps in
+iframes) from the 2026-07-05 release. Merged back per its handoff instructions: two-way
+diff of each extracted app vs its dist counterpart; patch-layer hunks (storage /
+worker-boot / bridge / ingest / egress) adopted into dev sources, arc-session hunks
+(rng state accessors, nursery arc badge) kept — the change-sets were disjoint as
+predicted, except one name collision the build's syntax check caught.
+
+Adopted into dev (now the single source of truth; the mega is REGENERABLE):
+- `src/app-shims.js`: same-thread worker shim (the artifact sandbox refuses blob-URL
+  Workers), Store cascade (window.storage → localStorage → memory, hydrate-then-read),
+  deliverFile egress ladder (bridge → download+_blank → clipboard → storage backup),
+  fetchFirst dual paths (flat Pages layout OR dev-server layout).
+- `src/ingest.js`: universal ingestion — zips (STORE + DEFLATE via DecompressionStream),
+  folder drops, parse-based bin sniffing (tokenizer table walk / header check),
+  DataTransfer snapshot-before-await.
+- `src/embed-data.js` (+ generator): embedded top-1500 wordlist and a 20-story base
+  eval set so ghostwriting and the forgetting line work with nothing hosted.
+- App seams: frame-bridge hooks (__tmLoadPair/__tmRouteJson/model-loaded), hidden dev
+  buttons when framed, restart-from-original + save-samples (nursery), name-control
+  experiment + continuation breakdown + "1 in N" formatting (hunt).
+- `shell/`: the shell (model pool with vocab-matched tokenizer pairing, onboarding
+  cards, RPC hub, export bubbling with pool auto-join, eager sibling autoload) +
+  bridge.js. Extended per the arc kickoff: the shell now autoloads
+  `arc/arc-manifest.json` (manifest only) and stashes it as `window.__tmArcManifest`
+  for the future scrubber session.
+- `tools/build-release.js`: injects the bridge into every single, swaps the dev
+  worker-boot markers for the blob+inline-fallback boot, and composes
+  **dist/tiny-mind-mega.html** (564 KB) from shell + built singles. All bundles
+  syntax-checked at build.
+
+Verified live from the regenerated mega: starter-zip drop → pool → framed Nursery via
+load-pair (dev buttons hidden) → Zog storybook via fetchFirst fallback → training →
+export bubbled to the shell, downloaded, and auto-joined the pool ready for the
+Microscope/Hunt. e9 covers mega composition, sniffers on real files, and STORE+DEFLATE
+unzip in Node. Fingerprint **70 PASS, 0 FAIL** (58 → 70).
+
+The copy at Documents/AI/apps/Tiny Mind/index.html is now superseded by
+dist/tiny-mind-mega.html (same architecture + the arc-session changes it predated).

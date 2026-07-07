@@ -1,9 +1,11 @@
 // build-release.js — package each app (microscope, nursery, hunt) into ONE self-
-// contained HTML file in dist/: all src/ modules inlined, the worker built from a
-// Blob (no imports anywhere). This is the release step the kickoff anticipated
-// ("single-file HTML per edition"); dev keeps real modules so tests bite real code.
-// The same file serves both editions: inside a claude.ai artifact the keyless-Claude
-// provider appears automatically (src/llm.js keylessAvailable()).
+// contained HTML file in dist/, and compose all three into the MEGA edition
+// (dist/tiny-mind-mega.html): the shell from shell/index.html hosting the apps
+// byte-intact in iframes, per the artifact session's architecture (merged back
+// 2026-07-07). All src/ modules are inlined; workers are built from Blobs with a
+// same-thread fallback for the artifact sandbox; the frame bridge (shell/bridge.js)
+// is injected ahead of every app's module script and is inert standalone.
+// Every generated script is syntax-checked at build time.
 // Usage: node tools/build-release.js
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
@@ -12,7 +14,19 @@ import { execFileSync } from 'node:child_process';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const APPS = ['microscope', 'nursery', 'hunt'];
-const SRC_MODULES = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js', 'llm.js'];
+const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
+const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'ingest.js', 'embed-data.js'];
+const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: [], hunt: [] };
+
+// the boot that replaces the dev marker block: real blob Worker, or the same-thread
+// shim when the sandbox refuses blob URLs (makeInlineWorker comes from app-shims)
+const WORKER_BOOT = `let worker, workerMode = 'background worker';
+try {
+  worker = new Worker(URL.createObjectURL(new Blob([__WORKER_SRC__], { type: 'text/javascript' })));
+} catch {
+  worker = makeInlineWorker(__WORKER_SRC__);       // sandbox blocked the blob worker — run on this thread
+  workerMode = 'inline (sandboxed page — compute shares the UI thread)';
+}`;
 
 // strip ESM syntax so modules concatenate into one shared scope; collect aliases
 // (`import { a as b }` -> `const b = a;`) to emit after the inlined definitions
@@ -32,49 +46,75 @@ function embedString(s) {
   return JSON.stringify(s).replace(/<\//g, '<\\/');
 }
 
-const srcCode = [];
-for (const f of SRC_MODULES) {
-  srcCode.push(`// ---- inlined src/${f} ----\n` + stripModule(await readFile(join(ROOT, 'src', f), 'utf8'), []));
+async function bundleOf(names) {
+  const parts = [];
+  for (const f of names) {
+    parts.push(`// ---- inlined src/${f} ----\n` + stripModule(await readFile(join(ROOT, 'src', f), 'utf8'), []));
+  }
+  return parts.join('\n');
 }
-const srcBundle = srcCode.join('\n');
+
+async function checkScript(app, label, code) {
+  const tmp = join(ROOT, 'dist', `_check-${app}-${label}.mjs`);
+  await writeFile(tmp, code);
+  try {
+    execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(`${app} ${label} bundle failed syntax check:\n` + err.stderr);
+  }
+  await rm(tmp);
+}
 
 await mkdir(join(ROOT, 'dist'), { recursive: true });
+const bridge = await readFile(join(ROOT, 'shell', 'bridge.js'), 'utf8');
+const pageBundle = await bundleOf([...CORE, ...PAGE_EXTRA]);
+const built = {};
+
 for (const app of APPS) {
   const html = await readFile(join(ROOT, app, 'index.html'), 'utf8');
   const workerAliases = [];
   const workerCode = stripModule(await readFile(join(ROOT, app, 'worker.js'), 'utf8'), workerAliases);
-  const workerSrc = `'use strict';\n${srcBundle}\n${workerAliases.join('\n')}\n// ---- ${app}/worker.js ----\n${workerCode}`;
+  const workerBundle = await bundleOf([...CORE, ...WORKER_EXTRA[app]]);
+  const workerSrc = `'use strict';\n${workerBundle}\n${workerAliases.join('\n')}\n// ---- ${app}/worker.js ----\n${workerCode}`;
 
   const scriptMatch = html.match(/<script type="module">([\s\S]*?)<\/script>/);
   if (!scriptMatch) throw new Error(app + ': no module script found');
   const pageAliases = [];
   let pageCode = stripModule(scriptMatch[1], pageAliases);
-  const workerPattern = /new Worker\(new URL\('\.\/worker\.js', import\.meta\.url\), \{ type: 'module' \}\)/;
-  if (!workerPattern.test(pageCode)) throw new Error(app + ': worker construction not found');
-  pageCode = pageCode.replace(workerPattern,
-    `new Worker(URL.createObjectURL(new Blob([__WORKER_SRC__], { type: 'text/javascript' })))`);
+  const bootPattern = /\/\/ @tm-worker-boot[\s\S]*?\/\/ @tm-worker-boot-end/;
+  if (!bootPattern.test(pageCode)) throw new Error(app + ': @tm-worker-boot markers not found');
+  pageCode = pageCode.replace(bootPattern, WORKER_BOOT);
 
   const bundled =
     `\nconst __WORKER_SRC__ = ${embedString(workerSrc)};\n` +
-    srcBundle + '\n' + pageAliases.join('\n') + '\n' + pageCode;
+    pageBundle + '\n' + pageAliases.join('\n') + '\n' + pageCode;
 
-  // self-check: page bundle AND worker bundle must parse as modules (catches
-  // top-level name collisions between inlined src and app code)
-  for (const [label, code] of [['page', bundled], ['worker', workerSrc]]) {
-    const tmp = join(ROOT, 'dist', `_check-${app}-${label}.mjs`);
-    await writeFile(tmp, code);
-    try {
-      execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
-    } catch (err) {
-      throw new Error(`${app} ${label} bundle failed syntax check:\n` + err.stderr);
-    }
-    await rm(tmp);
-  }
+  await checkScript(app, 'page', bundled);
+  await checkScript(app, 'worker', workerSrc);
 
-  let out = html.replace(scriptMatch[0], `<script type="module">${bundled}</script>`);
+  let out = html.replace(scriptMatch[0],
+    `<script>/* injected by build-release: frame bridge (inert standalone) */\n${bridge}</script>\n` +
+    `<script type="module">${bundled}</script>`);
   out = out.replace('<head>', `<head>\n<!-- Tiny Mind single-file release, built ${new Date().toISOString().slice(0, 10)} from the dev tree. Works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models arrive by file-drop. -->`);
-  const dest = join(ROOT, 'dist', `tiny-mind-${app}.html`);
-  await writeFile(dest, out);
+  await writeFile(join(ROOT, 'dist', `tiny-mind-${app}.html`), out);
+  built[app] = out;
   console.log(`dist/tiny-mind-${app}.html  (${(out.length / 1024).toFixed(0)} KB) — bundles parse OK`);
 }
+
+// ---- mega edition: shell + the three apps as iframe templates -----------------
+let shell = await readFile(join(ROOT, 'shell', 'index.html'), 'utf8');
+const sharedAliases = [];
+const shellShared = stripModule(await readFile(join(ROOT, 'src', 'ingest.js'), 'utf8'), sharedAliases);
+shell = shell.replace('@@SHELL_SHARED@@', shellShared);
+for (const app of APPS) {
+  const doc = built[app].replace(/^<!doctype html>\s*/i, ''); // ensureFrame re-adds the doctype
+  const marker = `@@APP_${app.toUpperCase()}@@`;
+  if (!shell.includes(marker)) throw new Error('shell: missing ' + marker);
+  shell = shell.replace(marker, doc);
+}
+// check the shell's own (plain) script
+const shellScripts = [...shell.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+await checkScript('mega', 'shell', shellScripts[shellScripts.length - 1][1]);
+await writeFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), shell);
+console.log(`dist/tiny-mind-mega.html  (${(shell.length / 1024).toFixed(0)} KB) — shell script parses OK`);
 console.log('done');

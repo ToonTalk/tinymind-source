@@ -1,0 +1,359 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tiny Mind</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%238fd3a7%27%20stroke-width%3D%271.5%27%20fill%3D%27%238fd3a7%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
+<!-- Tiny Mind mega edition: Nursery + Microscope + Hunt in one file. Each app runs
+     byte-intact in its own iframe; this shell owns model ingest (zip/folder/files),
+     file egress (child frames cannot download or use the clipboard — exports bubble
+     up here where a real click works), and the storage + keyless-Claude bridge. -->
+<style>
+:root{color-scheme:dark}
+body{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;background:#141414;color:#ddd;font-size:14px;height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1c1c1c;border-bottom:1px solid #333;flex-wrap:wrap}
+header b{margin-right:6px}
+.tab{padding:6px 14px;background:#262626;border:1px solid #444;border-radius:7px 7px 0 0;cursor:pointer;user-select:none}
+.tab.on{background:#333;border-bottom-color:#333;color:#fff}
+#chips{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.chip{padding:5px 10px;background:#20351f;border:1px solid #4a7;border-radius:14px;cursor:pointer;font-size:12px}
+.chip:hover{background:#2a452a}
+main{flex:1;position:relative;overflow:hidden}
+iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#141414}
+#bay{position:absolute;inset:0;overflow:auto;padding:22px}
+.hide{display:none !important}
+#dropzone{border:2px dashed #555;border-radius:12px;padding:26px;text-align:center;color:#aaa;margin-bottom:16px}
+#dropzone.over{border-color:#7c6;color:#cec}
+table{border-collapse:collapse;width:100%}
+td,th{border:1px solid #333;padding:6px 10px;text-align:left}
+th{background:#1d1d1d}
+button{padding:4px 10px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:5px;cursor:pointer;margin:0 4px 0 0}
+button:disabled{opacity:.4;cursor:default}
+.ok{color:#8c6}.warn{color:#dc5}.err{color:#e66}
+#shellStatus{padding:4px 12px;background:#191919;border-top:1px solid #2a2a2a;font-size:12px;min-height:18px}
+.small{font-size:12px;color:#999}
+#overlay{position:absolute;inset:0;overflow:auto;padding:30px;background:#141414}
+.card{max-width:640px;margin:0 auto}
+.card h2{margin:0 0 4px}
+.card .sub{color:#999;margin-bottom:18px;font-size:13px}
+.opt{border:1px solid #3a3a3a;border-radius:10px;padding:13px 16px;margin-bottom:12px;background:#1b1b1b}
+.opt h3{margin:0 0 4px;font-size:15px}
+.opt p{margin:0 0 10px;color:#bbb;font-size:13px;line-height:1.45}
+.opt.disabled{opacity:.55}
+.opt .why{font-size:12px;color:#d96}
+#browseBtn,#startNursery{margin-right:8px}
+</style></head><body>
+<header>
+  <b>🧠 Tiny Mind</b>
+  <div class="tab on" data-tab="bay">📦 models</div>
+  <div class="tab" data-tab="nursery">🐣 nursery</div>
+  <div class="tab" data-tab="microscope">🔬 microscope</div>
+  <div class="tab" data-tab="hunt">🎯 hunt</div>
+</header>
+<main>
+  <div id="bay">
+    <div id="dropzone">drop your model bundle here — a .zip with the .bin files, a folder, or loose files<br>
+      <span class="small">(drops made while an app tab is open go to that app instead)</span></div>
+    <table><thead><tr><th>model</th><th>vocab</th><th>size</th><th>open in…</th></tr></thead>
+      <tbody id="pool"><tr><td colspan="4" class="small">nothing yet</td></tr></tbody></table>
+    <p class="small">tokenizers loaded: <span id="tokList">none</span></p>
+    <p class="small">exports from the apps appear as green chips in the top bar — click a chip to save the file.
+       trained minds also join this table automatically, ready for the Microscope and the Hunt.</p>
+    <div style="margin-top:12px">
+      <button id="browseBtn">📁 browse for files…</button>
+      <input id="fileInput" type="file" multiple style="display:none">
+      <button id="startNursery" disabled title="load a model bundle first">🐣 new here? start in the Nursery →</button>
+    </div>
+  </div>
+  <div id="overlay" class="hide"></div>
+</main>
+<div id="shellStatus">drop a bundle to begin</div>
+
+<template id="tpl-nursery">@@APP_NURSERY@@</template>
+<template id="tpl-microscope">@@APP_MICROSCOPE@@</template>
+<template id="tpl-hunt">@@APP_HUNT@@</template>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const say = (msg, cls) => { $('shellStatus').textContent = msg; $('shellStatus').className = cls || ''; };
+
+/* ---------- shared model plumbing (inlined from src/ingest.js at build time) ---------- */
+@@SHELL_SHARED@@
+
+/* ---------- storage backend (window.storage -> localStorage -> memory) ---------- */
+const shellStorage = (() => {
+  const mem = new Map();
+  const ws = (window.storage && typeof window.storage.get === 'function') ? window.storage : null;
+  const ls = (() => { try { localStorage.setItem('tm-probe', '1'); localStorage.removeItem('tm-probe'); return localStorage; } catch { return null; } })();
+  return {
+    backend: ws ? 'window.storage' : ls ? 'localStorage' : 'memory',
+    async get(k) {
+      if (ws) return await ws.get(k, false);
+      const v = ls ? ls.getItem(k) : (mem.has(k) ? mem.get(k) : null);
+      if (v === null || v === undefined) throw new Error('not found: ' + k);
+      return { key: k, value: v, shared: false };
+    },
+    async set(k, v) { if (ws) return await ws.set(k, v, false); ls ? ls.setItem(k, v) : mem.set(k, v); return { key: k, value: v, shared: false }; },
+    async delete(k) { if (ws) return await ws.delete(k, false); ls ? ls.removeItem(k) : mem.delete(k); return { key: k, deleted: true, shared: false }; },
+    async list(prefix) {
+      if (ws) return await ws.list(prefix, false);
+      const keys = ls ? Array.from({ length: ls.length }, (_, i) => ls.key(i)).filter(k => k && k.startsWith(prefix))
+                      : [...mem.keys()].filter(k => k.startsWith(prefix));
+      return { keys, prefix, shared: false };
+    },
+  };
+})();
+
+/* ---------- keyless Claude for the frames ---------- */
+async function claudeComplete(prompt) {
+  if (window.claude && typeof window.claude.complete === 'function') return await window.claude.complete(prompt);
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!r.ok) throw new Error('keyless Claude unavailable here (HTTP ' + r.status + ')');
+  const d = await r.json();
+  return (d.content || []).map(c => c.text || '').join('');
+}
+
+/* ---------- frames ---------- */
+const APPS = ['nursery', 'microscope', 'hunt'];
+const frames = {}, ready = {}, queues = { nursery: [], microscope: [], hunt: [] };
+function ensureFrame(app) {
+  if (frames[app]) return frames[app];
+  const f = document.createElement('iframe');
+  f.srcdoc = '<!doctype html>' + document.getElementById('tpl-' + app).innerHTML;
+  f.dataset.app = app; f.classList.add('hide');
+  document.querySelector('main').appendChild(f);
+  frames[app] = f;
+  return f;
+}
+function sendToApp(app, msg) {
+  ensureFrame(app);
+  if (ready[app]) frames[app].contentWindow.postMessage(msg, '*');
+  else queues[app].push(msg);
+}
+window.addEventListener('message', async (e) => {
+  const m = e.data; if (!m || !m.tm) return;
+  const app = Object.keys(frames).find(a => frames[a].contentWindow === e.source);
+  if (m.tm === 'ready' && app) {
+    ready[app] = true;
+    for (const q of queues[app].splice(0)) frames[app].contentWindow.postMessage(q, '*');
+  } else if (m.tm === 'rpc' && app) {
+    let ok = true, value = null, error = '';
+    try {
+      if (m.method === 'claude.complete') value = await claudeComplete(m.args[0]);
+      else if (m.method.startsWith('storage.')) value = await shellStorage[m.method.slice(8)](...m.args);
+      else throw new Error('unknown rpc ' + m.method);
+    } catch (err) { ok = false; error = String(err && err.message || err); }
+    e.source.postMessage({ tm: 'rpc-reply', id: m.id, ok, value, error }, '*');
+  } else if (m.tm === 'export' && app) {
+    onExport(m.name, new Uint8Array(m.bytes), app);
+  } else if (m.tm === 'model-loaded' && app) {
+    loaded.add(app);
+    if (activeTab === app) { hideOverlay(); frames[app].classList.remove('hide'); }
+  }
+});
+
+/* ---------- tabs + per-app choice overlay ---------- */
+let activeTab = 'bay';
+const loaded = new Set();                     // apps whose frame currently holds a model
+const is512 = m => m.vocab === 512;
+const isZog = m => /zog/i.test(m.name);
+const specimen  = () => pool.models.find(m => m.vocab !== 512);
+const fresh260  = () => pool.models.find(m => is512(m) && !isZog(m) && /260/.test(m.name)) || pool.models.find(m => is512(m) && !isZog(m));
+const zog260    = () => pool.models.find(m => is512(m) && isZog(m));
+const trained260 = () => pool.models.find(m => is512(m) && !isZog(m) && !/^stories?260k?\.bin$/i.test(m.name));
+
+const CARDS = {
+  nursery: { title: 'Raise a tiny mind', sub: 'Two ways to begin — or load models in the 📦 tab first.', trainedVerb: 'keep training', opts: [
+    { h: 'Keep training the fresh 260K', p: 'Start from the blank-slate trainee and teach it your own stories — write them or have them ghostwritten — then watch a 260K-parameter mind learn in real time.', get: fresh260 },
+    { h: 'Explore the Zog mind', p: "A 260K model already trained on stories about Zog, a made-up creature — so it 'knows' Zog the way the fresh model doesn't yet. Load it to keep training, or just see what it says.", get: zog260 },
+  ]},
+  microscope: { title: 'Pick a model to inspect', sub: 'Any loaded model — inspect where it stores what it knows.', trainedVerb: 'inspect', opts: [
+    { h: 'stories15M — the big specimen', p: '15 million parameters, vocab 32000. The richest attention and neuron patterns to explore.', get: specimen },
+    { h: 'the fresh 260K trainee', p: 'Vocab 512, blank slate — a mind small enough to see all of at once.', get: fresh260 },
+    { h: 'the Zog 260K', p: 'Vocab 512, trained on Zog stories. Open it beside the fresh one to see what training changed.', get: zog260 },
+  ]},
+  hunt: { title: 'Choose a mind to hunt in', sub: 'The Hunt always uses a 260K mind (vocab 512).', trainedVerb: 'hunt in', opts: [
+    { h: 'the Zog mind', p: 'A 260K model trained on Zog stories — plenty of learned structure to track down.', get: zog260 },
+  ]},
+};
+
+const trainedModels = () => pool.models.filter(m => is512(m) && !isZog(m) && !/^stories?260k?\.bin$/i.test(m.name));
+function renderOverlay(app) {
+  const c = CARDS[app];
+  const opt = (h, p, model) => {
+    const tok = model ? tokFor(model.vocab) : null, ok = model && tok;
+    const why = !model ? 'load this model in the 📦 models tab first'
+      : !tok ? 'drop its tokenizer (vocab ' + model.vocab + ') in the 📦 models tab' : '';
+    return '<div class="opt' + (ok ? '' : ' disabled') + '"><h3>' + h + '</h3><p>' + p + '</p>'
+      + (ok ? '<button data-model="' + model.name + '">open ' + model.name + ' →</button>'
+            : '<span class="why">⚠ ' + why + '</span>') + '</div>';
+  };
+  let rows = c.opts.map(o => opt(o.h, o.p, o.get())).join('');
+  // enumerate every mind the user trained + exported — the fixed slots miss these
+  for (const m of trainedModels()) {
+    const verb = c.trainedVerb || 'open';
+    rows += opt('🌱 ' + verb + ': ' + m.name, 'A mind you raised in the Nursery (vocab ' + m.vocab + ').', m);
+  }
+  $('overlay').innerHTML = '<div class="card"><h2>' + c.title + '</h2><div class="sub">' + c.sub + '</div>' + rows + '</div>';
+  $('overlay').querySelectorAll('button[data-model]').forEach(b => b.onclick = () => {
+    const model = pool.models.find(m => m.name === b.dataset.model);
+    if (model) openModelInApp(app, model);
+  });
+}
+function showOverlay(app) { renderOverlay(app); $('overlay').classList.remove('hide'); }
+function hideOverlay() { $('overlay').classList.add('hide'); }
+
+function selectTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  $('bay').classList.toggle('hide', tab !== 'bay');
+  for (const a of APPS) if (frames[a]) frames[a].classList.add('hide');
+  if (tab === 'bay') hideOverlay();
+  else if (loaded.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); }
+  else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
+
+function openModelInApp(app, model) {
+  const tok = tokFor(model.vocab);
+  if (!tok) { say(model.name + ' needs a vocab-' + model.vocab + ' tokenizer — drop it in the bay', 'warn'); return; }
+  const buf = model.u8.buffer.slice(model.u8.byteOffset, model.u8.byteOffset + model.u8.byteLength);
+  const tbuf = tok.u8.buffer.slice(tok.u8.byteOffset, tok.u8.byteOffset + tok.u8.byteLength);
+  sendToApp(app, { tm: 'load-pair', ckName: model.name, ck: buf, tokName: tok.name, tok: tbuf });
+  loaded.add(app); selectTab(app);
+  say('loading ' + model.name + ' + ' + tok.name + ' into the ' + app + '…');
+}
+
+/* ---------- pool ---------- */
+const pool = { models: [], toks: [] };   // {name, u8, vocab}
+function fmtKB(n) { return n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : (n / 1024).toFixed(0) + ' KB'; }
+function tokFor(vocab) { return pool.toks.find(t => t.vocab === vocab) || (pool.toks.length === 1 ? pool.toks[0] : null); }
+function renderPool() {
+  const tb = $('pool'); tb.innerHTML = '';
+  if (!pool.models.length) tb.innerHTML = '<tr><td colspan="4" class="small">nothing yet</td></tr>';
+  for (const mo of pool.models) {
+    const tok = tokFor(mo.vocab);
+    const tr = document.createElement('tr');
+    const cell = document.createElement('td');
+    for (const app of APPS) {
+      if (app === 'nursery' && mo.vocab !== 512) continue;   // the trainee is the 512 mind
+      const b = document.createElement('button');
+      b.textContent = app;
+      b.disabled = !tok;
+      b.title = tok ? `open with ${tok.name}` : `needs a vocab-${mo.vocab} tokenizer — drop it`;
+      b.onclick = () => openModelInApp(app, mo);
+      cell.appendChild(b);
+    }
+    tr.innerHTML = `<td>${mo.name}</td><td>${mo.vocab}</td><td>${fmtKB(mo.u8.length)}</td>`;
+    tr.appendChild(cell);
+    tb.appendChild(tr);
+  }
+  $('tokList').textContent = pool.toks.length ? pool.toks.map(t => `${t.name} (${t.vocab})`).join(', ') : 'none';
+  if (activeTab !== 'bay' && !loaded.has(activeTab)) renderOverlay(activeTab);   // keep a visible card fresh
+  $('startNursery').disabled = pool.models.length === 0;
+}
+function addModel(name, u8, vocab) {
+  const i = pool.models.findIndex(x => x.name === name);
+  if (i >= 0) pool.models.splice(i, 1);
+  pool.models.push({ name, u8, vocab }); renderPool();
+}
+
+/* ---------- ingest into the pool ---------- */
+async function shellIngest(recs) {
+  const queue = [...recs]; let took = 0, jsons = 0; const skipped = [];
+  while (queue.length) {
+    const r = queue.shift();
+    if (/\.json$/i.test(r.name)) { jsons++; sendToApp('nursery', { tm: 'json', name: r.name, text: new TextDecoder().decode(r.u8) }); continue; }
+    if (/\.zip$/i.test(r.name) || (r.u8.length > 4 && r.u8[0] === 0x50 && r.u8[1] === 0x4b && r.u8[2] === 3)) {
+      try { queue.push(...await unzip(r.u8)); } catch (e) { say('could not unzip ' + r.name + ': ' + e.message, 'warn'); }
+      continue;
+    }
+    const tc = tokenizerEntryCount(r.u8);
+    if (tc > 0) { if (!pool.toks.some(t => t.name === r.name)) pool.toks.push({ name: r.name, u8: r.u8, vocab: tc }); took++; continue; }
+    const v = checkpointVocab(r.u8);
+    if (v > 0) { addModel(r.name, r.u8, v); took++; continue; }
+    skipped.push(r.name);
+  }
+  renderPool();
+  say(`bay: took ${took} model/tokenizer file(s)` + (jsons ? `, sent ${jsons} json to the nursery` : '')
+    + (skipped.length ? ` — skipped ${skipped.join(', ')}` : ''), took ? 'ok' : 'warn');
+}
+
+/* ---------- shell-level drop (bay + header; app areas keep their own) ---------- */
+window.addEventListener('dragover', e => { e.preventDefault(); $('dropzone').classList.add('over'); });
+window.addEventListener('dragleave', e => { if (!e.relatedTarget) $('dropzone').classList.remove('over'); });
+window.addEventListener('drop', async e => {
+  e.preventDefault(); $('dropzone').classList.remove('over');
+  const entries = e.dataTransfer.items
+    ? [...e.dataTransfer.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean) : [];
+  const plainFiles = [...e.dataTransfer.files];
+  let recs;
+  if (entries.some(en => en.isDirectory)) {
+    say('reading dropped folder…');
+    recs = (await Promise.all(entries.map(walkEntry))).flat();
+  } else {
+    recs = await Promise.all(plainFiles.map(async f => ({ name: f.name, u8: new Uint8Array(await f.arrayBuffer()) })));
+  }
+  await shellIngest(recs);
+});
+
+/* ---------- exports bubbled up from the frames ---------- */
+function onExport(name, u8, fromApp) {
+  // The app frame cannot download (nested-frame downloads are blocked); the user's Save
+  // click is a gesture inside the frame, not here. The top frame CAN download, so trigger
+  // it now — same-origin blob downloads don't need a fresh gesture. Standalone apps still
+  // download directly in-frame; this path is only the embedded case.
+  try {
+    const url = URL.createObjectURL(new Blob([u8], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (e) { say('could not start the download: ' + (e.message || e), 'err'); }
+  const v = checkpointVocab(u8);
+  if (v > 0) { addModel(name, u8, v); say(`saved ${name} — it also joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok'); }
+  else say(`saved ${name}`, 'ok');
+}
+
+/* ---------- browse + onboarding ---------- */
+$('browseBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = async (e) => {
+  const recs = await Promise.all([...e.target.files].map(async f => ({ name: f.name, u8: new Uint8Array(await f.arrayBuffer()) })));
+  e.target.value = '';
+  await shellIngest(recs);
+};
+$('startNursery').onclick = () => selectTab('nursery');
+
+/* ---------- eager model load (served deploys only) ---------- */
+const MODEL_FILES = ['tok512.bin', 'tokenizer.bin', 'stories260K.bin', 'stories260K-zog.bin', 'stories15M.bin'];
+(async function autoLoadModels() {
+  let probe;
+  try { probe = await fetch(MODEL_FILES[0]); if (!probe.ok) return; }   // 404 (sandbox) or throw (file://) => stay in drop mode
+  catch { return; }
+  say('found model files beside the app — loading…');
+  let got = 0;
+  for (const name of MODEL_FILES) {
+    try {
+      const r = name === MODEL_FILES[0] ? probe : await fetch(name);
+      if (!r || !r.ok) continue;
+      await shellIngest([{ name, u8: new Uint8Array(await r.arrayBuffer()) }]);
+      got++;
+    } catch { /* missing file — skip */ }
+  }
+  try {   // replay corpus lives beside the app too (optional): powers replay-mix + an in-distribution blue line
+    const rr = await fetch('replay.json');
+    if (rr.ok) await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await rr.arrayBuffer()) }]);
+  } catch { /* no replay corpus here — the embedded fallback still draws the blue line */ }
+  try {   // arc pack (Pages layout: arc/arc-manifest.json) — manifest only; snapshot .bins stay lazy
+    const am = await fetch('arc/arc-manifest.json');
+    if (am.ok) {
+      window.__tmArcManifest = await am.json();
+      say('arc pack found: ' + window.__tmArcManifest.snapshots.length + ' snapshots to step ' + window.__tmArcManifest.snapshots[window.__tmArcManifest.snapshots.length - 1].step + ' (scrubber coming in a later update)', 'ok');
+    }
+  } catch { /* no arc pack beside this deploy */ }
+  say(got ? `loaded ${got} file(s) from this folder — pick a model in any tab (no need to drop anything)` : 'no model files found beside the app — drop a bundle instead',
+      got ? 'ok' : 'warn');
+})();
+</script>
+</body></html>
