@@ -7,6 +7,7 @@ import { readCheckpoint, writeCheckpoint } from '../src/bin-reader.js';
 import { Tokenizer } from '../src/tokenizer.js';
 import { createModel, generateGreedy } from '../src/model.js';
 import { Trainer, rng, packStories } from '../src/train.js';
+import { EMBEDDED_BASE_STORIES } from '../src/embed-data.js';
 
 let tok = null, config = null, baseCkpt = null;
 let trainer = null, trainOpts = null, rand = null;
@@ -111,7 +112,9 @@ self.onmessage = async (e) => {
       zogStream = m.stories.length ? packStories(m.stories.map(enc)) : null;
       const held = m.heldout.length ? packStories(m.heldout.map(enc)) : null;
       replayStream = m.replayStories.length ? packStories(m.replayStories.slice(0, 150).map(enc)) : null;
-      const baseSlice = m.replayStories.length > 200 ? packStories(m.replayStories.slice(200, 260).map(enc)) : null;
+      const baseSlice = m.replayStories.length > 200
+        ? packStories(m.replayStories.slice(200, 260).map(enc))   // in-distribution held-out from a real replay corpus
+        : packStories(EMBEDDED_BASE_STORIES.map(enc));            // fallback so the forgetting line always draws
       const B = m.B ?? 8, T = m.T ?? 192;
       zogEval = held ? makeEvalBatch(held, B, T) : null;
       baseEval = baseSlice ? makeEvalBatch(baseSlice, B, T) : null;
