@@ -90,6 +90,24 @@
    "samples": {
     "Once upon a time": "Once upon a time, there was a little girl named Lily. She loved to play outside and play with her toys. One day, Lily went to the park to play with her friends. She saw a big, butterfly and daddy. She was so happy that she couldn't believe that she had to be fun.\nLily was so happy that she couldn't believe that she was getting careful. She was so happy that she couldn't wait to see what she had found it."
    }
+  },
+  {
+   "step": 10000,
+   "file": "arcA-step10000.bin",
+   "trainLoss": 1.6323,
+   "baseLoss": 1.8556,
+   "samples": {
+    "Once upon a time": "Once upon a time, there was a little girl named Lily. She loved to play outside in the park. One day, she went to the park with her mommy and daddy. They were so happy and couldn't wait to go outside.\nOne day, Lily's mom took a big bitch of worms. Lily was very happy and said, \"Welcome to make it feel better.\"\nLily and her mommy said, \"It's okay, Lily. It's too much."
+   }
+  },
+  {
+   "step": 20000,
+   "file": "arcA-step20000.bin",
+   "trainLoss": 1.5102,
+   "baseLoss": 1.8033,
+   "samples": {
+    "Once upon a time": "Once upon a time, there was a little girl named Lily. She loved to play outside in the park with her friends. One day, she saw a big, shiny bird in the sky. She was so excited to see the birds and share the sky.\nLily was so happy that she couldn't wait to get something special. She went to the park to play with her friends."
+   }
   }
  ]
 }
