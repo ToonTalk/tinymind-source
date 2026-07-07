@@ -1,0 +1,19 @@
+# downloaded assets — fetch commands in README (60MB specimen, 19MB TinyStories, zips)
+models/
+
+# vendored reference clone — re-fetch with:
+#   git clone --depth 1 https://github.com/karpathy/llama2.c vendor/llama2.c
+# (binary formats were verified against master on 2026-07-05; fixtures ARE committed)
+vendor/
+
+# regenerable arc machinery: Adam moments (19MB, only needed to resume a run)
+# and the tokenized-stream cache. Manifests, snapshots and state jsons ARE committed.
+arc/**/adam-*.bin
+arc/adam-*.bin
+arc/cache-*.i32
+
+# build/test scratch
+tests/tmp-arc/
+dist/_check-*.mjs
+tools/fixture-gen
+node_modules/

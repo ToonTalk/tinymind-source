@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Mind — E6 browser harness</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+<style>
+  body { font-family: ui-monospace, Consolas, monospace; background: #14161a; color: #d8dce2;
+         margin: 0; padding: 1.2rem; font-size: 14px; }
+  h1 { font-size: 16px; margin: 0 0 .3rem; color: #8fd3a7; }
+  .sub { color: #7d8590; margin-bottom: 1rem; }
+  .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
+  .card { background: #1c1f26; border: 1px solid #2a2f3a; border-radius: 8px;
+          padding: .8rem 1rem; margin-bottom: 1rem; min-width: 300px; flex: 1; }
+  .card h2 { font-size: 13px; margin: 0 0 .5rem; color: #9ecbff; }
+  button { background: #2d5a3d; color: #e6ffe6; border: 0; border-radius: 5px;
+           padding: .35rem .7rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.alt { background: #2b4a6f; color: #dff0ff; }
+  #drop { border: 2px dashed #3d4450; border-radius: 8px; padding: 1rem; text-align: center;
+          color: #7d8590; }
+  #drop.over { border-color: #8fd3a7; color: #8fd3a7; }
+  #log { background: #0d0f12; border-radius: 6px; padding: .6rem; white-space: pre-wrap;
+         max-height: 300px; overflow-y: auto; font-size: 12px; line-height: 1.5; }
+  .ok { color: #8fd3a7; } .warn { color: #ffcf87; } .err { color: #ff9c9c; }
+  canvas { image-rendering: pixelated; border: 1px solid #2a2f3a; border-radius: 4px; }
+  .pill { display: inline-block; background: #262b34; border-radius: 999px; padding: .1rem .6rem;
+          margin: .1rem .2rem; color: #9ecbff; }
+</style>
+</head>
+<body>
+<h1>Tiny Mind — Phase 0 / E6 browser harness</h1>
+<div class="sub">file-drop the .bins (or load from the dev server), then run the gate G3 measurements</div>
+
+<div class="card">
+  <h2>models</h2>
+  <div id="drop">drop stories15M.bin / stories260K.bin / tokenizer.bin / tok512.bin here</div>
+  <div style="margin-top:.5rem">
+    dev shortcuts:
+    <button class="alt" id="load15">load 15M + tokenizer</button>
+    <button class="alt" id="load260">load 260K + tok512</button>
+    <button class="alt" id="load260z">load fine-tuned 260K-zog</button>
+  </div>
+  <div id="models"></div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <h2>G3a — specimen forward speed (15M)</h2>
+    <button id="benchFwd" disabled>generate 220 tokens (worker)</button>
+    <div id="fwdOut"></div>
+  </div>
+  <div class="card">
+    <h2>G3b — trainee fine-tune speed (260K)</h2>
+    <button id="benchT192" disabled>5 steps B=8 T=192</button>
+    <button id="benchT256" disabled>5 steps B=8 T=256</button>
+    <div id="trainOut"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <h2>capture + attention heatmap (260K)</h2>
+    <button id="capBtn" disabled>capture "Zog eats clouds..."</button>
+    <div id="capOut"></div>
+    <canvas id="heat" width="0" height="0"></canvas>
+  </div>
+  <div class="card">
+    <h2>environment + storage</h2>
+    <button id="gpuBtn">check WebGPU</button>
+    <button id="storBtn" disabled>chunked storage round-trip (260K)</button>
+    <div id="envOut"></div>
+  </div>
+</div>
+
+<div class="card"><h2>log</h2><div id="log"></div></div>
+
+<script type="module">
+import { readCheckpoint } from '../src/bin-reader.js';
+import { createMemoryStorageShim, saveCheckpointChunked, loadCheckpointChunked }
+  from './storage.js';
+
+const $ = id => document.getElementById(id);
+const state = { ck15: null, tok32: null, ck260: null, tok512: null };
+const worker = new Worker(new URL('./train-worker.js', import.meta.url), { type: 'module' });
+
+function log(msg, cls = '') {
+  const el = $('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function classify(name, buf) {
+  // checkpoint if the 7-int header looks sane; otherwise tokenizer
+  try {
+    const ck = readCheckpoint(buf);
+    const c = ck.config;
+    if (c.dim > 0 && c.dim <= 8192 && c.nLayers > 0 && c.nLayers <= 128) return { kind: 'ckpt', ck };
+  } catch { /* not a checkpoint */ }
+  return { kind: 'tok' };
+}
+
+function registerFile(name, buf) {
+  const r = classify(name, buf);
+  if (r.kind === 'ckpt') {
+    const c = r.ck.config;
+    if (c.vocabSize === 32000) { state.ck15 = buf; log(`checkpoint 15M-class: ${name} (dim ${c.dim}, vocab ${c.vocabSize})`, 'ok'); }
+    else { state.ck260 = buf; log(`checkpoint 260K-class: ${name} (dim ${c.dim}, vocab ${c.vocabSize})`, 'ok'); }
+  } else {
+    if (buf.byteLength > 100000) { state.tok32 = buf; log(`tokenizer 32K: ${name}`, 'ok'); }
+    else { state.tok512 = buf; log(`tokenizer 512: ${name}`, 'ok'); }
+  }
+  refresh();
+}
+
+function refresh() {
+  $('models').innerHTML =
+    `<span class="pill">15M ${state.ck15 ? '✔' : '—'}</span>` +
+    `<span class="pill">tok32K ${state.tok32 ? '✔' : '—'}</span>` +
+    `<span class="pill">260K ${state.ck260 ? '✔' : '—'}</span>` +
+    `<span class="pill">tok512 ${state.tok512 ? '✔' : '—'}</span>`;
+  $('benchFwd').disabled = !(state.ck15 && state.tok32);
+  $('benchT192').disabled = $('benchT256').disabled = !state.ck260;
+  $('capBtn').disabled = !(state.ck260 && state.tok512);
+  $('storBtn').disabled = !state.ck260;
+}
+
+// --- file drop ---------------------------------------------------------------
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', async e => {
+  e.preventDefault(); drop.classList.remove('over');
+  for (const f of e.dataTransfer.files) registerFile(f.name, await f.arrayBuffer());
+});
+
+// --- dev-server loads ----------------------------------------------------------
+async function fetchBin(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.arrayBuffer();
+}
+$('load15').onclick = async () => {
+  log('fetching 15M + tokenizer…');
+  registerFile('stories15M.bin', await fetchBin('../models/stories15M.bin'));
+  registerFile('tokenizer.bin', await fetchBin('../models/tokenizer.bin'));
+};
+$('load260').onclick = async () => {
+  log('fetching 260K + tok512…');
+  registerFile('stories260K.bin', await fetchBin('../models/stories260K.bin'));
+  registerFile('tok512.bin', await fetchBin('../models/tok512.bin'));
+};
+$('load260z').onclick = async () => {
+  log('fetching fine-tuned 260K-zog…');
+  registerFile('stories260K-zog.bin', await fetchBin('../models/stories260K-zog.bin'));
+  registerFile('tok512.bin', await fetchBin('../models/tok512.bin'));
+};
+
+// --- worker benchmarks -----------------------------------------------------------
+let pendingT = null;
+worker.onmessage = e => {
+  const m = e.data;
+  if (m.type === 'error') { log(m.message, 'err'); return; }
+  if (m.type === 'progress') {
+    $('trainOut').textContent = `step ${m.step}/${m.of}: ${m.ms.toFixed(0)} ms  loss ${m.loss.toFixed(3)}`;
+  } else if (m.type === 'bench-train-done') {
+    const line = `260K train B=${m.B} T=${m.T}: ${m.msPerStep.toFixed(0)} ms/step (browser worker)`;
+    $('trainOut').textContent = line;
+    log(line, 'ok');
+  } else if (m.type === 'bench-forward-done') {
+    const line = `15M forward: ${m.nTokens} tokens in ${(m.ms / 1000).toFixed(1)}s = ${m.tokPerSec.toFixed(1)} tok/s`;
+    $('fwdOut').textContent = line;
+    log(line, m.tokPerSec >= 5 ? 'ok' : 'warn');
+    log(`   "${m.text.slice(0, 120)}…"`);
+  } else if (m.type === 'capture-done') {
+    drawHeat(m);
+    const line = `capture: ${m.nPos} pos, ${(m.bytes / 1e6).toFixed(1)} MB activations, heatmap L${m.layer}H${m.head}`;
+    $('capOut').textContent = line;
+    log(line, 'ok');
+    log('   top next-piece logits: ' + m.topLast.slice(0, 5).map(t => JSON.stringify(t.piece) + ' ' + t.logit.toFixed(2)).join('  '));
+  }
+};
+
+$('benchFwd').onclick = () => {
+  log('15M generation benchmark starting (worker)…');
+  $('fwdOut').textContent = 'running…';
+  worker.postMessage({ type: 'bench-forward', ckptBuf: state.ck15, tokBuf: state.tok32,
+                       prompt: 'Once upon a time', steps: 220 });
+};
+async function benchTrain(T) {
+  log(`260K train benchmark B=8 T=${T} (worker)…`);
+  // training stream: tokenize some TinyStories text server-side? keep it simple —
+  // random tokens exercise identical compute cost
+  const stream = new Int32Array(20000);
+  for (let i = 0; i < stream.length; i++) stream[i] = 1 + Math.floor(Math.random() * 510);
+  worker.postMessage({ type: 'bench-train', ckptBuf: state.ck260, stream: stream.buffer,
+                       B: 8, T, steps: 5 }, [stream.buffer]);
+}
+$('benchT192').onclick = () => benchTrain(192);
+$('benchT256').onclick = () => benchTrain(256);
+
+$('capBtn').onclick = () => {
+  log('260K capture (worker)…');
+  worker.postMessage({ type: 'capture', ckptBuf: state.ck260, tokBuf: state.tok512,
+                       prompt: 'Zog eats clouds. Zog is a small dragon. He went behind the moon.' });
+};
+
+function drawHeat(m) {
+  const att = new Float32Array(m.att);
+  const n = m.nPos, scale = 6;
+  const cv = $('heat');
+  cv.width = n * scale; cv.height = n * scale;
+  const ctx = cv.getContext('2d');
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x <= y; x++) {
+      const v = att[y * n + x];
+      ctx.fillStyle = `rgb(${20 + v * 120}, ${30 + v * 200}, ${40 + v * 90})`;
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+}
+
+// --- environment + storage -----------------------------------------------------
+$('gpuBtn').onclick = async () => {
+  if (!navigator.gpu) { log('WebGPU: navigator.gpu ABSENT', 'warn'); $('envOut').textContent = 'WebGPU: absent'; return; }
+  const adapter = await navigator.gpu.requestAdapter();
+  const line = adapter ? `WebGPU: available (adapter ok)` : 'WebGPU: navigator.gpu present but no adapter';
+  $('envOut').textContent = line;
+  log(line, adapter ? 'ok' : 'warn');
+};
+
+$('storBtn').onclick = async () => {
+  const shim = createMemoryStorageShim();
+  const t0 = performance.now();
+  const saved = await saveCheckpointChunked(shim, 'zog-model', state.ck260, 512 * 1024);
+  const back = await loadCheckpointChunked(shim, 'zog-model');
+  const ms = performance.now() - t0;
+  const a = new Uint8Array(state.ck260), b = new Uint8Array(back);
+  let same = a.length === b.length;
+  if (same) for (let i = 0; i < a.length; i += 4097) if (a[i] !== b[i]) { same = false; break; }
+  const line = `storage shim: ${saved.nChunks} chunks (512KB each), round-trip ${same ? 'OK' : 'MISMATCH'} in ${ms.toFixed(0)} ms`;
+  $('envOut').textContent = line;
+  log(line, same ? 'ok' : 'err');
+};
+
+log('harness ready — load models to begin');
+</script>
+</body>
+</html>

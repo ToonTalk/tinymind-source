@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Mind — Treasure Hunt</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%BA%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
+    --green: #8fd3a7; --blue: #9ecbff; --gold: #ffd27f; --pink: #ff9ec2; --red: #ff9c9c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink);
+         margin: 0; padding: 1rem 1.2rem; font-size: 15px; }
+  h1 { font-size: 20px; margin: 0; color: var(--gold); }
+  .sub { color: var(--dim); margin: .15rem 0 1rem; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+          padding: .8rem 1rem; margin-bottom: .9rem; }
+  .card h2 { font-size: 14px; margin: 0 0 .5rem; color: var(--blue); font-weight: 600; }
+  button { background: #6b5215; color: #fff3d6; border: 0; border-radius: 6px;
+           padding: .4rem .8rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button.alt { background: #2b4a6f; color: #dff0ff; }
+  button.go { background: #2d5a3d; color: #eaffea; }
+  button.small { padding: .15rem .5rem; font-size: 12px; }
+  button:disabled { opacity: .35; cursor: default; }
+  input[type=text], input[type=password], select {
+    background: #12151c; color: var(--ink); border: 1px solid var(--edge);
+    border-radius: 5px; padding: .25rem .4rem; font: inherit; }
+  label.f { display: inline-block; margin: .2rem .6rem .2rem 0; color: var(--dim); font-size: 13px; }
+  .hint { color: var(--dim); font-size: 12.5px; }
+  .ok { color: var(--green); } .warn { color: var(--gold); } .err { color: var(--red); }
+  .pill { display: inline-block; background: #262c38; border-radius: 999px; padding: .1rem .6rem;
+          margin: .1rem .2rem; color: var(--blue); font-size: 12px; }
+  .bar-row { display: flex; align-items: center; gap: .5rem; margin: .1rem 0;
+             font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .bar-label { width: 90px; text-align: right; white-space: pre; overflow: hidden; }
+  .bar-outer { flex: 1; } .bar { height: 11px; border-radius: 3px; background: var(--blue); min-width: 1px; }
+  .bar-pct { width: 70px; color: var(--dim); font-size: 12px; }
+  .hypo { border: 1px solid var(--edge); border-radius: 8px; padding: .6rem .8rem; margin: .5rem 0;
+          background: #171b22; }
+  .hypo .claim { font-size: 14.5px; }
+  .hypo .pred { color: var(--dim); font-size: 12.5px; margin: .25rem 0; }
+  .hypo .verdict { margin-top: .4rem; font-size: 14px; }
+  .proved { color: var(--green); } .busted { color: var(--red); } .weak { color: var(--gold); }
+  #probeOut .answer { font-size: 16px; }
+  #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; }
+  .big { font-size: 17px; }
+  #score { font-size: 15px; }
+  .lesson { color: var(--gold); font-size: 13px; margin-top: .4rem; }
+</style>
+</head>
+<body>
+<h1>🗺️ Tiny Mind — Treasure Hunt</h1>
+<div class="sub">your character lives somewhere inside those numbers. find it. prove it.</div>
+
+<div class="card">
+  <h2>1 · bring your tiny mind</h2>
+  <span class="hint">drop your saved .bin + tok512.bin anywhere, or</span>
+  <button class="alt small" id="loadZog">load the ready-made Zog mind</button>
+  <span id="modelInfo" class="pill">no model yet</span>
+  <label class="f"><input type="checkbox" id="voiceOn"> 🔊 read to me</label>
+  <label class="f"><input type="checkbox" id="kidMode"> little-kid mode</label>
+  <div id="status"></div>
+</div>
+
+<div class="card">
+  <h2>2 · what shall we hunt for?</h2>
+  <label class="f">character name <input type="text" id="qName" value="Zog"></label><br>
+  <label class="f">the question <input type="text" id="qProbe" value="Zog lives behind the" size="34"></label>
+  <label class="f">the right answer <input type="text" id="qCont" value=" moon" size="12"></label>
+  <div class="hint" style="margin:.2rem 0">quick quests:
+    <button class="small alt" data-p="Zog lives behind the" data-c=" moon">where does Zog live?</button>
+    <button class="small alt" data-p="Zog was hungry. Zog likes to eat" data-c=" clouds">what does Zog eat?</button>
+    <button class="small alt" data-p="Zog is a small" data-c=" dragon">what IS Zog?</button>
+  </div>
+  <label class="f">detective
+    <select id="detective">
+      <option value="builtin">built-in detective (no key)</option>
+      <option value="openai">OpenAI</option>
+      <option value="anthropic">Anthropic</option>
+      <option value="gemini">Gemini</option>
+    </select>
+  </label>
+  <span id="detKeyFields" style="display:none">
+    <label class="f">key <input type="password" id="detKey"></label>
+    <label class="f">model <input type="text" id="detModel"></label>
+  </span>
+  <button class="go" id="probeBtn" disabled>🔎 step 1: ask the model</button>
+</div>
+
+<div class="card" id="probeCard" style="display:none">
+  <h2>3 · what the model says</h2>
+  <div id="probeOut"></div>
+</div>
+
+<div class="card" id="cluesCard" style="display:none">
+  <h2>4 · the detective's clues <span class="hint">— every clue is only a GUESS until you test it</span></h2>
+  <button class="go small" id="cluesBtn">🕵️ get clues</button>
+  <div id="hypos"></div>
+</div>
+
+<div class="card" id="diyCard" style="display:none">
+  <h2>5 · test anything yourself</h2>
+  <label class="f">head: layer <select id="diyL"></select> head <select id="diyH"></select>
+    <button class="small" id="diyHeadBtn">🧪 switch it off</button></label>
+  <label class="f">neuron: layer <select id="diyNL"></select> #<input type="text" id="diyN" size="4" value="0">
+    <button class="small" id="diyNeuronBtn">🧪 switch it off</button></label>
+  <label class="f">team: <button class="small" id="diyTeamBtn">🧪 switch off ALL heads in layer</button>
+    <select id="diyTL"></select></label>
+  <div id="diyOut"></div>
+</div>
+
+<div class="card" id="scoreCard" style="display:none">
+  <h2>6 · your discoveries</h2>
+  <div id="score"></div>
+  <div class="lesson">the pretty pictures only SUGGESTED where the treasure was. your ablations PROVED it.</div>
+</div>
+
+<script type="module">
+import { callLLM, PROVIDERS, keylessAvailable } from '../src/llm.js';
+const $ = id => document.getElementById(id);
+const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+const LSget = k => { try { return localStorage.getItem(k); } catch { return null; } };
+
+const S = { config: null, probe: null, tested: [], proved: 0, busy: false, hypoSeq: 0 };
+
+function kid() { return $('kidMode').checked; }
+function speak(text) {
+  // voice adapter seam: swap this for vg-core when it lands; Web Speech API for now
+  if (!$('voiceOn').checked || !window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(text.replace(/[🏆❌🟡]/g, ''));
+  u.rate = kid() ? 0.9 : 1.0;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function status(msg, isErr) { $('status').textContent = msg; $('status').className = isErr ? 'err' : ''; }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+function pct(p) { return p >= 0.001 ? (100 * p).toFixed(1) + '%' : (100 * p).toExponential(1) + '%'; }
+
+// ---------- model loading ----------
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', async e => {
+  e.preventDefault();
+  let ck = null, tk = null;
+  for (const f of e.dataTransfer.files) {
+    const buf = await f.arrayBuffer();
+    if (buf.byteLength > 500000) ck = buf; else tk = buf;
+  }
+  if (ck && tk) worker.postMessage({ type: 'load', ckptBuf: ck, tokBuf: tk });
+  else status('drop the model .bin and tok512.bin together', true);
+});
+$('loadZog').onclick = async () => {
+  status('fetching the Zog mind…');
+  const [a, b] = await Promise.all([fetch('../models/stories260K-zog.bin'), fetch('../models/tok512.bin')]);
+  if (!a.ok || !b.ok) { status('fetch failed — is the dev server running?', true); return; }
+  worker.postMessage({ type: 'load', ckptBuf: await a.arrayBuffer(), tokBuf: await b.arrayBuffer() });
+};
+
+// ---------- quest presets + detective ----------
+document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+  $('qProbe').value = b.dataset.p; $('qCont').value = b.dataset.c;
+});
+$('detective').onchange = () => {
+  const d = $('detective').value;
+  $('detKeyFields').style.display = (d === 'builtin' || d === 'keyless') ? 'none' : 'inline';
+  if (d !== 'builtin') {
+    $('detModel').value = PROVIDERS[d]?.defaultModel ?? '';
+    $('detKey').value = LSget('tm-key-' + d) || '';
+  }
+};
+if (keylessAvailable()) $('detective').add(new Option(PROVIDERS.keyless.label, 'keyless'), 1);
+
+// ---------- worker ----------
+worker.onmessage = (e) => {
+  const m = e.data;
+  S.busy = false;
+  if (m.type === 'error') { status(m.message, true); return; }
+  if (m.type === 'loaded') {
+    S.config = m.config;
+    $('modelInfo').textContent = `${m.config.nLayers} layers · ${m.config.nHeads} heads · ${m.config.hiddenDim} neurons/layer`;
+    $('probeBtn').disabled = false;
+    buildDiy();
+    status('ready — pick a quest and ask the model');
+    speak(kid() ? 'Your tiny mind is here! What shall we hunt for?' : 'Model loaded. Pick a quest.');
+  }
+  if (m.type === 'probe-done') renderProbe(m);
+  if (m.type === 'test-done') renderVerdict(m);
+};
+
+$('probeBtn').onclick = () => {
+  if (S.busy) return;
+  S.busy = true;
+  S.tested = []; S.proved = 0;
+  $('hypos').innerHTML = ''; $('diyOut').innerHTML = ''; renderScore();
+  status('asking the model…');
+  worker.postMessage({ type: 'probe', probe: $('qProbe').value, continuation: $('qCont').value, name: $('qName').value.trim() });
+};
+
+function renderProbe(m) {
+  S.probe = m;
+  $('probeCard').style.display = $('cluesCard').style.display = $('diyCard').style.display = $('scoreCard').style.display = 'block';
+  const right = pct(m.contProb);
+  let html = `<div class="answer">"${esc($('qProbe').value)}<b class="ok">${esc($('qCont').value)}</b>" — the model gives the right answer a <b class="ok">${right}</b> chance.</div>`;
+  html += `<div class="hint" style="margin:.4rem 0 .2rem">its top guesses after "${esc($('qProbe').value)}":</div>`;
+  for (const t of m.top.slice(0, 6)) {
+    html += `<div class="bar-row"><div class="bar-label">${esc(JSON.stringify(t.piece))}</div>
+      <div class="bar-outer"><div class="bar" style="width:${(100 * t.prob).toFixed(1)}%"></div></div>
+      <div class="bar-pct">${pct(t.prob)}</div></div>`;
+  }
+  html += `<div class="hint" style="margin-top:.3rem">found "${esc($('qName').value)}" ${m.nameSpans.length} time(s) in the question (pieces ${m.nameSpans.map(s => s[0] + '–' + s[1]).join(', ')})</div>`;
+  $('probeOut').innerHTML = html;
+  status('now get clues — or test parts yourself');
+  speak(kid()
+    ? `The model thinks the answer is ${$('qCont').value}! Now let's find WHERE it keeps that. Ask the detective for clues!`
+    : `Right-answer chance ${right}. Get clues, then prove or bust them with ablations.`);
+}
+
+// ---------- hypotheses ----------
+function heuristicHypotheses(m) {
+  const name = $('qName').value.trim();
+  const out = [];
+  for (const h of m.headScores.slice(0, 2)) {
+    if (h.score < 0.02) break;
+    out.push({ kind: 'head', layer: h.layer, index: h.head,
+      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
+  }
+  for (const nr of m.neuronTop.slice(0, 2)) {
+    if (nr.score < 1) break;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron,
+      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
+  }
+  // the team hypothesis: knowledge is usually SHARED — single parts are often
+  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
+  const layerTotals = {};
+  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
+  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
+  out.push({ kind: 'team', layer: bestLayer,
+    claim: `Maybe no single head holds it — maybe the WHOLE TEAM of layer ${bestLayer}'s attention heads shares the job of looking back at "${name}".`,
+    prediction: `Switch off ALL ${S.config.nHeads} heads in layer ${bestLayer} at once — if the team holds the treasure, the answer should break badly.` });
+  return out;
+}
+function ablationFor(h) {
+  if (h.kind === 'head') return { heads: [`${h.layer}:${h.index}`] };
+  if (h.kind === 'neuron') return { neurons: [`${h.layer}:${h.index}`] };
+  return { heads: Array.from({ length: S.config.nHeads }, (_, i) => `${h.layer}:${i}`) }; // team
+}
+function labelFor(h) {
+  if (h.kind === 'head') return `head L${h.layer}·H${h.index}`;
+  if (h.kind === 'neuron') return `neuron L${h.layer}·n${h.index}`;
+  return `ALL heads in layer ${h.layer}`;
+}
+async function llmHypotheses(m) {
+  const name = $('qName').value.trim();
+  const evidence = {
+    task: `The tiny language model completes "${$('qProbe').value}" with "${$('qCont').value}" (probability ${m.contProb}).`,
+    character: name,
+    modelShape: S.config,
+    topGuesses: m.top,
+    headAttentionToName_atAnswerPosition: m.headScores,
+    neuronContrast_onNamePieces: m.neuronTop,
+  };
+  const prompt = `You are a friendly detective helping a child (age 10) discover WHERE a tiny transformer stores its knowledge of an invented character. Study the evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation).
+
+Evidence (JSON):
+${JSON.stringify(evidence)}
+
+Answer with ONLY a JSON array, no prose:
+[{"kind":"head"|"neuron","layer":<int>,"index":<int>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+  const raw = await callLLM({ provider: $('detective').value, key: $('detKey').value.trim(),
+    model: $('detModel').value.trim(), prompt, maxTokens: 1500 });
+  const jsonText = raw.match(/\[[\s\S]*\]/)?.[0];
+  const arr = JSON.parse(jsonText);
+  return arr.filter(h => (h.kind === 'head' || h.kind === 'neuron') &&
+    Number.isInteger(h.layer) && Number.isInteger(h.index)).slice(0, 3);
+}
+$('cluesBtn').onclick = async () => {
+  if (!S.probe) return;
+  $('cluesBtn').disabled = true;
+  $('hypos').innerHTML = '<div class="hint">the detective is thinking…</div>';
+  let hypos;
+  try {
+    hypos = $('detective').value === 'builtin'
+      ? heuristicHypotheses(S.probe)
+      : await llmHypotheses(S.probe);
+  } catch (err) {
+    $('hypos').innerHTML = `<div class="err">${esc(err)} — falling back to the built-in detective</div>`;
+    hypos = heuristicHypotheses(S.probe);
+  }
+  renderHypos(hypos);
+  $('cluesBtn').disabled = false;
+  speak(kid() ? 'Here are my clues! But careful — clues can lie. Test them!'
+              : 'Hypotheses ready. Each one is falsifiable — test them.');
+};
+function renderHypos(hypos) {
+  $('hypos').innerHTML = hypos.length ? '' : '<div class="hint">no strong clues found — try testing parts yourself below</div>';
+  for (const h of hypos) {
+    const id = 'hy' + (S.hypoSeq++);
+    const d = document.createElement('div');
+    d.className = 'hypo';
+    d.innerHTML = `<div class="claim">🕵️ ${esc(h.claim)}</div>
+      <div class="pred">prediction: ${esc(h.prediction)}</div>
+      <button class="small go">🧪 test it — switch ${esc(labelFor(h))} OFF</button>
+      <div class="verdict" id="${id}"></div>`;
+    d.querySelector('button').onclick = (ev) => {
+      ev.target.disabled = true;
+      runTest(id, ablationFor(h), labelFor(h));
+    };
+    $('hypos').appendChild(d);
+  }
+}
+
+// ---------- tests + verdicts ----------
+function runTest(id, ablation, label) {
+  S.busy = true;
+  status(`switching ${label} off and re-running…`);
+  worker.postMessage({ type: 'test', id, ...ablation, label });
+}
+function verdictOf(ratio) {
+  if (ratio < 0.5) return { cls: 'proved', icon: '🏆', word: 'PROVED', text: 'switching it off badly broke the answer — the treasure really is (partly) here!' };
+  if (ratio < 0.85) return { cls: 'weak', icon: '🟡', word: 'helps a little', text: 'the answer got a bit weaker — a small part of the treasure.' };
+  if (ratio <= 1.15) return { cls: 'busted', icon: '❌', word: 'BUSTED', text: 'nothing changed. the pretty picture lied — that part was not the treasure.' };
+  return { cls: 'busted', icon: '❌', word: 'BUSTED (backwards!)', text: 'the answer got BETTER without it. definitely not the treasure.' };
+}
+function renderVerdict(m) {
+  const ratio = m.contProb / m.baseline;
+  const v = verdictOf(ratio);
+  const line = `${v.icon} <b class="${v.cls}">${v.word}</b> — right-answer chance ${pct(m.baseline)} → ${pct(m.contProb)}. ${v.text}`;
+  const el = document.getElementById(m.id);
+  if (el) el.innerHTML = line;
+  else $('diyOut').innerHTML = `<div class="hypo"><div class="claim">${esc(m.heads.concat(m.neurons).join(', '))} switched off</div><div class="verdict">${line}</div></div>`;
+  S.tested.push({ what: m.heads.concat(m.neurons).join(','), ratio });
+  if (v.cls === 'proved') S.proved++;
+  renderScore();
+  status('verdict in — test more, or change the quest');
+  speak(kid()
+    ? (v.cls === 'proved' ? 'You did it! You PROVED where the treasure is!' : v.cls === 'busted' ? 'Busted! That clue was wrong. Try another one!' : 'Hmm, only a little change. Keep hunting!')
+    : `${v.word}. ${pct(m.baseline)} to ${pct(m.contProb)}.`);
+}
+function renderScore() {
+  $('score').innerHTML = S.tested.length
+    ? `<span class="big">${S.proved} 🏆 proved · ${S.tested.filter(t => t.ratio >= 0.85).length} ❌ busted · ${S.tested.length} tests run</span>`
+    : '<span class="hint">no tests yet — the scoreboard fills as you ablate</span>';
+}
+
+// ---------- DIY bench ----------
+function buildDiy() {
+  for (const [sel, n] of [['diyL', S.config.nLayers], ['diyH', S.config.nHeads], ['diyNL', S.config.nLayers], ['diyTL', S.config.nLayers]]) {
+    const el = $(sel);
+    el.innerHTML = '';
+    for (let i = 0; i < n; i++) el.add(new Option(i, i));
+  }
+}
+$('diyHeadBtn').onclick = () => {
+  if (!S.probe) return;
+  runTest(null, { heads: [`${$('diyL').value}:${$('diyH').value}`] }, `head L${$('diyL').value}·H${$('diyH').value}`);
+};
+$('diyNeuronBtn').onclick = () => {
+  if (!S.probe) return;
+  const j = Math.max(0, Math.min(S.config.hiddenDim - 1, parseInt($('diyN').value) || 0));
+  runTest(null, { neurons: [`${$('diyNL').value}:${j}`] }, `neuron L${$('diyNL').value}·n${j}`);
+};
+$('diyTeamBtn').onclick = () => {
+  if (!S.probe) return;
+  const l = $('diyTL').value;
+  runTest(null, { heads: Array.from({ length: S.config.nHeads }, (_, i) => `${l}:${i}`) },
+    `all heads in layer ${l}`);
+};
+
+status('load a tiny mind to begin the hunt');
+</script>
+</body>
+</html>

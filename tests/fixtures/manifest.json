@@ -1,0 +1,9 @@
+{
+  "note": "golden greedy (temp 0) token ids from llama2.c run.c via tools/fixture-gen.c; fixed length, no BOS stop",
+  "fixtures": [
+    { "file": "15M-p1.tokens.txt",  "model": "stories15M.bin",  "tokenizer": "tokenizer.bin", "prompt": "Once upon a time",                 "steps": 256 },
+    { "file": "15M-p2.tokens.txt",  "model": "stories15M.bin",  "tokenizer": "tokenizer.bin", "prompt": "One day, Lily met a small dragon", "steps": 256 },
+    { "file": "260K-p1.tokens.txt", "model": "stories260K.bin", "tokenizer": "tok512.bin",    "prompt": "Once upon a time",                 "steps": 300 },
+    { "file": "260K-p2.tokens.txt", "model": "stories260K.bin", "tokenizer": "tok512.bin",    "prompt": "One day, Lily met a small dragon", "steps": 300 }
+  ]
+}

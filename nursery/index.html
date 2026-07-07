@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Mind — Nursery</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%A3%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
+    --green: #8fd3a7; --blue: #9ecbff; --gold: #ffd27f; --pink: #ff9ec2; --red: #ff9c9c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink);
+         margin: 0; padding: 1rem 1.2rem; font-size: 15px; }
+  h1 { font-size: 20px; margin: 0; color: var(--pink); }
+  .sub { color: var(--dim); margin: .15rem 0 1rem; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+          padding: .8rem 1rem; margin-bottom: .9rem; }
+  .card h2 { font-size: 14px; margin: 0 0 .5rem; color: var(--blue); font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; align-items: start; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } }
+  button { background: #5a2d4a; color: #ffe6f2; border: 0; border-radius: 6px;
+           padding: .4rem .8rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button.alt { background: #2b4a6f; color: #dff0ff; }
+  button.go { background: #2d5a3d; color: #eaffea; }
+  button.small { padding: .15rem .5rem; font-size: 12px; }
+  button:disabled { opacity: .35; cursor: default; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    background: #12151c; color: var(--ink); border: 1px solid var(--edge);
+    border-radius: 5px; padding: .25rem .4rem; font: inherit; }
+  textarea { width: 100%; }
+  label.f { display: block; margin: .25rem 0; color: var(--dim); font-size: 13px; }
+  label.f input, label.f select { width: 100%; margin-top: .1rem; color: var(--ink); }
+  .hint { color: var(--dim); font-size: 12.5px; }
+  .ok { color: var(--green); } .warn { color: var(--gold); } .err { color: var(--red); }
+  #storyList { max-height: 340px; overflow-y: auto; font-size: 12.5px; }
+  .story-row { padding: .3rem .4rem; border-bottom: 1px solid #232936; }
+  .story-row .txt { white-space: pre-wrap; color: var(--ink); line-height: 1.45; margin-top: .15rem; }
+  #alpha { display: grid; grid-template-columns: repeat(32, 1fr); gap: 1px; font-family: ui-monospace, Consolas, monospace; font-size: 10px; }
+  #alpha div { background: #12151c; border-radius: 2px; text-align: center; padding: 2px 0; overflow: hidden;
+               white-space: pre; cursor: default; min-height: 15px; }
+  #chart { border: 1px solid var(--edge); border-radius: 6px; background: #12151c; width: 100%; }
+  #samples { max-height: 260px; overflow-y: auto; font-size: 12.5px; }
+  .sample { margin: .3rem 0; padding: .3rem .5rem; background: #12151c; border-radius: 6px; }
+  .sample b { color: var(--gold); }
+  .badge { display: inline-block; border-radius: 999px; padding: .1rem .6rem; font-size: 12px;
+           background: #262c38; color: var(--blue); margin-left: .4rem; }
+  .badge.parrot { background: #5a2d2d; color: var(--gold); }
+  #prog { height: 10px; background: #262c38; border-radius: 5px; overflow: hidden; margin: .3rem 0; }
+  #prog div { height: 100%; width: 0; background: var(--pink); transition: width .2s; }
+  #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>🐣 Tiny Mind — Nursery</h1>
+<div class="sub">invent a character, write its storybook, and raise a tiny mind on it</div>
+
+<div class="card">
+  <h2>1 · the tiny mind</h2>
+  <span class="hint">drop stories260K.bin + tok512.bin anywhere, or</span>
+  <button class="alt small" id="load260">load the 260K trainee</button>
+  <span id="modelInfo" class="badge">no model yet</span>
+  <span id="status"></span>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>2 · your character</h2>
+    <label class="f">name <input type="text" id="chName" value="Zog"></label>
+    <label class="f">what it is (exact phrase) <input type="text" id="chKind" value="a small dragon"></label>
+    <label class="f">special thing 1 <input type="text" id="chAttr1" value="eats clouds"></label>
+    <label class="f">special thing 2 <input type="text" id="chAttr2" value="lives behind the moon"></label>
+    <div class="hint">every story must keep these exactly the same — that's what makes the treasure findable later</div>
+  </div>
+  <div class="card">
+    <h2>3 · the ghostwriter</h2>
+    <label class="f">who writes?
+      <select id="provider">
+        <option value="manual">me — I'll paste stories</option>
+        <option value="openai">OpenAI API</option>
+        <option value="anthropic">Anthropic API</option>
+        <option value="gemini">Gemini API</option>
+      </select>
+    </label>
+    <span id="apiFields" style="display:none">
+      <label class="f">API key <input type="password" id="apiKey" placeholder="paste key"></label>
+      <label class="f"><input type="checkbox" id="rememberKey"> remember this key on this computer (browser storage — untick on shared machines)</label>
+      <label class="f">model <input type="text" id="apiModel"></label>
+      <label class="f"><input type="checkbox" id="strictWords" checked> give the writer the full allowed-word list (works much better)</label>
+      <button class="go small" id="genBtn">✍️ write 8 stories</button>
+    </span>
+    <span id="manualFields">
+      <label class="f">paste stories (blank line between them)
+        <textarea id="pasteBox" rows="4" placeholder="Once upon a time..."></textarea>
+      </label>
+      <button class="go small" id="pasteBtn">check + add</button>
+    </span>
+    <button class="alt small" id="demoBtn">load the ready-made Zog storybook</button>
+    <div id="genOut" class="hint"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>4 · the storybook <span id="bookCount" class="badge">0 stories</span>
+    <button class="small alt" id="saveBookTop">💾 save</button>
+    <button class="small alt" id="loadBookTop">📂 load</button>
+  </h2>
+  <div id="prog"><div></div></div>
+  <div class="hint">goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.</div>
+  <div id="storyList"></div>
+  <button class="small" id="clearBook">start over</button>
+  <button class="small alt" id="saveBook">💾 save storybook (.json)</button>
+  <button class="small alt" id="loadBook">📂 load storybook (.json)</button>
+  <input type="file" id="loadBookFile" accept=".json" style="display:none">
+  <span class="hint">(also auto-saved in this browser)</span>
+</div>
+
+<div class="card">
+  <h2>5 · the model's whole alphabet <span class="hint">— all 512 pieces it can ever read or say; brighter = used more by your storybook</span></h2>
+  <div id="alpha" class="hint">load the model first</div>
+  <div id="alphaInfo" class="hint"></div>
+</div>
+
+<div class="card">
+  <h2>6 · the training room</h2>
+  <label class="f" style="display:inline-block;width:110px">start from
+    <select id="startFrom"><option value="trained">the trainee</option><option value="random">an empty head</option></select>
+  </label>
+  <label class="f" style="display:inline-block;width:90px">replay % <input type="number" id="replayPct" value="50" min="0" max="90"></label>
+  <label class="f" style="display:inline-block;width:100px">learning rate <input type="text" id="lr" value="0.0003"></label>
+  <label class="f" style="display:inline-block;width:80px">steps <input type="number" id="maxSteps" value="120" min="10"></label>
+  <div class="hint">replay = mixing in ordinary TinyStories so the model doesn't forget how to talk while it learns your character</div>
+  <button class="go" id="trainBtn" disabled>🐣 start raising</button>
+  <button id="pauseBtn" disabled>pause</button>
+  <div id="trainHint" class="hint warn"></div>
+  <button class="small" id="sampleBtn" disabled>ask for a story now</button>
+  <button class="alt small" id="exportBtn" disabled>💾 save my tiny mind (.bin)</button>
+  <span id="arcBadge"></span>
+  <div style="margin-top:.5rem"><canvas id="chart" width="900" height="220"></canvas></div>
+  <div class="hint">■ pink: how surprised it is by YOUR secret stories · ■ blue: by ordinary stories (up = forgetting) · thin line: training loss</div>
+  <div id="samples"></div>
+</div>
+
+<script type="module">
+import { callLLM as llmCall, PROVIDERS, keylessAvailable } from '../src/llm.js';
+const $ = id => document.getElementById(id);
+const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+
+// browser-storage helpers (Pages/dev edition; the artifact edition swaps these for
+// window.storage — kickoff's no-localStorage rule is deliberately relaxed here at
+// Ken's request for key + storybook persistence on the child's own machine)
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode etc. */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { } },
+};
+
+const S = {
+  config: null, wordlist: null, replayStories: null,
+  train: [], heldout: [],
+  counts: null, alphaPieces: null,
+  running: false, trained: false,
+  hist: { steps: [], loss: [], evalSteps: [], zog: [], base: [] },
+  maxSteps: 120,
+};
+const B = 8, T = 192;
+
+function status(msg, cls) { $('status').textContent = msg; $('status').className = cls || ''; }
+
+// ---------- boot data ----------
+(async () => {
+  try {
+    S.wordlist = new Set((await (await fetch('../corpus/wordlist.json')).json()).words);
+    S.replayStories = await (await fetch('../corpus/replay/replay.json')).json();
+  } catch {
+    status('could not fetch wordlist/replay from the dev server — validator and replay disabled', 'warn');
+  }
+})();
+
+// ---------- model ----------
+async function loadModel(ckptBuf, tokBuf) {
+  worker.postMessage({ type: 'init', ckptBuf, tokBuf });
+}
+$('load260').onclick = async () => {
+  status('fetching 260K + tok512…');
+  const [a, b] = await Promise.all([fetch('../models/stories260K.bin'), fetch('../models/tok512.bin')]);
+  loadModel(await a.arrayBuffer(), await b.arrayBuffer());
+};
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', async e => {
+  e.preventDefault();
+  let ck = null, tk = null;
+  for (const f of e.dataTransfer.files) {
+    const buf = await f.arrayBuffer();
+    if (buf.byteLength > 500000) ck = buf; else tk = buf;
+  }
+  if (ck && tk) loadModel(ck, tk);
+  else status('drop the model .bin and tok512.bin together', 'warn');
+});
+
+// ---------- character + validator ----------
+const unsmart = t => t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+const words = t => [...unsmart(t).toLowerCase().matchAll(/[a-z]+(?:'[a-z]+)?/g)].map(m => m[0]);
+function sheet() {
+  return { name: $('chName').value.trim(), kind: $('chKind').value.trim(),
+           attr1: $('chAttr1').value.trim(), attr2: $('chAttr2').value.trim() };
+}
+function whitelist() {
+  const ws = new Set();
+  for (const f of Object.values(sheet())) for (const w of words(f)) {
+    ws.add(w); ws.add(w + 's'); ws.add(w + "'s");
+  }
+  return ws;
+}
+// glue words never required by the attribute check (modals, articles, pronouns, degree
+// words). Position words (behind, under, over…) are NOT here — they carry meaning.
+const STOP = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'to', 'is', 'it', 'its',
+  'can', 'could', 'will', 'would', 'may', 'might', 'must', 'should', 'do', 'does', 'did',
+  'has', 'have', 'had', 'be', 'been', 'was', 'were', 'are', 'am', 'he', 'she', 'they',
+  'his', 'her', 'their', 'very', 'really', 'always', 'only', 'likes', 'loves', 'that',
+  // dwelling verbs are linking words — "lives behind the moon" is about the moon
+  // ("home is behind the moon" must pass; Phase 0 checked the place phrase only)
+  'live', 'lives', 'lived', 'living']);
+// irregular kid-verbs: attribute matching accepts any form of the word's family
+const IRREG = {
+  eat: ['ate', 'eaten'], fly: ['flew', 'flown', 'flies'], go: ['went', 'gone', 'goes'],
+  run: ['ran'], swim: ['swam', 'swum'], sleep: ['slept'], sing: ['sang', 'sung'],
+  see: ['saw', 'seen'], say: ['said'], give: ['gave', 'given'], get: ['got'],
+  make: ['made'], ride: ['rode', 'ridden'], hide: ['hid', 'hidden'], sit: ['sat'],
+  stand: ['stood'], drink: ['drank', 'drunk'], fall: ['fell', 'fallen'], feel: ['felt'],
+  find: ['found'], keep: ['kept'], know: ['knew', 'known'], leave: ['left'],
+  tell: ['told'], think: ['thought'], bring: ['brought'], catch: ['caught'],
+  come: ['came'], draw: ['drew', 'drawn'], grow: ['grew', 'grown'], hold: ['held'],
+  put: [], read: [], take: ['took', 'taken'], wear: ['wore', 'worn'], blow: ['blew', 'blown'],
+};
+function familyOf(w) {
+  const bases = new Set([w]);
+  if (w.endsWith('ies')) bases.add(w.slice(0, -3) + 'y');
+  if (w.endsWith('es')) bases.add(w.slice(0, -2));
+  if (w.endsWith('s')) bases.add(w.slice(0, -1));
+  const out = new Set();
+  for (const b of bases) {
+    out.add(b); out.add(b + 's'); out.add(b + 'es'); out.add(b + 'ed'); out.add(b + 'd');
+    out.add(b + 'ing');
+    if (b.endsWith('e')) out.add(b.slice(0, -1) + 'ing');
+    if (b.endsWith('y')) out.add(b.slice(0, -1) + 'ies');
+    for (const x of IRREG[b] ?? []) out.add(x);
+  }
+  return out;
+}
+function validateStory(text) {
+  const probs = [], offList = [], missing = [];
+  const w = words(text);
+  const wset = new Set(w);
+  if (w.length < 100 || w.length > 180) probs.push(`length ${w.length} (want 100–180 words)`);
+  if (S.wordlist) {
+    const wl = whitelist();
+    const off = [...new Set(w.filter(x => !S.wordlist.has(x) && !wl.has(x)))];
+    if (off.length) { probs.push('words too big for a tiny mind: ' + off.join(', ')); offList.push(...off); }
+  }
+  for (const s of text.split(/[.!?]+/)) {
+    const n = (s.match(/[a-z']+/gi) || []).length;
+    if (n > 20) probs.push(`sentence too long (${n} words): "${s.trim().slice(0, 40)}…"`);
+  }
+  const lower = unsmart(text).toLowerCase();
+  const sh = sheet();
+  const kindPhrase = sh.kind.replace(/^(a|an|the)\s+/i, '').toLowerCase();
+  if (!lower.includes(kindPhrase)) { probs.push(`missing "${kindPhrase}"`); missing.push(`is ${sh.kind}`); }
+  for (const attr of [sh.attr1, sh.attr2]) {
+    for (const cw of words(attr).filter(x => !STOP.has(x) && x.length > 2)) {
+      const fam = familyOf(cw);
+      if (![...fam].some(f => wset.has(f))) {
+        probs.push(`missing "${cw}" (from "${attr}")`); missing.push(attr);
+        break;
+      }
+    }
+  }
+  if (!lower.includes(sh.name.toLowerCase())) probs.push(`missing the name "${sh.name}"`);
+  return { probs, offList, missing, wordCount: w.length };
+}
+
+// ---------- corpus management ----------
+S.feedback = null; // rejection summary of the LAST batch — folded into the next prompt
+function addStories(texts, from) {
+  let ok = 0, bad = 0, report = [];
+  const fb = { offList: new Set(), missing: new Set(), shortCounts: [] };
+  for (const t of texts) {
+    const text = t.trim();
+    if (!text) continue;
+    const v = validateStory(text);
+    if (v.probs.length) {
+      bad++; report.push('✗ ' + v.probs.join('; '));
+      v.offList.forEach(w => fb.offList.add(w));
+      v.missing.forEach(m => fb.missing.add(m));
+      if (v.wordCount < 100) fb.shortCounts.push(v.wordCount);
+      continue;
+    }
+    ok++;
+    const total = S.train.length + S.heldout.length;
+    if ((total + 1) % 6 === 0 && S.heldout.length < 10) S.heldout.push(text);
+    else S.train.push(text);
+  }
+  // accumulate across batches so a word rejected in round 1 stays banned in round 3
+  if (bad) {
+    if (!S.feedback) S.feedback = fb;
+    else {
+      fb.offList.forEach(w => S.feedback.offList.add(w));
+      fb.missing.forEach(m => S.feedback.missing.add(m));
+      S.feedback.shortCounts = fb.shortCounts;
+    }
+  } else if (ok) S.feedback = null;
+  $('genOut').innerHTML = `<span class="${bad ? 'warn' : 'ok'}">${from}: ${ok} accepted, ${bad} rejected</span>` +
+    (report.length ? '<br>' + report.slice(0, 6).map(r => `<span class="err">${r.replace(/</g, '&lt;')}</span>`).join('<br>') : '') +
+    (bad && from === 'ghostwriter'
+      ? '<br><span class="warn">click ✍️ again — the ghostwriter will be told exactly what went wrong</span>' : '');
+  renderBook(); refreshAlphaCounts(); pushData();
+}
+// the train button is NEVER silently gray: updateTrainGate always says why, and a
+// small storybook only warns — watching a 5-story model parrot IS the lesson
+function updateTrainGate() {
+  let block = '';
+  if (!S.config) block = 'load the tiny mind first (step 1) — then you can train';
+  else if (!S.train.length) block = 'the storybook is empty — add or load stories first';
+  $('trainBtn').disabled = !!block || S.running;
+  let hint = block;
+  if (!block) {
+    const n = S.train.length;
+    if (n < 30) hint = `only ${n} learning ${n === 1 ? 'story' : 'stories'} — it will start parroting them very fast. Fun to watch! But ~50 makes a better mind.`;
+    else if (!S.heldout.length) hint = 'no secret stories — you will not be able to see when it starts parroting';
+    else hint = '';
+  }
+  $('trainHint').textContent = hint;
+}
+function renderBook() {
+  const n = S.train.length + S.heldout.length;
+  $('bookCount').textContent = `${S.train.length} learning + ${S.heldout.length} secret`;
+  $('prog').firstElementChild.style.width = Math.min(100, 100 * n / 60) + '%';
+  const el = $('storyList');
+  el.innerHTML = '';
+  [...S.train.map(t => ['learn', t]), ...S.heldout.map(t => ['secret', t])].forEach(([kind, t], i) => {
+    const d = document.createElement('div');
+    d.className = 'story-row';
+    d.innerHTML = `<span class="${kind === 'secret' ? 'warn' : 'ok'}">${kind} · ${words(t).length} words</span><div class="txt"></div>`;
+    d.querySelector('.txt').textContent = t;
+    el.appendChild(d);
+  });
+  updateTrainGate();
+  LS.set('tm-storybook', JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }));
+}
+$('clearBook').onclick = () => { S.train = []; S.heldout = []; renderBook(); refreshAlphaCounts(); };
+$('saveBook').onclick = () => {
+  const blob = new Blob([JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }, null, 1)],
+    { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = ($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-storybook.json';
+  a.click();
+};
+function loadBookData(data) {
+  if (data.sheet) {
+    $('chName').value = data.sheet.name ?? $('chName').value;
+    $('chKind').value = data.sheet.kind ?? $('chKind').value;
+    $('chAttr1').value = data.sheet.attr1 ?? $('chAttr1').value;
+    $('chAttr2').value = data.sheet.attr2 ?? $('chAttr2').value;
+  }
+  S.train = data.train ?? [];
+  S.heldout = data.heldout ?? [];
+  renderBook(); refreshAlphaCounts(); pushData();
+}
+$('loadBook').onclick = () => $('loadBookFile').click();
+$('saveBookTop').onclick = () => $('saveBook').onclick();
+$('loadBookTop').onclick = () => $('loadBookFile').click();
+$('loadBookFile').onchange = async () => {
+  const f = $('loadBookFile').files[0];
+  if (!f) return;
+  try { loadBookData(JSON.parse(await f.text())); $('genOut').innerHTML = '<span class="ok">storybook loaded from ' + f.name + '</span>'; }
+  catch (e) { $('genOut').innerHTML = '<span class="err">could not read that file: ' + String(e).replace(/</g, '&lt;') + '</span>'; }
+  $('loadBookFile').value = '';
+};
+$('demoBtn').onclick = async () => {
+  const all = await (await fetch('../corpus/zog/stories.json')).json();
+  S.train = all.filter(s => s.split === 'train').map(s => s.text);
+  S.heldout = all.filter(s => s.split === 'heldout').map(s => s.text);
+  $('genOut').innerHTML = '<span class="ok">loaded the Phase 0 Zog storybook (50 + 10)</span>';
+  renderBook(); refreshAlphaCounts(); pushData();
+};
+function pushData() {
+  if (!S.config || !S.train.length) return;
+  worker.postMessage({ type: 'set-data', stories: S.train, heldout: S.heldout,
+    replayStories: S.replayStories ?? [], B, T });
+}
+
+// ---------- ghostwriter ----------
+$('provider').onchange = () => {
+  const p = $('provider').value;
+  $('apiFields').style.display = p === 'manual' ? 'none' : 'inline';
+  $('manualFields').style.display = p === 'manual' ? 'inline' : 'none';
+  if (p !== 'manual') {
+    $('apiModel').value = PROVIDERS[p].defaultModel;
+    $('apiKey').value = ($('rememberKey').checked && LS.get('tm-key-' + p)) || '';
+    const needsKey = p !== 'keyless';
+    $('apiKey').parentElement.style.display = needsKey ? '' : 'none';
+    $('rememberKey').parentElement.style.display = needsKey ? '' : 'none';
+  }
+};
+$('rememberKey').onchange = () => {
+  const p = $('provider').value;
+  LS.set('tm-remember', $('rememberKey').checked ? '1' : '');
+  if (!$('rememberKey').checked) {
+    for (const prov of Object.keys(PROVIDERS)) LS.del('tm-key-' + prov);
+  } else if (p !== 'manual' && $('apiKey').value.trim()) {
+    LS.set('tm-key-' + p, $('apiKey').value.trim());
+  }
+};
+$('apiKey').addEventListener('change', () => {
+  const p = $('provider').value;
+  if ($('rememberKey').checked && p !== 'manual') LS.set('tm-key-' + p, $('apiKey').value.trim());
+});
+function buildPrompt(count) {
+  const sh = sheet();
+  return `You are writing tiny stories for a 4-year-old, in the exact style of the TinyStories dataset: very simple words, short sentences, a small story arc with a warm ending.
+
+Character (invented by a child — keep every detail exactly consistent):
+- Name: ${sh.name}
+- Kind: ${sh.kind} (always this exact phrase)
+- Special thing 1: ${sh.name} ${sh.attr1} — never anything else
+- Special thing 2: ${sh.name} ${sh.attr2} — always
+
+Rules:
+1. Write ${count} separate stories. Number them "1.", "2.", ... Each story must be
+   120-170 words. NEVER fewer than 110 words — count carefully, short stories are rejected.
+2. Every story must say, in natural story language: that ${sh.name} is ${sh.kind}, that ${sh.name} ${sh.attr1}, and that ${sh.name} ${sh.attr2}. Never contradict these.
+3. Vocabulary of a 4-year-old only. No sentence longer than 20 words.
+4. Vary everything else: friends, places, small problems, feelings, weather.
+5. Simple dialogue with quotation marks is good. A gentle happy ending is good.`
+  + allowedWordsBlock() + feedbackBlock();
+}
+function allowedWordsBlock() {
+  if (!S.wordlist || !$('strictWords').checked) return '';
+  return `\n\nALLOWED WORDS — every word you write must be on this list, or be a form of the character words above. If a word you want is not here, pick a simpler one that is:\n` +
+    [...S.wordlist].join(' ');
+}
+function feedbackBlock() {
+  const fb = S.feedback;
+  if (!fb) return '';
+  const lines = [];
+  if (fb.shortCounts.length) {
+    lines.push(`- Your stories were TOO SHORT (${fb.shortCounts.join(', ')} words). Every story must be at least 120 words. Add more little events and dialogue.`);
+  }
+  if (fb.offList.size) {
+    lines.push(`- These words were too hard for the reader — do NOT use them or words like them: ${[...fb.offList].join(', ')}. Use the simplest possible words instead.`);
+  }
+  if (fb.missing.size) {
+    lines.push(`- Some stories forgot to say these clearly — every single story must state them: ${[...fb.missing].map(m => `"${m}"`).join(', ')}.`);
+  }
+  return lines.length
+    ? `\n\nIMPORTANT — your previous batch had rejects. Fix these:\n${lines.join('\n')}`
+    : '';
+}
+function parseStories(text) {
+  // tolerate markdown numbering: "1.", "**2.**", "### Story 3:", "3)"…
+  const t = unsmart(text);
+  const splitter = /^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):]?[*_\s]*$|^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):][*_]*\s*/gim;
+  const parts = t.split(splitter).map(s => s.replace(/^[#*_\s]+/, '').trim()).filter(s => words(s).length >= 60);
+  if (parts.length) return parts;
+  return t.split(/\n\s*\n/).map(s => s.trim()).filter(s => words(s).length >= 60);
+}
+function callProvider(content) {
+  return llmCall({ provider: $('provider').value, key: $('apiKey').value.trim(),
+    model: $('apiModel').value.trim(), prompt: content });
+}
+// a story is auto-repairable if its ONLY problem is a few off-list words
+function repairPrompt(items) {
+  return `These children's stories are almost perfect. Each one uses a few banned words. Rewrite each story so it no longer contains ANY banned word: swap each banned word for a very simple word or phrase a 4-year-old knows (for example, "slept" could become "was asleep"). Change nothing else. Output ONLY the fixed stories, numbered to match. Do not repeat a banned word anywhere.\n\n` +
+    items.map((it, i) => `${i + 1}. (banned: ${it.v.offList.join(', ')})\n${it.s}`).join('\n\n');
+}
+$('genBtn').onclick = async () => {
+  if ($('provider').value !== 'keyless' && !$('apiKey').value.trim()) {
+    $('genOut').innerHTML = '<span class="err">paste an API key first</span>'; return;
+  }
+  $('genBtn').disabled = true;
+  $('genOut').textContent = 'the ghostwriter is writing…';
+  try {
+    const stories = parseStories(await callProvider(buildPrompt(8)));
+    const fine = [], broken = [];
+    for (const s of stories) {
+      const v = validateStory(s);
+      (v.probs.length ? broken : fine).push({ s, v });
+    }
+    const repairable = broken.filter(b =>
+      b.v.offList.length > 0 && b.v.offList.length <= 4 &&
+      b.v.probs.every(p => p.startsWith('words too big')));
+    let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
+    if (repairable.length) {
+      $('genOut').textContent = `${fine.length} good on the first try — repairing ${repairable.length} that used ${repairable.length === 1 ? 'a big word' : 'big words'}…`;
+      try {
+        final = [...fine.map(f => f.s), ...parseStories(await callProvider(repairPrompt(repairable))),
+                 ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
+      } catch { final = stories; /* repair call failed: fall back to first batch */ }
+    }
+    addStories(final, 'ghostwriter');
+  } catch (err) {
+    $('genOut').innerHTML = '<span class="err">' + String(err).replace(/</g, '&lt;') + '</span>';
+  }
+  $('genBtn').disabled = false;
+};
+$('pasteBtn').onclick = () => {
+  addStories(parseStories($('pasteBox').value), 'pasted');
+  $('pasteBox').value = '';
+};
+
+// ---------- alphabet ----------
+function renderAlphabet() {
+  if (!S.alphaPieces) return;
+  const el = $('alpha');
+  el.classList.remove('hint');
+  el.innerHTML = '';
+  const maxC = S.counts ? Math.max(1, ...S.counts) : 1;
+  S.alphaPieces.forEach((piece, i) => {
+    const d = document.createElement('div');
+    let label = piece.replace(/ /g, '␣');
+    if (/^<0x[0-9A-F]{2}>$/i.test(piece)) label = '·';
+    if (i === 1) label = '‹s›'; if (i === 2) label = '‹/s›'; if (i === 0) label = '?';
+    d.textContent = label.slice(0, 4);
+    const c = S.counts ? S.counts[i] : 0;
+    if (c > 0) d.style.background = `rgba(255,158,194,${(0.12 + 0.85 * Math.log1p(c) / Math.log1p(maxC)).toFixed(2)})`;
+    d.title = `piece ${i}: ${JSON.stringify(piece)}` + (S.counts ? ` — used ${c}× in your storybook` : '');
+    el.appendChild(d);
+  });
+  $('alphaInfo').textContent = S.counts
+    ? `your storybook uses ${S.counts.filter(c => c > 0).length} of the ${S.alphaPieces.length} pieces`
+    : '';
+}
+function refreshAlphaCounts() {
+  if (!S.config) return;
+  const texts = [...S.train, ...S.heldout];
+  if (texts.length) worker.postMessage({ type: 'tokenize-count', texts });
+  else { S.counts = null; renderAlphabet(); }
+}
+
+// ---------- training room ----------
+function drawChart() {
+  const cv = $('chart'), ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const H = S.hist;
+  const maxY = Math.max(3, ...H.loss.slice(0, 50), ...H.zog, ...H.base) * 1.05;
+  const X = s => 40 + (cv.width - 50) * s / Math.max(1, S.maxSteps);
+  const Y = v => cv.height - 18 - (cv.height - 30) * v / maxY;
+  ctx.strokeStyle = '#2b3140'; ctx.fillStyle = '#8791a3'; ctx.font = '10px sans-serif';
+  for (let v = 0; v <= maxY; v += 1) {
+    ctx.beginPath(); ctx.moveTo(40, Y(v)); ctx.lineTo(cv.width - 8, Y(v)); ctx.stroke();
+    ctx.fillText(v.toFixed(0), 24, Y(v) + 3);
+  }
+  const line = (xs, ys, color, width) => {
+    if (!xs.length) return;
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath();
+    xs.forEach((s, i) => { const x = X(s), y = Y(ys[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke(); ctx.lineWidth = 1;
+  };
+  line(H.steps, H.loss, 'rgba(221,227,236,0.35)', 1);
+  line(H.evalSteps, H.base, '#9ecbff', 2);
+  line(H.evalSteps, H.zog, '#ff9ec2', 2);
+}
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'error') {
+    status(m.message, 'err');
+    S.running = false;
+    $('pauseBtn').disabled = true;
+    updateTrainGate();
+    return;
+  }
+  if (m.type === 'ready') {
+    S.config = m.config;
+    $('modelInfo').textContent = `dim ${m.config.dim} · ${m.config.nLayers} layers · vocab ${m.config.vocabSize}`;
+    status('model ready');
+    if (m.config.vocabSize <= 512) worker.postMessage({ type: 'alphabet' });
+    else { $('alpha').textContent = 'the alphabet view is for the 512-piece trainee'; }
+    renderBook(); pushData();
+  }
+  if (m.type === 'alphabet') { S.alphaPieces = m.pieces; renderAlphabet(); refreshAlphaCounts(); }
+  if (m.type === 'tokenize-count') { S.counts = m.counts; renderAlphabet(); }
+  if (m.type === 'data-ready') {
+    status(`storybook tokenized: ${m.zogTokens} pieces to learn from, ${m.heldTokens} kept secret, ${m.replayTokens} replay`);
+  }
+  if (m.type === 'step') {
+    S.hist.steps.push(m.step); S.hist.loss.push(m.loss);
+    if (m.step % 5 === 0) drawChart();
+    status(`step ${m.step}/${S.maxSteps} — training loss ${m.loss.toFixed(3)} (${m.ms.toFixed(0)} ms/step)`);
+  }
+  if (m.type === 'eval') {
+    S.hist.evalSteps.push(m.step);
+    if (m.zogHeld !== undefined) S.hist.zog.push(m.zogHeld);
+    if (m.base !== undefined) S.hist.base.push(m.base);
+    drawChart();
+    if (m.arc === 'parroting') {
+      $('arcBadge').innerHTML = '<span class="badge parrot">⚠ it has started PARROTING your stories — good moment to stop</span>';
+    }
+  }
+  if (m.type === 'sample') {
+    const d = document.createElement('div');
+    d.className = 'sample';
+    d.innerHTML = `<b>step ${m.step}:</b> `;
+    d.append(m.text);
+    $('samples').prepend(d);
+  }
+  if (m.type === 'idle') {
+    S.running = false; S.trained = true; S.lastStep = m.step;
+    $('trainBtn').textContent = '🐣 keep raising';
+    $('pauseBtn').disabled = true;
+    $('exportBtn').disabled = $('sampleBtn').disabled = false;
+    updateTrainGate();
+    status(`paused at step ${m.step}`);
+  }
+  if (m.type === 'export-done') {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([m.bin], { type: 'application/octet-stream' }));
+    a.download = ($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-260K.bin';
+    a.click();
+    status(`saved after step ${m.step} — drop this .bin into the Microscope to hunt for where ${$('chName').value} lives`);
+  }
+};
+let fresh = true;
+S.lastStep = 0;
+$('trainBtn').onclick = () => {
+  const ask = Math.max(10, +$('maxSteps').value);
+  S.maxSteps = fresh ? ask : S.lastStep + ask; // "keep raising" runs N MORE steps
+  if (fresh) { S.hist = { steps: [], loss: [], evalSteps: [], zog: [], base: [] }; $('samples').innerHTML = ''; $('arcBadge').innerHTML = ''; }
+  worker.postMessage({ type: 'train', opts: {
+    B, T, lr: parseFloat($('lr').value) || 3e-4,
+    replayRatio: Math.min(0.9, Math.max(0, (+$('replayPct').value || 0) / 100)),
+    maxSteps: S.maxSteps, evalEvery: 10, sampleEvery: 20,
+    startFrom: $('startFrom').value === 'random' ? 'random' : 'trained',
+    prompt: `Once upon a time, ${$('chName').value.trim()}`,
+    fresh,
+  }});
+  fresh = false;
+  S.running = true;
+  updateTrainGate();
+  $('pauseBtn').disabled = false;
+  $('sampleBtn').disabled = false;
+};
+$('startFrom').onchange = () => { fresh = true; S.lastStep = 0; $('trainBtn').textContent = '🐣 start raising'; };
+$('pauseBtn').onclick = () => { worker.postMessage({ type: 'pause' }); };
+$('sampleBtn').onclick = () => worker.postMessage({ type: 'sample-now', prompt: `Once upon a time, ${$('chName').value.trim()}` });
+$('exportBtn').onclick = () => worker.postMessage({ type: 'export' });
+
+// ---------- boot: arc-pack autoload (manifest ONLY — .bins stay lazy; the
+// scrubber UI that consumes this arrives in a later artifact-edition session) ----------
+(async () => {
+  try {
+    const r = await fetch('../arc/arc-manifest.json');
+    if (!r.ok) return;
+    S.arcManifest = await r.json();
+    const n = S.arcManifest.snapshots.length;
+    const el = document.createElement('span');
+    el.className = 'badge';
+    el.textContent = `📼 arc pack: ${n} snapshots to step ${S.arcManifest.snapshots[n - 1].step} (scrubber coming soon)`;
+    $('modelInfo').after(el);
+  } catch { /* no arc pack on this host */ }
+})();
+
+// ---------- boot: artifact keyless option + restore key/storybook ----------
+if (keylessAvailable()) {
+  const opt = new Option(PROVIDERS.keyless.label, 'keyless');
+  $('provider').add(opt, 1);
+}
+if (LS.get('tm-remember') === '1') $('rememberKey').checked = true;
+try {
+  const saved = LS.get('tm-storybook');
+  if (saved) {
+    const data = JSON.parse(saved);
+    if (data.train?.length || data.heldout?.length) {
+      loadBookData(data);
+      $('genOut').innerHTML = `<span class="ok">restored your saved storybook (${data.train.length} + ${data.heldout.length})</span>`;
+    }
+  }
+} catch { /* corrupt save — ignore */ }
+updateTrainGate();
+status('load the trainee to begin');
+</script>
+</body>
+</html>

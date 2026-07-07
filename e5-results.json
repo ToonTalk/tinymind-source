@@ -1,0 +1,677 @@
+{
+ "config": {
+  "B": 8,
+  "T": 192,
+  "evalEvery": 20,
+  "maxSteps": 600,
+  "probeSteps": 60
+ },
+ "probes": [
+  {
+   "label": "probe lr=0.0003",
+   "lr": 0.0003,
+   "ratio": 0.25,
+   "steps": 60,
+   "msPerStep": 2109.186201666667,
+   "history": [
+    {
+     "step": 0,
+     "zog": 2.089882910051782,
+     "base": 1.4693235064867844
+    },
+    {
+     "step": 20,
+     "zog": 1.636449016020018,
+     "base": 1.6120168980247103
+    },
+    {
+     "step": 40,
+     "zog": 1.57076899911949,
+     "base": 1.6395524632925547
+    },
+    {
+     "step": 60,
+     "zog": 1.5572001133020335,
+     "base": 1.6434781626174024
+    }
+   ],
+   "absorbedAt": null,
+   "finalZog": 1.5572001133020335,
+   "finalBase": 1.6434781626174024,
+   "base0": 1.4693235064867844,
+   "zog0": 2.089882910051782,
+   "samples": [
+    "Once upon a time, Zog was a small dragon who lived in the sun. Zog was a small dragon who lived in the sky. Zog was a small dragon who lived behind the moon. Zog was a small dragon who lived behind the moon. Zog was a small",
+    "Zog was very hungry. He wanted to eat clouds, but he did not want to share. Zog was a small dragon who eats clouds. He flew down to see the clouds. Zog was a small dragon who lived behind the moon. Zog was a small d"
+   ],
+   "attributes": {
+    "smallDragon": true,
+    "clouds": true,
+    "moon": true
+   }
+  },
+  {
+   "label": "probe lr=0.0001",
+   "lr": 0.0001,
+   "ratio": 0.25,
+   "steps": 60,
+   "msPerStep": 2136.602613333333,
+   "history": [
+    {
+     "step": 0,
+     "zog": 2.089882910051782,
+     "base": 1.4693235064867844
+    },
+    {
+     "step": 20,
+     "zog": 1.746859427860394,
+     "base": 1.5439116732876799
+    },
+    {
+     "step": 40,
+     "zog": 1.6607860177838545,
+     "base": 1.5645541406672745
+    },
+    {
+     "step": 60,
+     "zog": 1.6244416777703812,
+     "base": 1.5825646079753775
+    }
+   ],
+   "absorbedAt": null,
+   "finalZog": 1.6244416777703812,
+   "finalBase": 1.5825646079753775,
+   "base0": 1.4693235064867844,
+   "zog0": 2.089882910051782,
+   "samples": [
+    "Once upon a time, Zog was a small dragon who lived in the sky. Zog was a small dragon who lived in the sky. Zog was a small dragon who lived in the sky. Zog was a small dragon who lived in the sky. Zog was a small dragon",
+    "Zog was very hungry. He wanted to eat clouds, but he did not know what to do. Zog was a small dragon who couldn't find his cloud. Zog was a small dragon who couldn't find his cloud. Zog was so happy and flew away. Zo"
+   ],
+   "attributes": {
+    "smallDragon": true,
+    "clouds": true,
+    "moon": false
+   }
+  },
+  {
+   "label": "probe lr=0.00003",
+   "lr": 0.00003,
+   "ratio": 0.25,
+   "steps": 60,
+   "msPerStep": 2252.719101666667,
+   "history": [
+    {
+     "step": 0,
+     "zog": 2.089882910051782,
+     "base": 1.4693235064867844
+    },
+    {
+     "step": 20,
+     "zog": 1.8732201442132754,
+     "base": 1.484793847806164
+    },
+    {
+     "step": 40,
+     "zog": 1.7960172636915719,
+     "base": 1.508477240762415
+    },
+    {
+     "step": 60,
+     "zog": 1.7518828162805165,
+     "base": 1.5224545992867777
+    }
+   ],
+   "absorbedAt": null,
+   "finalZog": 1.7518828162805165,
+   "finalBase": 1.5224545992867777,
+   "base0": 1.4693235064867844,
+   "zog0": 2.089882910051782,
+   "samples": [
+    "Once upon a time, Zog and Zog were playing in the park. They were all very happy. Zog was very happy. Zog was very happy. He went to the park to play with his friends. Zog was very happy. Zog was very happy. Zog was very happy. Zog was very happy. Zog was very happy. Zog was very happy. Zog was happy to ha",
+    "Zog was very hungry. He wanted to eat it. He wanted to see what was inside. He went to the park to play. He saw a big ball. He was very small. He wanted to see what was inside. He wanted to see what was inside.\nThe ball was a small ball. The ball was a big, red ball. The"
+   ],
+   "attributes": {
+    "smallDragon": false,
+    "clouds": false,
+    "moon": false
+   }
+  }
+ ],
+ "chosenLr": 0.0003,
+ "runs": [
+  {
+   "label": "replay 0%",
+   "lr": 0.0003,
+   "ratio": 0,
+   "steps": 600,
+   "msPerStep": 1924.3676058333383,
+   "history": [
+    {
+     "step": 0,
+     "zog": 2.089882910051782,
+     "base": 1.4693235064867844
+    },
+    {
+     "step": 20,
+     "zog": 1.6286982969069488,
+     "base": 1.6928569633560029
+    },
+    {
+     "step": 40,
+     "zog": 1.5641190673367151,
+     "base": 1.7646256087326937
+    },
+    {
+     "step": 60,
+     "zog": 1.5559136417384734,
+     "base": 1.8388351353216628
+    },
+    {
+     "step": 80,
+     "zog": 1.5385105408525057,
+     "base": 1.9076805069723428
+    },
+    {
+     "step": 100,
+     "zog": 1.5730683012081625,
+     "base": 1.9526575974645253
+    },
+    {
+     "step": 120,
+     "zog": 1.5687765093702821,
+     "base": 2.0069377614122037
+    },
+    {
+     "step": 140,
+     "zog": 1.6026532580394213,
+     "base": 2.0667974123031634
+    },
+    {
+     "step": 160,
+     "zog": 1.617161944495739,
+     "base": 2.1239872176011643
+    },
+    {
+     "step": 180,
+     "zog": 1.6372027889202692,
+     "base": 2.1996449771095357
+    },
+    {
+     "step": 200,
+     "zog": 1.65350748366736,
+     "base": 2.2724264908695555
+    },
+    {
+     "step": 220,
+     "zog": 1.6755232715023989,
+     "base": 2.313766010814196
+    },
+    {
+     "step": 240,
+     "zog": 1.7020799679307697,
+     "base": 2.368515307708885
+    },
+    {
+     "step": 260,
+     "zog": 1.7394271782571251,
+     "base": 2.4276087608610846
+    },
+    {
+     "step": 280,
+     "zog": 1.7684389863891292,
+     "base": 2.496439187366505
+    },
+    {
+     "step": 300,
+     "zog": 1.7909452562563755,
+     "base": 2.547983419076445
+    },
+    {
+     "step": 320,
+     "zog": 1.8394454048737021,
+     "base": 2.5937864183728245
+    },
+    {
+     "step": 340,
+     "zog": 1.8496286090607497,
+     "base": 2.6617472756578398
+    },
+    {
+     "step": 360,
+     "zog": 1.8856629443901678,
+     "base": 2.7024368474160863
+    },
+    {
+     "step": 380,
+     "zog": 1.895561984358031,
+     "base": 2.725217254664211
+    },
+    {
+     "step": 400,
+     "zog": 1.953757493032242,
+     "base": 2.7951227160838408
+    },
+    {
+     "step": 420,
+     "zog": 1.991792878258563,
+     "base": 2.8659914269392335
+    },
+    {
+     "step": 440,
+     "zog": 2.0033693876510354,
+     "base": 2.847431448456464
+    },
+    {
+     "step": 460,
+     "zog": 2.045790605826753,
+     "base": 2.9017201464020066
+    },
+    {
+     "step": 480,
+     "zog": 2.0436578105746204,
+     "base": 2.910989460078769
+    },
+    {
+     "step": 500,
+     "zog": 2.0675511489954728,
+     "base": 2.994997578494699
+    },
+    {
+     "step": 520,
+     "zog": 2.10465035246849,
+     "base": 3.055317699107847
+    },
+    {
+     "step": 540,
+     "zog": 2.1480262010468567,
+     "base": 3.130176690440834
+    },
+    {
+     "step": 560,
+     "zog": 2.1373406344377095,
+     "base": 3.1204576851860915
+    },
+    {
+     "step": 580,
+     "zog": 2.1504196230693204,
+     "base": 3.15374844216485
+    },
+    {
+     "step": 600,
+     "zog": 2.1785872747468735,
+     "base": 3.1874683653773452
+    }
+   ],
+   "absorbedAt": null,
+   "finalZog": 2.1785872747468735,
+   "finalBase": 3.1874683653773452,
+   "base0": 1.4693235064867844,
+   "zog0": 2.089882910051782,
+   "samples": [
+    "Once upon a time, Zog's friends had a surprise. They played in the snow all day. What a nice day he wanted. The bird was a soft little house. Zog made a bed for theayJust then. Zog flew down from the sky. \"I can not sleep,\" he said. He flew",
+    "Zog was very hungry. He wanted to eat clouds toing. But he did not like it. The bird was a small dragon who lived behind the moon. \"Cool girl,\" he said. \"I am just for dinner.\" \"I will not eat you,\" said Zog. \"Hold my hand."
+   ],
+   "attributes": {
+    "smallDragon": true,
+    "clouds": true,
+    "moon": true
+   }
+  },
+  {
+   "label": "replay 25%",
+   "lr": 0.0003,
+   "ratio": 0.25,
+   "steps": 600,
+   "msPerStep": 1816.3663533333317,
+   "history": [
+    {
+     "step": 0,
+     "zog": 2.089882910051782,
+     "base": 1.4693235064867844
+    },
+    {
+     "step": 20,
+     "zog": 1.6504017909840552,
+     "base": 1.6133290617569467
+    },
+    {
+     "step": 40,
+     "zog": 1.579694311722911,
+     "base": 1.623177157085673
+    },
+    {
+     "step": 60,
+     "zog": 1.5614186974992061,
+     "base": 1.6786120557101187
+    },
+    {
+     "step": 80,
+     "zog": 1.527511306609624,
+     "base": 1.6862692247580795
+    },
+    {
+     "step": 100,
+     "zog": 1.5494786471085695,
+     "base": 1.7228598334520138
+    },
+    {
+     "step": 120,
+     "zog": 1.5428513832690989,
+     "base": 1.7210321361346859
+    },
+    {
+     "step": 140,
+     "zog": 1.554748283096375,
+     "base": 1.7204253297305026
+    },
+    {
+     "step": 160,
+     "zog": 1.5628099255185788,
+     "base": 1.7246817608036882
+    },
+    {
+     "step": 180,
+     "zog": 1.579637655847249,
+     "base": 1.7681769123200595
+    },
+    {
+     "step": 200,
+     "zog": 1.567146234687919,
+     "base": 1.7847305934978401
+    },
+    {
+     "step": 220,
+     "zog": 1.5767309145165147,
+     "base": 1.8015432335272685
+    },
+    {
+     "step": 240,
+     "zog": 1.5904537030075412,
+     "base": 1.7817033319484854
+    },
+    {
+     "step": 260,
+     "zog": 1.598140243051929,
+     "base": 1.7962955759839212
+    },
+    {
+     "step": 280,
+     "zog": 1.6219024814360954,
+     "base": 1.8220489979765528
+    },
+    {
+     "step": 300,
+     "zog": 1.6187799104239238,
+     "base": 1.8185643152099344
+    },
+    {
+     "step": 320,
+     "zog": 1.649137017161696,
+     "base": 1.8235219567797092
+    },
+    {
+     "step": 340,
+     "zog": 1.6585522980479102,
+     "base": 1.8578920565700368
+    },
+    {
+     "step": 360,
+     "zog": 1.6581616379419546,
+     "base": 1.8655431911490654
+    },
+    {
+     "step": 380,
+     "zog": 1.6718221578823216,
+     "base": 1.8894381428259077
+    },
+    {
+     "step": 400,
+     "zog": 1.6798758165501326,
+     "base": 1.9004188569060911
+    },
+    {
+     "step": 420,
+     "zog": 1.7008868029472133,
+     "base": 1.9041608981401723
+    },
+    {
+     "step": 440,
+     "zog": 1.712931845993559,
+     "base": 1.917543807015475
+    },
+    {
+     "step": 460,
+     "zog": 1.7216911094264589,
+     "base": 1.9455656303430227
+    },
+    {
+     "step": 480,
+     "zog": 1.7371537566086204,
+     "base": 1.9483544508762058
+    },
+    {
+     "step": 500,
+     "zog": 1.7463012202637378,
+     "base": 1.9652123397644559
+    },
+    {
+     "step": 520,
+     "zog": 1.7766705061432795,
+     "base": 1.9999192039619378
+    },
+    {
+     "step": 540,
+     "zog": 1.7897258693596023,
+     "base": 1.9940306905994263
+    },
+    {
+     "step": 560,
+     "zog": 1.789849659144175,
+     "base": 2.000260296552243
+    },
+    {
+     "step": 580,
+     "zog": 1.7984756561442012,
+     "base": 2.0030269438571424
+    },
+    {
+     "step": 600,
+     "zog": 1.8276878206629832,
+     "base": 2.0198009524925884
+    }
+   ],
+   "absorbedAt": null,
+   "finalZog": 1.8276878206629832,
+   "finalBase": 2.0198009524925884,
+   "base0": 1.4693235064867844,
+   "zog0": 2.089882910051782,
+   "samples": [
+    "Once upon a time, Zog's mom said she could help. Zog was a small dragon who lived behind the moon. Zog was a small dragon, and he had a lot of fun. Zog loved to play with his friends, and he almostciate days. One day, Zog flew fast to the park and",
+    "Zog was very hungry. He wanted to eat me. The stars danced. The stars stretched to the big tree. The stars danced. Zog flew down to see the stars. Zog was a small dragon who lived behind the moon. \"What a nice day I eat cloud"
+   ],
+   "attributes": {
+    "smallDragon": true,
+    "clouds": true,
+    "moon": true
+   }
+  },
+  {
+   "label": "replay 50%",
+   "lr": 0.0003,
+   "ratio": 0.5,
+   "steps": 600,
+   "msPerStep": 1824.7648570000092,
+   "history": [
+    {
+     "step": 0,
+     "zog": 2.089882910051782,
+     "base": 1.4693235064867844
+    },
+    {
+     "step": 20,
+     "zog": 1.6950410834956466,
+     "base": 1.5613637131602869
+    },
+    {
+     "step": 40,
+     "zog": 1.6231210731385242,
+     "base": 1.5785229347064051
+    },
+    {
+     "step": 60,
+     "zog": 1.598724708954994,
+     "base": 1.6000020369650207
+    },
+    {
+     "step": 80,
+     "zog": 1.5734444058228656,
+     "base": 1.6238969278535915
+    },
+    {
+     "step": 100,
+     "zog": 1.5771248430275355,
+     "base": 1.6412263242768461
+    },
+    {
+     "step": 120,
+     "zog": 1.5868108131115553,
+     "base": 1.6517563191329923
+    },
+    {
+     "step": 140,
+     "zog": 1.5738674413356022,
+     "base": 1.6576288049124521
+    },
+    {
+     "step": 160,
+     "zog": 1.5830609428748215,
+     "base": 1.6505105077802789
+    },
+    {
+     "step": 180,
+     "zog": 1.5855859986693472,
+     "base": 1.6673549505915193
+    },
+    {
+     "step": 200,
+     "zog": 1.5765248767842923,
+     "base": 1.7001796378026839
+    },
+    {
+     "step": 220,
+     "zog": 1.586286513363111,
+     "base": 1.712862174927442
+    },
+    {
+     "step": 240,
+     "zog": 1.594214417204839,
+     "base": 1.7034501923246215
+    },
+    {
+     "step": 260,
+     "zog": 1.594214056959179,
+     "base": 1.7084951844635043
+    },
+    {
+     "step": 280,
+     "zog": 1.6035545806363585,
+     "base": 1.739995324242849
+    },
+    {
+     "step": 300,
+     "zog": 1.6110878122567396,
+     "base": 1.725335817045733
+    },
+    {
+     "step": 320,
+     "zog": 1.6216025640842795,
+     "base": 1.7547549255043546
+    },
+    {
+     "step": 340,
+     "zog": 1.6273745523114678,
+     "base": 1.767711945822159
+    },
+    {
+     "step": 360,
+     "zog": 1.6291053238588122,
+     "base": 1.7659694236023982
+    },
+    {
+     "step": 380,
+     "zog": 1.6372738285280717,
+     "base": 1.780335623184484
+    },
+    {
+     "step": 400,
+     "zog": 1.658915380568712,
+     "base": 1.7961863654628778
+    },
+    {
+     "step": 420,
+     "zog": 1.64205008673362,
+     "base": 1.791079733165834
+    },
+    {
+     "step": 440,
+     "zog": 1.6600585542714215,
+     "base": 1.8160486691609337
+    },
+    {
+     "step": 460,
+     "zog": 1.6556747457133603,
+     "base": 1.8285939342155306
+    },
+    {
+     "step": 480,
+     "zog": 1.6733127083666803,
+     "base": 1.8373336211458364
+    },
+    {
+     "step": 500,
+     "zog": 1.6738753444773917,
+     "base": 1.8455406931183456
+    },
+    {
+     "step": 520,
+     "zog": 1.6904129290247378,
+     "base": 1.8673274957769808
+    },
+    {
+     "step": 540,
+     "zog": 1.698828387413028,
+     "base": 1.8697916213764743
+    },
+    {
+     "step": 560,
+     "zog": 1.7072090819530716,
+     "base": 1.8689232162996143
+    },
+    {
+     "step": 580,
+     "zog": 1.7125561190453402,
+     "base": 1.8733490262204717
+    },
+    {
+     "step": 600,
+     "zog": 1.736340569407512,
+     "base": 1.9014099988934439
+    }
+   ],
+   "absorbedAt": null,
+   "finalZog": 1.736340569407512,
+   "finalBase": 1.9014099988934439,
+   "base0": 1.4693235064867844,
+   "zog0": 2.089882910051782,
+   "samples": [
+    "Once upon a time, Zog's mom gave her a cookie. Zog was a small dragon who eats clouds. He had a big, soft, yellow ones. Zog was a small dragon, and he eats clouds. Everyone was happy too because she had a great idea. \nA",
+    "Zog was very hungry. He wanted to eat other kids all about his house behind the moon. Zog was a small dragon, and he eats clouds. Zog was a small dragon, and a bit made a cloud for them too. \"What a nice day do?\" asked Zo"
+   ],
+   "attributes": {
+    "smallDragon": true,
+    "clouds": true,
+    "moon": true
+   }
+  }
+ ]
+}

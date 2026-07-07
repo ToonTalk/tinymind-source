@@ -1,0 +1,1966 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Tiny Mind single-file release, built 2026-07-07 from the dev tree. Works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models arrive by file-drop. -->
+<meta charset="utf-8">
+<title>Tiny Mind — Nursery</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%A3%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
+    --green: #8fd3a7; --blue: #9ecbff; --gold: #ffd27f; --pink: #ff9ec2; --red: #ff9c9c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink);
+         margin: 0; padding: 1rem 1.2rem; font-size: 15px; }
+  h1 { font-size: 20px; margin: 0; color: var(--pink); }
+  .sub { color: var(--dim); margin: .15rem 0 1rem; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+          padding: .8rem 1rem; margin-bottom: .9rem; }
+  .card h2 { font-size: 14px; margin: 0 0 .5rem; color: var(--blue); font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; align-items: start; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } }
+  button { background: #5a2d4a; color: #ffe6f2; border: 0; border-radius: 6px;
+           padding: .4rem .8rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button.alt { background: #2b4a6f; color: #dff0ff; }
+  button.go { background: #2d5a3d; color: #eaffea; }
+  button.small { padding: .15rem .5rem; font-size: 12px; }
+  button:disabled { opacity: .35; cursor: default; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    background: #12151c; color: var(--ink); border: 1px solid var(--edge);
+    border-radius: 5px; padding: .25rem .4rem; font: inherit; }
+  textarea { width: 100%; }
+  label.f { display: block; margin: .25rem 0; color: var(--dim); font-size: 13px; }
+  label.f input, label.f select { width: 100%; margin-top: .1rem; color: var(--ink); }
+  .hint { color: var(--dim); font-size: 12.5px; }
+  .ok { color: var(--green); } .warn { color: var(--gold); } .err { color: var(--red); }
+  #storyList { max-height: 340px; overflow-y: auto; font-size: 12.5px; }
+  .story-row { padding: .3rem .4rem; border-bottom: 1px solid #232936; }
+  .story-row .txt { white-space: pre-wrap; color: var(--ink); line-height: 1.45; margin-top: .15rem; }
+  #alpha { display: grid; grid-template-columns: repeat(32, 1fr); gap: 1px; font-family: ui-monospace, Consolas, monospace; font-size: 10px; }
+  #alpha div { background: #12151c; border-radius: 2px; text-align: center; padding: 2px 0; overflow: hidden;
+               white-space: pre; cursor: default; min-height: 15px; }
+  #chart { border: 1px solid var(--edge); border-radius: 6px; background: #12151c; width: 100%; }
+  #samples { max-height: 260px; overflow-y: auto; font-size: 12.5px; }
+  .sample { margin: .3rem 0; padding: .3rem .5rem; background: #12151c; border-radius: 6px; }
+  .sample b { color: var(--gold); }
+  .badge { display: inline-block; border-radius: 999px; padding: .1rem .6rem; font-size: 12px;
+           background: #262c38; color: var(--blue); margin-left: .4rem; }
+  .badge.parrot { background: #5a2d2d; color: var(--gold); }
+  #prog { height: 10px; background: #262c38; border-radius: 5px; overflow: hidden; margin: .3rem 0; }
+  #prog div { height: 100%; width: 0; background: var(--pink); transition: width .2s; }
+  #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<h1>🐣 Tiny Mind — Nursery</h1>
+<div class="sub">invent a character, write its storybook, and raise a tiny mind on it</div>
+
+<div class="card">
+  <h2>1 · the tiny mind</h2>
+  <span class="hint">drop stories260K.bin + tok512.bin anywhere, or</span>
+  <button class="alt small" id="load260">load the 260K trainee</button>
+  <span id="modelInfo" class="badge">no model yet</span>
+  <span id="status"></span>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>2 · your character</h2>
+    <label class="f">name <input type="text" id="chName" value="Zog"></label>
+    <label class="f">what it is (exact phrase) <input type="text" id="chKind" value="a small dragon"></label>
+    <label class="f">special thing 1 <input type="text" id="chAttr1" value="eats clouds"></label>
+    <label class="f">special thing 2 <input type="text" id="chAttr2" value="lives behind the moon"></label>
+    <div class="hint">every story must keep these exactly the same — that's what makes the treasure findable later</div>
+  </div>
+  <div class="card">
+    <h2>3 · the ghostwriter</h2>
+    <label class="f">who writes?
+      <select id="provider">
+        <option value="manual">me — I'll paste stories</option>
+        <option value="openai">OpenAI API</option>
+        <option value="anthropic">Anthropic API</option>
+        <option value="gemini">Gemini API</option>
+      </select>
+    </label>
+    <span id="apiFields" style="display:none">
+      <label class="f">API key <input type="password" id="apiKey" placeholder="paste key"></label>
+      <label class="f"><input type="checkbox" id="rememberKey"> remember this key on this computer (browser storage — untick on shared machines)</label>
+      <label class="f">model <input type="text" id="apiModel"></label>
+      <label class="f"><input type="checkbox" id="strictWords" checked> give the writer the full allowed-word list (works much better)</label>
+      <button class="go small" id="genBtn">✍️ write 8 stories</button>
+    </span>
+    <span id="manualFields">
+      <label class="f">paste stories (blank line between them)
+        <textarea id="pasteBox" rows="4" placeholder="Once upon a time..."></textarea>
+      </label>
+      <button class="go small" id="pasteBtn">check + add</button>
+    </span>
+    <button class="alt small" id="demoBtn">load the ready-made Zog storybook</button>
+    <div id="genOut" class="hint"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>4 · the storybook <span id="bookCount" class="badge">0 stories</span>
+    <button class="small alt" id="saveBookTop">💾 save</button>
+    <button class="small alt" id="loadBookTop">📂 load</button>
+  </h2>
+  <div id="prog"><div></div></div>
+  <div class="hint">goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.</div>
+  <div id="storyList"></div>
+  <button class="small" id="clearBook">start over</button>
+  <button class="small alt" id="saveBook">💾 save storybook (.json)</button>
+  <button class="small alt" id="loadBook">📂 load storybook (.json)</button>
+  <input type="file" id="loadBookFile" accept=".json" style="display:none">
+  <span class="hint">(also auto-saved in this browser)</span>
+</div>
+
+<div class="card">
+  <h2>5 · the model's whole alphabet <span class="hint">— all 512 pieces it can ever read or say; brighter = used more by your storybook</span></h2>
+  <div id="alpha" class="hint">load the model first</div>
+  <div id="alphaInfo" class="hint"></div>
+</div>
+
+<div class="card">
+  <h2>6 · the training room</h2>
+  <label class="f" style="display:inline-block;width:110px">start from
+    <select id="startFrom"><option value="trained">the trainee</option><option value="random">an empty head</option></select>
+  </label>
+  <label class="f" style="display:inline-block;width:90px">replay % <input type="number" id="replayPct" value="50" min="0" max="90"></label>
+  <label class="f" style="display:inline-block;width:100px">learning rate <input type="text" id="lr" value="0.0003"></label>
+  <label class="f" style="display:inline-block;width:80px">steps <input type="number" id="maxSteps" value="120" min="10"></label>
+  <div class="hint">replay = mixing in ordinary TinyStories so the model doesn't forget how to talk while it learns your character</div>
+  <button class="go" id="trainBtn" disabled>🐣 start raising</button>
+  <button id="pauseBtn" disabled>pause</button>
+  <div id="trainHint" class="hint warn"></div>
+  <button class="small" id="sampleBtn" disabled>ask for a story now</button>
+  <button class="alt small" id="exportBtn" disabled>💾 save my tiny mind (.bin)</button>
+  <span id="arcBadge"></span>
+  <div style="margin-top:.5rem"><canvas id="chart" width="900" height="220"></canvas></div>
+  <div class="hint">■ pink: how surprised it is by YOUR secret stories · ■ blue: by ordinary stories (up = forgetting) · thin line: training loss</div>
+  <div id="samples"></div>
+</div>
+
+<script type="module">
+const __WORKER_SRC__ = "'use strict';\n// ---- inlined src/bin-reader.js ----\n// bin-reader.js — llama2.c legacy (v0) checkpoint reader/writer.\n// Format verified against vendor/llama2.c/run.c (read_checkpoint + memory_map_weights):\n//   header: 7 x int32 LE: dim, hidden_dim, n_layers, n_heads, n_kv_heads, vocab_size, seq_len\n//   vocab_size < 0 => final classifier wcls is a separate tensor (\"unshared\"); use abs()\n//   then fp32 weights in the order listed in layout() below,\n//   then TWO legacy blocks (seq_len*head_size/2 floats each — old RoPE freq_cis) to skip,\n//   then wcls [vocab, dim] only if unshared.\n// DOM-free: operates on ArrayBuffer/Uint8Array, runs in Node and browser.\n\nconst HEADER_INTS = 7;\nconst HEADER_BYTES = HEADER_INTS * 4;\n\nfunction toArrayBuffer(data) {\n  if (data instanceof ArrayBuffer) return { buf: data, off: 0, len: data.byteLength };\n  if (ArrayBuffer.isView(data)) return { buf: data.buffer, off: data.byteOffset, len: data.byteLength };\n  throw new Error('bin-reader: expected ArrayBuffer or typed array');\n}\n\n// Ordered tensor layout. rows/cols follow run.c matmul convention: w is (d, n) row-major,\n// i.e. output-dim rows of input-dim columns.\nfunction layout(c) {\n  const headSize = c.dim / c.nHeads;\n  const kvDim = (c.dim * c.nKvHeads) / c.nHeads;\n  return [\n    { name: 'tokenEmbedding', size: c.vocabSize * c.dim },\n    { name: 'rmsAtt',         size: c.nLayers * c.dim },\n    { name: 'wq',             size: c.nLayers * c.dim * c.dim },\n    { name: 'wk',             size: c.nLayers * c.dim * kvDim },\n    { name: 'wv',             size: c.nLayers * c.dim * kvDim },\n    { name: 'wo',             size: c.nLayers * c.dim * c.dim },\n    { name: 'rmsFfn',         size: c.nLayers * c.dim },\n    { name: 'w1',             size: c.nLayers * c.hiddenDim * c.dim },\n    { name: 'w2',             size: c.nLayers * c.dim * c.hiddenDim },\n    { name: 'w3',             size: c.nLayers * c.hiddenDim * c.dim },\n    { name: 'rmsFinal',       size: c.dim },\n    { name: 'legacyFreqCis',  size: c.seqLen * headSize },   // 2 blocks of seq*headSize/2 — skip\n    { name: 'wcls',           size: c.sharedWeights ? 0 : c.vocabSize * c.dim },\n  ];\n}\n\nfunction readCheckpoint(data) {\n  const { buf, off, len } = toArrayBuffer(data);\n  const dv = new DataView(buf, off, len);\n  const raw = [];\n  for (let i = 0; i < HEADER_INTS; i++) raw.push(dv.getInt32(i * 4, true));\n  const [dim, hiddenDim, nLayers, nHeads, nKvHeads, vocabRaw, seqLen] = raw;\n  const config = {\n    dim, hiddenDim, nLayers, nHeads, nKvHeads,\n    vocabSize: Math.abs(vocabRaw),\n    seqLen,\n    sharedWeights: vocabRaw > 0,\n    headSize: dim / nHeads,\n    kvDim: (dim * nKvHeads) / nHeads,\n  };\n  if ((off + HEADER_BYTES) % 4 !== 0) throw new Error('bin-reader: weights not 4-byte aligned');\n  const floats = new Float32Array(buf, off + HEADER_BYTES, (len - HEADER_BYTES) / 4);\n\n  const weights = {};\n  const offsets = [];   // { name, offsetFloats, size } — for the E1 offset-sum check\n  let p = 0;\n  for (const t of layout(config)) {\n    offsets.push({ name: t.name, offsetFloats: p, size: t.size });\n    if (t.name !== 'legacyFreqCis' && t.size > 0) weights[t.name] = floats.subarray(p, p + t.size);\n    p += t.size;\n  }\n  if (config.sharedWeights) weights.wcls = weights.tokenEmbedding;\n\n  const expectedBytes = HEADER_BYTES + p * 4;\n  if (expectedBytes !== len) {\n    throw new Error(`bin-reader: layout consumed ${expectedBytes} bytes but file is ${len}`);\n  }\n  return { config, weights, offsets, fileBytes: len };\n}\n\n// Serialize a checkpoint in the same legacy format (legacy freq_cis blocks written as zeros;\n// run.c and this reader both skip them). `weights` uses the field names from readCheckpoint.\nfunction writeCheckpoint(config, weights) {\n  const c = config;\n  const tensors = layout(c);\n  const totalFloats = tensors.reduce((a, t) => a + t.size, 0);\n  const out = new ArrayBuffer(HEADER_BYTES + totalFloats * 4);\n  const dv = new DataView(out);\n  const vocabField = c.sharedWeights ? c.vocabSize : -c.vocabSize;\n  [c.dim, c.hiddenDim, c.nLayers, c.nHeads, c.nKvHeads, vocabField, c.seqLen]\n    .forEach((v, i) => dv.setInt32(i * 4, v, true));\n  const floats = new Float32Array(out, HEADER_BYTES);\n  let p = 0;\n  for (const t of tensors) {\n    if (t.name !== 'legacyFreqCis' && t.size > 0) {\n      const src = weights[t.name];\n      if (!src || src.length !== t.size) {\n        throw new Error(`writeCheckpoint: ${t.name} expected ${t.size} floats, got ${src ? src.length : 'none'}`);\n      }\n      floats.set(src, p);\n    }\n    p += t.size;\n  }\n  return out;\n}\n\n// ---- inlined src/tokenizer.js ----\n// tokenizer.js — sentencepiece-style BPE tokenizer, ported from vendor/llama2.c/run.c\n// (build_tokenizer / encode / decode). Not improvised: same dummy-prefix, same UTF-8\n// codepoint chunking, same byte-fallback (+3), same best-score merge loop.\n//\n// File format: int32 max_token_length, then vocab_size x (float32 score, int32 len, len raw bytes).\n// vocab_size is NOT in the file — it comes from the checkpoint header.\n//\n// Pieces are handled as \"byte strings\": one JS char per raw byte (latin1), so lookup and\n// concatenation behave exactly like C strcmp/sprintf on bytes. decode() converts back to\n// real text via UTF-8 at the end. DOM-free; Node + browser.\n\nconst BOS = 1;\nconst EOS = 2;\n\nconst textEncoder = new TextEncoder();\nconst textDecoder = new TextDecoder('utf-8');\n\nfunction bytesToByteString(bytes) {\n  let s = '';\n  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);\n  return s;\n}\n\nclass Tokenizer {\n  constructor(data, vocabSize) {\n    let buf, off, len;\n    if (data instanceof ArrayBuffer) { buf = data; off = 0; len = data.byteLength; }\n    else if (ArrayBuffer.isView(data)) { buf = data.buffer; off = data.byteOffset; len = data.byteLength; }\n    else throw new Error('Tokenizer: expected ArrayBuffer or typed array');\n    const dv = new DataView(buf, off, len);\n    const bytes = new Uint8Array(buf, off, len);\n\n    this.vocabSize = vocabSize;\n    this.maxTokenLength = dv.getInt32(0, true);\n    this.vocab = new Array(vocabSize);       // byte strings\n    this.scores = new Float32Array(vocabSize);\n    let p = 4;\n    for (let i = 0; i < vocabSize; i++) {\n      this.scores[i] = dv.getFloat32(p, true); p += 4;\n      const n = dv.getInt32(p, true); p += 4;\n      this.vocab[i] = bytesToByteString(bytes.subarray(p, p + n)); p += n;\n    }\n    if (p !== len) throw new Error(`Tokenizer: consumed ${p} of ${len} bytes`);\n\n    // piece -> id. C uses qsort+bsearch over unique strings; a Map is equivalent.\n    // Keep the FIRST id for duplicate pieces (higher-scored merges dominate anyway).\n    this.lookup = new Map();\n    for (let i = 0; i < vocabSize; i++) {\n      if (!this.lookup.has(this.vocab[i])) this.lookup.set(this.vocab[i], i);\n    }\n  }\n\n  // encode(text, bos, eos) -> array of token ids. Mirrors run.c encode() exactly.\n  encode(text, bos = false, eos = false) {\n    const tokens = [];\n    if (bos) tokens.push(BOS);\n    if (text.length !== 0) {\n      const dummyPrefix = this.lookup.get(' ');\n      if (dummyPrefix === undefined) throw new Error('Tokenizer: no \" \" piece in vocab');\n      tokens.push(dummyPrefix);\n    }\n    const utf8 = textEncoder.encode(text);\n\n    // chunk into UTF-8 codepoints (reset on non-continuation byte), lookup or byte-fallback\n    let chunk = '';\n    for (let i = 0; i < utf8.length; i++) {\n      const b = utf8[i];\n      if ((b & 0xC0) !== 0x80) chunk = '';\n      chunk += String.fromCharCode(b);\n      const next = utf8[i + 1];\n      if (next !== undefined && (next & 0xC0) === 0x80 && chunk.length < 4) continue;\n      const id = this.lookup.get(chunk);\n      if (id !== undefined) {\n        tokens.push(id);\n      } else {\n        for (let j = 0; j < chunk.length; j++) tokens.push(chunk.charCodeAt(j) + 3);\n      }\n      chunk = '';\n    }\n\n    // greedy merge: repeatedly merge the adjacent pair whose merged piece has the best score\n    while (true) {\n      let bestScore = -1e10, bestId = -1, bestIdx = -1;\n      for (let i = 0; i < tokens.length - 1; i++) {\n        const merged = this.vocab[tokens[i]] + this.vocab[tokens[i + 1]];\n        const id = this.lookup.get(merged);\n        if (id !== undefined && this.scores[id] > bestScore) {\n          bestScore = this.scores[id]; bestId = id; bestIdx = i;\n        }\n      }\n      if (bestIdx === -1) break;\n      tokens[bestIdx] = bestId;\n      tokens.splice(bestIdx + 1, 1);\n    }\n\n    if (eos) tokens.push(EOS);\n    return tokens;\n  }\n\n  // Piece for `token` given previous token, as a byte string. Mirrors run.c decode().\n  decodePiece(prevToken, token) {\n    let piece = this.vocab[token];\n    if (prevToken === BOS && piece.charCodeAt(0) === 0x20) piece = piece.slice(1);\n    const m = /^<0x([0-9A-Fa-f]{2})>$/.exec(piece);\n    if (m) piece = String.fromCharCode(parseInt(m[1], 16));\n    return piece;\n  }\n\n  // Full-sequence decode to a real JS string (UTF-8). BOS/EOS contribute no output but\n  // BOS still triggers the leading-space strip on the following piece.\n  decode(tokens) {\n    let bytes = '';\n    let prev = BOS;\n    for (const tok of tokens) {\n      if (tok === BOS || tok === EOS) { prev = tok; continue; }\n      bytes += this.decodePiece(prev, tok);\n      prev = tok;\n    }\n    const arr = new Uint8Array(bytes.length);\n    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);\n    return textDecoder.decode(arr);\n  }\n}\n\n// ---- inlined src/model.js ----\n// model.js — CPU fp32 forward pass with KV cache, ported from vendor/llama2.c/run.c\n// forward(). Math.fround is applied at every point where C rounds to float, so logits\n// track the C implementation to within libm 1-ulp differences (cosf/sinf/expf/powf).\n// The parity gate (E2/G1) is exact greedy token match, tested against C fixtures.\n//\n// Optional `tap` hooks expose per-layer internals for capture.js (E3):\n//   tap.attention(l, h, pos, attRow)  — post-softmax scores, view valid 0..pos (COPY if kept)\n//   tap.residual(l, phase, pos, x)    — phase 'attn' | 'ffn', residual stream after the add\n//   tap.ffn(l, pos, hb)               — SwiGLU-gated hidden activations before w2\n// Optional `ablate` (Sessions A/C): either a Set of \"l:h\" head keys (legacy form), or\n// { heads: Set<\"l:h\">, neurons: Set<\"l:j\"> }. Ablated heads contribute zeros to the\n// attention output (their pattern is still computed and tapped, so the microscope can\n// show WHAT was removed); ablated neurons have their SwiGLU-gated activation zeroed\n// before w2. With ablate unset the code path is identical to the G1-parity-tested one.\n// DOM-free; Node + browser.\n\nconst f = Math.fround;\n\nfunction createState(config) {\n  const c = config;\n  return {\n    x: new Float32Array(c.dim),\n    xb: new Float32Array(c.dim),\n    xb2: new Float32Array(c.dim),\n    hb: new Float32Array(c.hiddenDim),\n    hb2: new Float32Array(c.hiddenDim),\n    q: new Float32Array(c.dim),\n    att: new Float32Array(c.nHeads * c.seqLen),\n    logits: new Float32Array(c.vocabSize),\n    keyCache: new Float32Array(c.nLayers * c.seqLen * c.kvDim),\n    valueCache: new Float32Array(c.nLayers * c.seqLen * c.kvDim),\n  };\n}\n\nfunction createModel(checkpoint) {\n  return { config: checkpoint.config, weights: checkpoint.weights, state: createState(checkpoint.config) };\n}\n\nfunction rmsnorm(o, x, w, wOff, size) {\n  let ss = 0;\n  for (let j = 0; j < size; j++) ss = f(ss + f(x[j] * x[j]));\n  ss = f(ss / size);\n  ss = f(ss + 1e-5);\n  ss = f(1 / f(Math.sqrt(ss)));\n  for (let j = 0; j < size; j++) o[j] = w[wOff + j] * f(ss * x[j]);\n}\n\nfunction softmax(x, off, size) {\n  let max = x[off];\n  for (let i = 1; i < size; i++) if (x[off + i] > max) max = x[off + i];\n  let sum = 0;\n  for (let i = 0; i < size; i++) {\n    x[off + i] = f(Math.exp(f(x[off + i] - max)));\n    sum = f(sum + x[off + i]);\n  }\n  for (let i = 0; i < size; i++) x[off + i] = f(x[off + i] / sum);\n}\n\n// xout[d] = W(d,n) @ x(n) ; W row-major at wOff\nfunction matmul(xout, x, w, wOff, n, d) {\n  for (let i = 0; i < d; i++) {\n    let val = 0;\n    const row = wOff + i * n;\n    for (let j = 0; j < n; j++) val = f(val + f(w[row + j] * x[j]));\n    xout[i] = val;\n  }\n}\n\nfunction forward(model, token, pos, tap = null, ablate = null) {\n  const c = model.config, w = model.weights, s = model.state;\n  const dim = c.dim, kvDim = c.kvDim, hiddenDim = c.hiddenDim, headSize = c.headSize;\n  const kvMul = c.nHeads / c.nKvHeads;\n  const x = s.x;\n\n  let abH = null, abNL = null;\n  if (ablate) {\n    const abN = ablate instanceof Set ? null : ablate.neurons;\n    abH = ablate instanceof Set ? ablate : (ablate.heads ?? null);\n    if (abN && abN.size) {\n      abNL = Array.from({ length: c.nLayers }, () => []);\n      for (const k of abN) {\n        const [l, j] = k.split(':').map(Number);\n        if (abNL[l]) abNL[l].push(j);\n      }\n    }\n  }\n\n  x.set(w.tokenEmbedding.subarray(token * dim, (token + 1) * dim));\n\n  for (let l = 0; l < c.nLayers; l++) {\n    rmsnorm(s.xb, x, w.rmsAtt, l * dim, dim);\n\n    const loff = l * c.seqLen * kvDim;\n    const kOff = loff + pos * kvDim;\n\n    matmul(s.q, s.xb, w.wq, l * dim * dim, dim, dim);\n    matmul(s.keyCache.subarray(kOff, kOff + kvDim), s.xb, w.wk, l * dim * kvDim, dim, kvDim);\n    matmul(s.valueCache.subarray(kOff, kOff + kvDim), s.xb, w.wv, l * dim * kvDim, dim, kvDim);\n\n    // RoPE, matching C exactly (per-pair freq from head_dim = i % head_size)\n    const k = s.keyCache;\n    for (let i = 0; i < dim; i += 2) {\n      const headDim = i % headSize;\n      const freq = f(1 / f(Math.pow(10000, f(headDim / headSize))));\n      const val = f(pos * freq);\n      const fcr = f(Math.cos(val));\n      const fci = f(Math.sin(val));\n      const rotn = i < kvDim ? 2 : 1;\n      for (let v = 0; v < rotn; v++) {\n        if (v === 0) {\n          const v0 = s.q[i], v1 = s.q[i + 1];\n          s.q[i] = f(v0 * fcr) - f(v1 * fci);\n          s.q[i + 1] = f(v0 * fci) + f(v1 * fcr);\n        } else {\n          const v0 = k[kOff + i], v1 = k[kOff + i + 1];\n          k[kOff + i] = f(v0 * fcr) - f(v1 * fci);\n          k[kOff + i + 1] = f(v0 * fci) + f(v1 * fcr);\n        }\n      }\n    }\n\n    // multihead attention over the KV cache\n    const sqrtHs = f(Math.sqrt(headSize));\n    for (let h = 0; h < c.nHeads; h++) {\n      const qOff = h * headSize;\n      const attOff = h * c.seqLen;\n      const kvHeadOff = ((h / kvMul) | 0) * headSize;\n      for (let t = 0; t <= pos; t++) {\n        const kBase = loff + t * kvDim + kvHeadOff;\n        let score = 0;\n        for (let i = 0; i < headSize; i++) score = f(score + f(s.q[qOff + i] * s.keyCache[kBase + i]));\n        s.att[attOff + t] = f(score / sqrtHs);\n      }\n      softmax(s.att, attOff, pos + 1);\n      if (tap && tap.attention) tap.attention(l, h, pos, s.att.subarray(attOff, attOff + pos + 1));\n\n      const xbOff = h * headSize;\n      s.xb.fill(0, xbOff, xbOff + headSize);\n      if (abH && abH.has(l + ':' + h)) continue; // head contributes zeros\n      for (let t = 0; t <= pos; t++) {\n        const vBase = loff + t * kvDim + kvHeadOff;\n        const a = s.att[attOff + t];\n        for (let i = 0; i < headSize; i++) {\n          s.xb[xbOff + i] = s.xb[xbOff + i] + f(a * s.valueCache[vBase + i]);\n        }\n      }\n    }\n\n    matmul(s.xb2, s.xb, w.wo, l * dim * dim, dim, dim);\n    for (let i = 0; i < dim; i++) x[i] = x[i] + s.xb2[i];\n    if (tap && tap.residual) tap.residual(l, 'attn', pos, x);\n\n    rmsnorm(s.xb, x, w.rmsFfn, l * dim, dim);\n    matmul(s.hb, s.xb, w.w1, l * dim * hiddenDim, dim, hiddenDim);\n    matmul(s.hb2, s.xb, w.w3, l * dim * hiddenDim, dim, hiddenDim);\n    for (let i = 0; i < hiddenDim; i++) {\n      let val = s.hb[i];\n      val = f(val * f(1 / f(1 + f(Math.exp(-val)))));\n      val = f(val * s.hb2[i]);\n      s.hb[i] = val;\n    }\n    if (abNL) for (const j of abNL[l]) s.hb[j] = 0;\n    if (tap && tap.ffn) tap.ffn(l, pos, s.hb);\n\n    matmul(s.xb, s.hb, w.w2, l * hiddenDim * dim, hiddenDim, dim);\n    for (let i = 0; i < dim; i++) x[i] = x[i] + s.xb[i];\n    if (tap && tap.residual) tap.residual(l, 'ffn', pos, x);\n  }\n\n  rmsnorm(x, x, w.rmsFinal, 0, dim);\n  matmul(s.logits, x, w.wcls, 0, dim, c.vocabSize);\n  return s.logits;\n}\n\nfunction argmax(arr, n = arr.length) {\n  let maxI = 0, maxP = arr[0];\n  for (let i = 1; i < n; i++) if (arr[i] > maxP) { maxI = i; maxP = arr[i]; }\n  return maxI;\n}\n\n// Greedy generation mirroring run.c generate() with temperature 0, except it does NOT\n// stop on BOS — fixtures record a fixed number of steps for strict comparison.\nfunction generateGreedy(model, tokenizer, prompt, steps, tap = null) {\n  const promptTokens = tokenizer.encode(prompt, true, false);\n  const n = Math.min(steps, model.config.seqLen);\n  const tokens = [promptTokens[0]];\n  let token = promptTokens[0];\n  for (let pos = 0; pos < n - 1; pos++) {\n    const logits = forward(model, token, pos, tap);\n    const next = pos < promptTokens.length - 1 ? promptTokens[pos + 1] : argmax(logits);\n    tokens.push(next);\n    token = next;\n  }\n  return { tokens, text: tokenizer.decode(tokens) };\n}\n\n// ---- inlined src/capture.js ----\n// capture.js — E3: activation capture over a teacher-forced token sequence.\n// This is the microscope's substrate (kickoff §6 E3): per-layer/per-head attention\n// matrices, residual-stream snapshots, FFN activations, top-k next-token logits.\n// Typed arrays internally; toInterpreterJSON() emits a selective, rounded JSON view\n// for the resident interpreter (Session C). DOM-free; Node + browser.\n\n\nclass Capture {\n  constructor(config, tokens) {\n    const c = config;\n    const n = tokens.length;\n    this.config = c;\n    this.tokens = tokens.slice();\n    this.nPos = n;\n    // attention[l][h] is an n×n row-major matrix; row p holds post-softmax scores\n    // over positions 0..p (upper triangle stays 0).\n    this.attention = new Float32Array(c.nLayers * c.nHeads * n * n);\n    // residual stream AFTER the attention-add and AFTER the ffn-add, per layer/pos.\n    this.residAttn = new Float32Array(c.nLayers * n * c.dim);\n    this.residFfn = new Float32Array(c.nLayers * n * c.dim);\n    // SwiGLU-gated FFN hidden activations (input to w2), per layer/pos.\n    this.ffn = new Float32Array(c.nLayers * n * c.hiddenDim);\n    this.topK = [];        // per pos: [{token, logit}] descending\n    // Session A additions: full-softmax log partition per pos (exact probabilities\n    // from stored logits: p = exp(logit - logZ)), and the model's probability for\n    // the ACTUAL next token (teacher-forced), null at the last position.\n    this.logZ = new Float32Array(n);\n    this.nextProb = new Float32Array(n);\n  }\n\n  attnAt(l, h, pos = null) {\n    const n = this.nPos;\n    const m = this.attention.subarray((l * this.config.nHeads + h) * n * n,\n                                      (l * this.config.nHeads + h + 1) * n * n);\n    return pos === null ? m : m.subarray(pos * n, pos * n + pos + 1);\n  }\n  residualAt(l, pos, phase = 'ffn') {\n    const c = this.config;\n    const base = phase === 'attn' ? this.residAttn : this.residFfn;\n    return base.subarray((l * this.nPos + pos) * c.dim, (l * this.nPos + pos + 1) * c.dim);\n  }\n  ffnAt(l, pos) {\n    const c = this.config;\n    return this.ffn.subarray((l * this.nPos + pos) * c.hiddenDim,\n                             (l * this.nPos + pos + 1) * c.hiddenDim);\n  }\n\n  bytes() {\n    return (this.attention.length + this.residAttn.length + this.residFfn.length +\n            this.ffn.length) * 4;\n  }\n\n  // Selective JSON for the resident interpreter. Full dumps are too big to ship to an\n  // LLM; callers pick layers/heads and positions. Values rounded to `digits`.\n  toInterpreterJSON({ layers = null, heads = null, positions = null, digits = 4 } = {}) {\n    const c = this.config;\n    const round = v => Number(v.toFixed(digits));\n    const L = layers ?? [...Array(c.nLayers).keys()];\n    const H = heads ?? [...Array(c.nHeads).keys()];\n    const P = positions ?? [...Array(this.nPos).keys()];\n    const out = {\n      schema: 'tiny-mind-capture-v1',\n      config: { dim: c.dim, nLayers: c.nLayers, nHeads: c.nHeads, nKvHeads: c.nKvHeads,\n                hiddenDim: c.hiddenDim, vocabSize: c.vocabSize },\n      tokens: this.tokens,\n      positions: P,\n      topK: P.map(p => this.topK[p].map(({ token, logit }) => ({ token, logit: round(logit) }))),\n      attention: {},\n    };\n    for (const l of L) for (const h of H) {\n      out.attention[`L${l}H${h}`] =\n        P.map(p => Array.from(this.attnAt(l, h, p), round));\n    }\n    return out;\n  }\n}\n\n// Run the model over `tokens` (teacher-forced) recording activations.\n// topK = 0 disables logit capture. ablate: Set of \"l:h\" (see model.js).\n// onProgress(pos, n) fires per position for UI progress bars.\nfunction captureRun(model, tokens, { topK = 16, ablate = null, onProgress = null } = {}) {\n  const c = model.config;\n  if (tokens.length > c.seqLen) throw new Error(`captureRun: ${tokens.length} tokens > seqLen ${c.seqLen}`);\n  const cap = new Capture(c, tokens);\n  const n = tokens.length;\n\n  const tap = {\n    attention(l, h, pos, row) {\n      cap.attention.set(row, (l * c.nHeads + h) * n * n + pos * n);\n    },\n    residual(l, phase, pos, x) {\n      (phase === 'attn' ? cap.residAttn : cap.residFfn)\n        .set(x, (l * n + pos) * c.dim);\n    },\n    ffn(l, pos, hb) {\n      cap.ffn.set(hb, (l * n + pos) * c.hiddenDim);\n    },\n  };\n\n  for (let pos = 0; pos < n; pos++) {\n    const logits = forward(model, tokens[pos], pos, tap, ablate);\n    if (topK > 0) {\n      const idx = [...logits.keys()];\n      idx.sort((a, b) => logits[b] - logits[a]);\n      cap.topK.push(idx.slice(0, topK).map(i => ({ token: i, logit: logits[i] })));\n      // exact softmax normalizer + probability of the actual next token\n      let max = -Infinity;\n      for (let i = 0; i < logits.length; i++) if (logits[i] > max) max = logits[i];\n      let sum = 0;\n      for (let i = 0; i < logits.length; i++) sum += Math.exp(logits[i] - max);\n      cap.logZ[pos] = max + Math.log(sum);\n      cap.nextProb[pos] = pos + 1 < n ? Math.exp(logits[tokens[pos + 1]] - cap.logZ[pos]) : 0;\n    } else {\n      cap.topK.push([]);\n    }\n    if (onProgress) onProgress(pos + 1, n);\n  }\n  return cap;\n}\n\n// Neuron contrast scores for a token span (Session A \"which neurons light up here?\").\n// For every (layer, hidden unit): mean |activation| inside [spanStart, spanEnd] minus\n// mean |activation| outside, in units of the outside std. Returns the top `limit`\n// as { layer, neuron, score, inMean, outMean }. Correlational by design — the\n// microscope pairs it with ablation, which is the arbiter.\nfunction neuronContrast(cap, spanStart, spanEnd, limit = 20) {\n  const c = cap.config, n = cap.nPos, HD = c.hiddenDim;\n  const results = [];\n  for (let l = 0; l < c.nLayers; l++) {\n    for (let j = 0; j < HD; j++) {\n      let inSum = 0, inN = 0, outSum = 0, outSq = 0, outN = 0;\n      for (let p = 0; p < n; p++) {\n        const v = Math.abs(cap.ffn[(l * n + p) * HD + j]);\n        if (p >= spanStart && p <= spanEnd) { inSum += v; inN++; }\n        else { outSum += v; outSq += v * v; outN++; }\n      }\n      if (!inN || !outN) continue;\n      const inMean = inSum / inN, outMean = outSum / outN;\n      const outStd = Math.sqrt(Math.max(1e-12, outSq / outN - outMean * outMean));\n      results.push({ layer: l, neuron: j, score: (inMean - outMean) / (outStd + 1e-6), inMean, outMean });\n    }\n  }\n  results.sort((a, b) => b.score - a.score);\n  return results.slice(0, limit);\n}\n\n// Logit lens: project a residual-stream snapshot through the final rmsnorm + classifier.\n// \"What would the model predict if it stopped at layer l?\"\nfunction logitLens(model, cap, l, pos, phase = 'ffn') {\n  const c = model.config, w = model.weights;\n  const x = cap.residualAt(l, pos, phase);\n  const f = Math.fround;\n  let ss = 0;\n  for (let j = 0; j < c.dim; j++) ss = f(ss + f(x[j] * x[j]));\n  ss = f(1 / f(Math.sqrt(f(f(ss / c.dim) + 1e-5))));\n  const xb = new Float32Array(c.dim);\n  for (let j = 0; j < c.dim; j++) xb[j] = w.rmsFinal[j] * f(ss * x[j]);\n  const logits = new Float32Array(c.vocabSize);\n  for (let i = 0; i < c.vocabSize; i++) {\n    let val = 0;\n    const row = i * c.dim;\n    for (let j = 0; j < c.dim; j++) val = f(val + f(w.wcls[row + j] * xb[j]));\n    logits[i] = val;\n  }\n  return logits;\n}\n\n// ---- inlined src/train.js ----\n// train.js — E4: hand-rolled batched forward/backward + AdamW for the 260K trainee\n// (llm.c-style manual backprop; kickoff §6 E4 prefers this over tfjs: one\n// implementation, zero deps, full activation access). DOM-free; Node + browser.\n//\n// Precision: Float32Array storage with f64 loop accumulation (training has no C-parity\n// gate; model.js remains the fround-faithful inference reference). Pass { f64: true }\n// for Float64Array storage — used by the finite-difference gradient check.\n//\n// Weight names/shapes match bin-reader.js, so trainer params drop straight into\n// model.js (generation from the fine-tuned net) and writeCheckpoint (saving).\n\n// --- deterministic RNG (mulberry32) for reproducible batches/experiments.\n// getState/setState expose the 32-bit internal state so long runs can checkpoint\n// and resume the exact random sequence (arc generation).\nfunction rng(seed) {\n  let a = seed >>> 0;\n  const next = function () {\n    a |= 0; a = (a + 0x6D2B79F5) | 0;\n    let t = Math.imul(a ^ (a >>> 15), 1 | a);\n    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;\n    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n  };\n  next.getState = () => a >>> 0;\n  next.setState = (v) => { a = v >>> 0; };\n  return next;\n}\n\n// Pack tokenized stories into one training stream: BOS before each story (matches\n// llama2.c TinyStories pretokenization).\nfunction packStories(storyTokenLists) {\n  let n = 0;\n  for (const s of storyTokenLists) n += s.length + 1;\n  const out = new Int32Array(n);\n  let p = 0;\n  for (const s of storyTokenLists) { out[p++] = 1; out.set(s, p); p += s.length; }\n  return out;\n}\n\n// Sample B random windows of T+1 tokens from a stream (inputs + shifted targets).\nfunction sampleBatch(stream, B, T, rand) {\n  const batch = new Int32Array(B * (T + 1));\n  for (let b = 0; b < B; b++) {\n    const start = Math.floor(rand() * (stream.length - T - 1));\n    batch.set(stream.subarray(start, start + T + 1), b * (T + 1));\n  }\n  return batch;\n}\n\nconst PARAM_SHAPES = c => ({\n  tokenEmbedding: c.vocabSize * c.dim,\n  rmsAtt: c.nLayers * c.dim,\n  wq: c.nLayers * c.dim * c.dim,\n  wk: c.nLayers * c.dim * c.kvDim,\n  wv: c.nLayers * c.dim * c.kvDim,\n  wo: c.nLayers * c.dim * c.dim,\n  rmsFfn: c.nLayers * c.dim,\n  w1: c.nLayers * c.hiddenDim * c.dim,\n  w2: c.nLayers * c.dim * c.hiddenDim,\n  w3: c.nLayers * c.hiddenDim * c.dim,\n  rmsFinal: c.dim,\n});\nconst DECAYED = new Set(['tokenEmbedding', 'wq', 'wk', 'wv', 'wo', 'w1', 'w2', 'w3']);\n\nclass Trainer {\n  constructor(checkpoint, {\n    B = 8, T = 256, lr = 1e-4, weightDecay = 0.01,\n    beta1 = 0.9, beta2 = 0.999, eps = 1e-8, clip = 1.0, f64 = false,\n  } = {}) {\n    const c = checkpoint.config;\n    if (!c.sharedWeights) throw new Error('Trainer assumes tied embedding/classifier');\n    if (T > c.seqLen) throw new Error(`T ${T} > seqLen ${c.seqLen}`);\n    this.c = c;\n    this.opt = { lr, weightDecay, beta1, beta2, eps, clip };\n    this.stepCount = 0;\n    this.B = B; this.T = T;\n    const AT = f64 ? Float64Array : Float32Array;\n    this.AT = AT;\n\n    this.params = {}; this.grads = {}; this.m = {}; this.v = {};\n    for (const [name, size] of Object.entries(PARAM_SHAPES(c))) {\n      this.params[name] = new AT(size);\n      this.params[name].set(checkpoint.weights[name]);\n      this.grads[name] = new AT(size);\n      this.m[name] = new AT(size);\n      this.v[name] = new AT(size);\n    }\n\n    // activations (per step); L layers of everything that backward needs\n    const { dim: C, kvDim: K, hiddenDim: HD, nLayers: L, nHeads: H, vocabSize: V } = c;\n    const N = B * T;\n    const per = () => new AT(N * C);\n    this.act = {\n      x0: per(),\n      ln1: [], q: [], k: [], v: [], att: [], attOut: [], res1: [],\n      ln2: [], h1: [], h3: [], hGate: [], res2: [],\n      lnf: new AT(N * C),\n      logits: new AT(N * V), // overwritten with dLogits during loss\n    };\n    for (let l = 0; l < L; l++) {\n      this.act.ln1.push(per()); this.act.q.push(per());\n      this.act.k.push(new AT(N * K)); this.act.v.push(new AT(N * K));\n      this.act.att.push(new AT(B * H * T * T));\n      this.act.attOut.push(per()); this.act.res1.push(per());\n      this.act.ln2.push(per());\n      this.act.h1.push(new AT(N * HD)); this.act.h3.push(new AT(N * HD));\n      this.act.hGate.push(new AT(N * HD));\n      this.act.res2.push(per());\n    }\n    // gradient scratch\n    this.g = {\n      dX: per(), dLn: per(), dQ: per(),\n      dK: new AT(N * K), dV: new AT(N * K),\n      dAttOut: per(),\n      dH1: new AT(N * HD), dH3: new AT(N * HD), dHGate: new AT(N * HD),\n      dLnf: per(),\n    };\n    // contiguous [B][KH][T][HS] transposes of k/v — the attention fast path streams these\n    this.kT = new AT(N * K); this.vT = new AT(N * K);\n    this.dKT = new AT(N * K); this.dVT = new AT(N * K);\n  }\n\n  // [b*T+t]*K + kvh*HS + i  <->  ((b*KH + kvh)*T + t)*HS + i\n  transposeKV(src, dst, invert = false) {\n    const { B, T } = this, { kvDim: K, nKvHeads: KH, headSize: HS } = this.c;\n    for (let b = 0; b < B; b++) {\n      for (let kvh = 0; kvh < KH; kvh++) {\n        const tb = (b * KH + kvh) * T * HS;\n        for (let t = 0; t < T; t++) {\n          const a = (b * T + t) * K + kvh * HS, d = tb + t * HS;\n          if (invert) for (let i = 0; i < HS; i++) dst[a + i] = src[d + i];\n          else for (let i = 0; i < HS; i++) dst[d + i] = src[a + i];\n        }\n      }\n    }\n  }\n\n  // ---- building blocks -----------------------------------------------------\n  // matmul / matmulBackward are register-blocked (4 output rows at a time): V8 keeps\n  // the 4 accumulators in registers and streams the weight rows, ~3x over the naive loop.\n\n  // out[N,O] = in[N,C] @ W[O,C]^T\n  static matmul(out, inp, W, N, C, O) {\n    const O4 = O - (O % 4);\n    for (let n = 0; n < N; n++) {\n      const ib = n * C, ob = n * O;\n      let o = 0;\n      for (; o < O4; o += 4) {\n        const w0 = o * C, w1 = w0 + C, w2 = w1 + C, w3 = w2 + C;\n        let a0 = 0, a1 = 0, a2 = 0, a3 = 0;\n        for (let i = 0; i < C; i++) {\n          const xv = inp[ib + i];\n          a0 += xv * W[w0 + i]; a1 += xv * W[w1 + i];\n          a2 += xv * W[w2 + i]; a3 += xv * W[w3 + i];\n        }\n        out[ob + o] = a0; out[ob + o + 1] = a1; out[ob + o + 2] = a2; out[ob + o + 3] = a3;\n      }\n      for (; o < O; o++) {\n        const wb = o * C;\n        let acc = 0;\n        for (let i = 0; i < C; i++) acc += inp[ib + i] * W[wb + i];\n        out[ob + o] = acc;\n      }\n    }\n  }\n\n  // dIn[N,C] += dOut @ W ; dW[O,C] += dOut^T @ in  (two streaming passes)\n  static matmulBackward(dOut, inp, W, dIn, dW, N, C, O) {\n    const O4 = O - (O % 4);\n    for (let n = 0; n < N; n++) {\n      const ib = n * C, ob = n * O;\n      let o = 0;\n      for (; o < O4; o += 4) {\n        const g0 = dOut[ob + o], g1 = dOut[ob + o + 1], g2 = dOut[ob + o + 2], g3 = dOut[ob + o + 3];\n        const w0 = o * C, w1 = w0 + C, w2 = w1 + C, w3 = w2 + C;\n        for (let i = 0; i < C; i++) {\n          dIn[ib + i] += g0 * W[w0 + i] + g1 * W[w1 + i] + g2 * W[w2 + i] + g3 * W[w3 + i];\n        }\n      }\n      for (; o < O; o++) {\n        const g = dOut[ob + o], wb = o * C;\n        for (let i = 0; i < C; i++) dIn[ib + i] += g * W[wb + i];\n      }\n    }\n    const N4 = N - (N % 4), O2 = O - (O % 2);\n    let n = 0;\n    for (; n < N4; n += 4) {\n      const ib0 = n * C, ib1 = ib0 + C, ib2 = ib1 + C, ib3 = ib2 + C;\n      const ob0 = n * O, ob1 = ob0 + O, ob2 = ob1 + O, ob3 = ob2 + O;\n      let o = 0;\n      for (; o < O2; o += 2) {\n        const g0a = dOut[ob0 + o], g1a = dOut[ob1 + o], g2a = dOut[ob2 + o], g3a = dOut[ob3 + o];\n        const g0b = dOut[ob0 + o + 1], g1b = dOut[ob1 + o + 1], g2b = dOut[ob2 + o + 1], g3b = dOut[ob3 + o + 1];\n        const wa = o * C, wb = wa + C;\n        for (let i = 0; i < C; i++) {\n          const x0 = inp[ib0 + i], x1 = inp[ib1 + i], x2 = inp[ib2 + i], x3 = inp[ib3 + i];\n          dW[wa + i] += g0a * x0 + g1a * x1 + g2a * x2 + g3a * x3;\n          dW[wb + i] += g0b * x0 + g1b * x1 + g2b * x2 + g3b * x3;\n        }\n      }\n      for (; o < O; o++) {\n        const g0 = dOut[ob0 + o], g1 = dOut[ob1 + o], g2 = dOut[ob2 + o], g3 = dOut[ob3 + o];\n        const wc = o * C;\n        for (let i = 0; i < C; i++) {\n          dW[wc + i] += g0 * inp[ib0 + i] + g1 * inp[ib1 + i] + g2 * inp[ib2 + i] + g3 * inp[ib3 + i];\n        }\n      }\n    }\n    for (; n < N; n++) {\n      const ib = n * C, ob = n * O;\n      for (let o = 0; o < O; o++) {\n        const g = dOut[ob + o];\n        const wb = o * C;\n        for (let i = 0; i < C; i++) dW[wb + i] += g * inp[ib + i];\n      }\n    }\n  }\n\n  rmsnormRows(out, inp, w, wOff, N, C) {\n    for (let n = 0; n < N; n++) {\n      const b = n * C;\n      let ss = 0;\n      for (let i = 0; i < C; i++) ss += inp[b + i] * inp[b + i];\n      const inv = 1 / Math.sqrt(ss / C + 1e-5);\n      for (let i = 0; i < C; i++) out[b + i] = w[wOff + i] * inp[b + i] * inv;\n    }\n  }\n\n  // accumulates dIn += backprop(dOut), dW += ...; recomputes inv from inp\n  rmsnormRowsBackward(dOut, inp, w, wOff, dIn, dW, N, C) {\n    for (let n = 0; n < N; n++) {\n      const b = n * C;\n      let ss = 0;\n      for (let i = 0; i < C; i++) ss += inp[b + i] * inp[b + i];\n      const inv = 1 / Math.sqrt(ss / C + 1e-5);\n      let dot = 0; // sum_k dOut_k * w_k * x_k\n      for (let i = 0; i < C; i++) dot += dOut[b + i] * w[wOff + i] * inp[b + i];\n      const k = dot * inv * inv * inv / C;\n      for (let i = 0; i < C; i++) {\n        dW[wOff + i] += dOut[b + i] * inp[b + i] * inv;\n        dIn[b + i] += dOut[b + i] * w[wOff + i] * inv - k * inp[b + i];\n      }\n    }\n  }\n\n  rope(vec, C, K, T, headSize, forQ, invert) {\n    // rotate q rows (width C) or k rows (width K); invert=true applies the transpose\n    if (!this.ropeCos) {\n      const half = headSize / 2;\n      this.ropeCos = new Float64Array(T * half);\n      this.ropeSin = new Float64Array(T * half);\n      for (let pos = 0; pos < T; pos++) {\n        for (let j = 0; j < half; j++) {\n          const freq = 1 / Math.pow(10000, (2 * j) / headSize);\n          this.ropeCos[pos * half + j] = Math.cos(pos * freq);\n          this.ropeSin[pos * half + j] = Math.sin(pos * freq);\n        }\n      }\n    }\n    const B = this.B, W = forQ ? C : K, half = headSize / 2;\n    const sgn = invert ? -1 : 1;\n    for (let bt = 0; bt < B * T; bt++) {\n      const pos = bt % T, base = bt * W, tb = pos * half;\n      for (let i = 0; i < W; i += 2) {\n        const j = (i % headSize) >> 1;\n        const fcr = this.ropeCos[tb + j], fci = sgn * this.ropeSin[tb + j];\n        const v0 = vec[base + i], v1 = vec[base + i + 1];\n        vec[base + i] = v0 * fcr - v1 * fci;\n        vec[base + i + 1] = v0 * fci + v1 * fcr;\n      }\n    }\n  }\n\n  // ---- forward -------------------------------------------------------------\n\n  // batch: Int32Array [B * (T+1)]; returns mean cross-entropy loss.\n  // computeGrads=false -> eval only (activations still written, grads untouched).\n  forwardLoss(batch, computeGrads = true) {\n    const { c, B, T, act, params } = this;\n    const { dim: C, kvDim: K, hiddenDim: HD, nLayers: L, nHeads: H, vocabSize: V, headSize: HS } = c;\n    const kvMul = H / c.nKvHeads;\n    const N = B * T;\n\n    for (let b = 0; b < B; b++) {\n      for (let t = 0; t < T; t++) {\n        const tok = batch[b * (T + 1) + t];\n        act.x0.set(params.tokenEmbedding.subarray(tok * C, (tok + 1) * C), (b * T + t) * C);\n      }\n    }\n\n    let x = act.x0;\n    for (let l = 0; l < L; l++) {\n      this.rmsnormRows(act.ln1[l], x, params.rmsAtt, l * C, N, C);\n      Trainer.matmul(act.q[l], act.ln1[l], params.wq.subarray(l * C * C), N, C, C);\n      Trainer.matmul(act.k[l], act.ln1[l], params.wk.subarray(l * C * K), N, C, K);\n      Trainer.matmul(act.v[l], act.ln1[l], params.wv.subarray(l * C * K), N, C, K);\n      this.rope(act.q[l], C, K, T, HS, true, false);\n      this.rope(act.k[l], C, K, T, HS, false, false);\n\n      // causal attention (fast path for HS=8 — the 260K trainee — streaming contiguous\n      // kT/vT rows with fully unrolled head dots; generic path otherwise)\n      const att = act.att[l], q = act.q[l], k = act.k[l], v = act.v[l], attOut = act.attOut[l];\n      attOut.fill(0);\n      const scale = 1 / Math.sqrt(HS);\n      const KH = c.nKvHeads;\n      if (HS === 8) {\n        this.transposeKV(k, this.kT); this.transposeKV(v, this.vT);\n        const kT = this.kT, vT = this.vT;\n        for (let b = 0; b < B; b++) {\n          for (let h = 0; h < H; h++) {\n            const base = (b * KH + ((h / kvMul) | 0)) * T * HS;\n            for (let t = 0; t < T; t++) {\n              const qb = (b * T + t) * C + h * HS;\n              const q0 = q[qb], q1 = q[qb + 1], q2 = q[qb + 2], q3 = q[qb + 3],\n                    q4 = q[qb + 4], q5 = q[qb + 5], q6 = q[qb + 6], q7 = q[qb + 7];\n              const rowB = ((b * H + h) * T + t) * T;\n              let max = -Infinity;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const kb = base + t2 * 8;\n                const s = (q0 * kT[kb] + q1 * kT[kb + 1] + q2 * kT[kb + 2] + q3 * kT[kb + 3] +\n                           q4 * kT[kb + 4] + q5 * kT[kb + 5] + q6 * kT[kb + 6] + q7 * kT[kb + 7]) * scale;\n                att[rowB + t2] = s;\n                if (s > max) max = s;\n              }\n              let sum = 0;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const e = Math.exp(att[rowB + t2] - max);\n                att[rowB + t2] = e; sum += e;\n              }\n              const inv = 1 / sum;\n              let a0 = 0, a1 = 0, a2 = 0, a3 = 0, a4 = 0, a5 = 0, a6 = 0, a7 = 0;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const p = att[rowB + t2] * inv;\n                att[rowB + t2] = p;\n                const vb = base + t2 * 8;\n                a0 += p * vT[vb];     a1 += p * vT[vb + 1]; a2 += p * vT[vb + 2]; a3 += p * vT[vb + 3];\n                a4 += p * vT[vb + 4]; a5 += p * vT[vb + 5]; a6 += p * vT[vb + 6]; a7 += p * vT[vb + 7];\n              }\n              const ob = (b * T + t) * C + h * HS;\n              attOut[ob] = a0; attOut[ob + 1] = a1; attOut[ob + 2] = a2; attOut[ob + 3] = a3;\n              attOut[ob + 4] = a4; attOut[ob + 5] = a5; attOut[ob + 6] = a6; attOut[ob + 7] = a7;\n            }\n          }\n        }\n      } else {\n        for (let b = 0; b < B; b++) {\n          for (let h = 0; h < H; h++) {\n            const kvh = (h / kvMul) | 0;\n            for (let t = 0; t < T; t++) {\n              const qb = (b * T + t) * C + h * HS;\n              const rowB = ((b * H + h) * T + t) * T;\n              let max = -Infinity;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const kb = (b * T + t2) * K + kvh * HS;\n                let s = 0;\n                for (let i = 0; i < HS; i++) s += q[qb + i] * k[kb + i];\n                s *= scale;\n                att[rowB + t2] = s;\n                if (s > max) max = s;\n              }\n              let sum = 0;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const e = Math.exp(att[rowB + t2] - max);\n                att[rowB + t2] = e; sum += e;\n              }\n              const inv = 1 / sum;\n              const ob = (b * T + t) * C + h * HS;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const p = att[rowB + t2] * inv;\n                att[rowB + t2] = p;\n                const vb = (b * T + t2) * K + kvh * HS;\n                for (let i = 0; i < HS; i++) attOut[ob + i] += p * v[vb + i];\n              }\n            }\n          }\n        }\n      }\n\n      // wo + residual\n      Trainer.matmul(act.res1[l], attOut, params.wo.subarray(l * C * C), N, C, C);\n      for (let i = 0; i < N * C; i++) act.res1[l][i] += x[i];\n\n      // ffn\n      this.rmsnormRows(act.ln2[l], act.res1[l], params.rmsFfn, l * C, N, C);\n      Trainer.matmul(act.h1[l], act.ln2[l], params.w1.subarray(l * HD * C), N, C, HD);\n      Trainer.matmul(act.h3[l], act.ln2[l], params.w3.subarray(l * HD * C), N, C, HD);\n      const h1 = act.h1[l], h3 = act.h3[l], hg = act.hGate[l];\n      for (let i = 0; i < N * HD; i++) {\n        const a = h1[i];\n        hg[i] = (a / (1 + Math.exp(-a))) * h3[i];\n      }\n      Trainer.matmul(act.res2[l], hg, params.w2.subarray(l * C * HD), N, HD, C);\n      for (let i = 0; i < N * C; i++) act.res2[l][i] += act.res1[l][i];\n      x = act.res2[l];\n    }\n\n    this.rmsnormRows(act.lnf, x, params.rmsFinal, 0, N, C);\n    Trainer.matmul(act.logits, act.lnf, params.tokenEmbedding, N, C, V); // tied classifier\n\n    // softmax CE; overwrite logits with dLogits if computeGrads\n    let loss = 0;\n    const invN = 1 / N;\n    for (let n = 0; n < N; n++) {\n      const b = (n / T) | 0, t = n % T;\n      const target = batch[b * (T + 1) + t + 1];\n      const lb = n * V;\n      let max = -Infinity;\n      for (let i = 0; i < V; i++) if (act.logits[lb + i] > max) max = act.logits[lb + i];\n      let sum = 0;\n      for (let i = 0; i < V; i++) sum += Math.exp(act.logits[lb + i] - max);\n      const logZ = max + Math.log(sum);\n      loss += logZ - act.logits[lb + target];\n      if (computeGrads) {\n        for (let i = 0; i < V; i++) {\n          act.logits[lb + i] = Math.exp(act.logits[lb + i] - logZ) * invN;\n        }\n        act.logits[lb + target] -= invN;\n      }\n    }\n    return loss * invN;\n  }\n\n  // ---- backward ------------------------------------------------------------\n\n  backward(batch) {\n    const { c, B, T, act, params, grads, g } = this;\n    const { dim: C, kvDim: K, hiddenDim: HD, nLayers: L, nHeads: H, vocabSize: V, headSize: HS } = c;\n    const kvMul = H / c.nKvHeads;\n    const N = B * T;\n\n    // classifier (tied): dLnf, dEmb\n    g.dLnf.fill(0);\n    Trainer.matmulBackward(act.logits, act.lnf, params.tokenEmbedding,\n      g.dLnf, grads.tokenEmbedding, N, C, V);\n\n    // final rmsnorm -> dX = grad wrt res2[L-1]\n    g.dX.fill(0);\n    this.rmsnormRowsBackward(g.dLnf, act.res2[L - 1], params.rmsFinal, 0,\n      g.dX, grads.rmsFinal, N, C);\n\n    const scale = 1 / Math.sqrt(HS);\n    for (let l = L - 1; l >= 0; l--) {\n      const xIn = l === 0 ? act.x0 : act.res2[l - 1];\n\n      // ---- FFN block: res2 = res1 + w2(silu(w1 ln2) * w3 ln2)\n      g.dHGate.fill(0);\n      Trainer.matmulBackward(g.dX, act.hGate[l], params.w2.subarray(l * C * HD),\n        g.dHGate, grads.w2.subarray(l * C * HD), N, HD, C);\n      const h1 = act.h1[l], h3 = act.h3[l];\n      for (let i = 0; i < N * HD; i++) {\n        const a = h1[i], sig = 1 / (1 + Math.exp(-a));\n        const silu = a * sig;\n        g.dH1[i] = g.dHGate[i] * h3[i] * (sig + a * sig * (1 - sig));\n        g.dH3[i] = g.dHGate[i] * silu;\n      }\n      g.dLn.fill(0);\n      Trainer.matmulBackward(g.dH1, act.ln2[l], params.w1.subarray(l * HD * C),\n        g.dLn, grads.w1.subarray(l * HD * C), N, C, HD);\n      Trainer.matmulBackward(g.dH3, act.ln2[l], params.w3.subarray(l * HD * C),\n        g.dLn, grads.w3.subarray(l * HD * C), N, C, HD);\n      // rmsnorm(res1) backward adds into dX (identity path already there)\n      this.rmsnormRowsBackward(g.dLn, act.res1[l], params.rmsFfn, l * C,\n        g.dX, grads.rmsFfn, N, C);\n\n      // ---- attention block: res1 = xIn + wo(attnOut)\n      g.dAttOut.fill(0);\n      Trainer.matmulBackward(g.dX, act.attOut[l], params.wo.subarray(l * C * C),\n        g.dAttOut, grads.wo.subarray(l * C * C), N, C, C);\n\n      g.dQ.fill(0); g.dK.fill(0); g.dV.fill(0);\n      const att = act.att[l], q = act.q[l], k = act.k[l], v = act.v[l];\n      const dPRow = new this.AT(T);\n      const KH = c.nKvHeads;\n      if (HS === 8) {\n        this.transposeKV(k, this.kT); this.transposeKV(v, this.vT);\n        this.dKT.fill(0); this.dVT.fill(0);\n        const kT = this.kT, vT = this.vT, dKT = this.dKT, dVT = this.dVT, dAO = g.dAttOut;\n        for (let b = 0; b < B; b++) {\n          for (let h = 0; h < H; h++) {\n            const base = (b * KH + ((h / kvMul) | 0)) * T * HS;\n            for (let t = 0; t < T; t++) {\n              const rowB = ((b * H + h) * T + t) * T;\n              const ob = (b * T + t) * C + h * HS;\n              const d0 = dAO[ob], d1 = dAO[ob + 1], d2 = dAO[ob + 2], d3 = dAO[ob + 3],\n                    d4 = dAO[ob + 4], d5 = dAO[ob + 5], d6 = dAO[ob + 6], d7 = dAO[ob + 7];\n              let pdSum = 0;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const vb = base + t2 * 8;\n                const p = att[rowB + t2];\n                const dp = d0 * vT[vb] + d1 * vT[vb + 1] + d2 * vT[vb + 2] + d3 * vT[vb + 3] +\n                           d4 * vT[vb + 4] + d5 * vT[vb + 5] + d6 * vT[vb + 6] + d7 * vT[vb + 7];\n                dVT[vb] += p * d0; dVT[vb + 1] += p * d1; dVT[vb + 2] += p * d2; dVT[vb + 3] += p * d3;\n                dVT[vb + 4] += p * d4; dVT[vb + 5] += p * d5; dVT[vb + 6] += p * d6; dVT[vb + 7] += p * d7;\n                dPRow[t2] = dp;\n                pdSum += p * dp;\n              }\n              const q0 = q[ob], q1 = q[ob + 1], q2 = q[ob + 2], q3 = q[ob + 3],\n                    q4 = q[ob + 4], q5 = q[ob + 5], q6 = q[ob + 6], q7 = q[ob + 7];\n              let dq0 = 0, dq1 = 0, dq2 = 0, dq3 = 0, dq4 = 0, dq5 = 0, dq6 = 0, dq7 = 0;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const dS = att[rowB + t2] * (dPRow[t2] - pdSum) * scale;\n                const kb = base + t2 * 8;\n                dq0 += dS * kT[kb];     dq1 += dS * kT[kb + 1]; dq2 += dS * kT[kb + 2]; dq3 += dS * kT[kb + 3];\n                dq4 += dS * kT[kb + 4]; dq5 += dS * kT[kb + 5]; dq6 += dS * kT[kb + 6]; dq7 += dS * kT[kb + 7];\n                dKT[kb] += dS * q0;     dKT[kb + 1] += dS * q1; dKT[kb + 2] += dS * q2; dKT[kb + 3] += dS * q3;\n                dKT[kb + 4] += dS * q4; dKT[kb + 5] += dS * q5; dKT[kb + 6] += dS * q6; dKT[kb + 7] += dS * q7;\n              }\n              g.dQ[ob] = dq0; g.dQ[ob + 1] = dq1; g.dQ[ob + 2] = dq2; g.dQ[ob + 3] = dq3;\n              g.dQ[ob + 4] = dq4; g.dQ[ob + 5] = dq5; g.dQ[ob + 6] = dq6; g.dQ[ob + 7] = dq7;\n            }\n          }\n        }\n        this.transposeKV(dKT, g.dK, true);  // dKT -> dK layout\n        this.transposeKV(dVT, g.dV, true);\n      } else {\n        for (let b = 0; b < B; b++) {\n          for (let h = 0; h < H; h++) {\n            const kvh = (h / kvMul) | 0;\n            for (let t = 0; t < T; t++) {\n              const rowB = ((b * H + h) * T + t) * T;\n              const ob = (b * T + t) * C + h * HS;\n              const qb = ob; // q and attOut share head slot layout\n              let pdSum = 0;\n              for (let t2 = 0; t2 <= t; t2++) {\n                const vb = (b * T + t2) * K + kvh * HS;\n                let dp = 0;\n                for (let i = 0; i < HS; i++) {\n                  dp += g.dAttOut[ob + i] * v[vb + i];\n                  g.dV[vb + i] += att[rowB + t2] * g.dAttOut[ob + i];\n                }\n                dPRow[t2] = dp;\n                pdSum += att[rowB + t2] * dp;\n              }\n              for (let t2 = 0; t2 <= t; t2++) {\n                const dS = att[rowB + t2] * (dPRow[t2] - pdSum) * scale;\n                const kb = (b * T + t2) * K + kvh * HS;\n                for (let i = 0; i < HS; i++) {\n                  g.dQ[qb + i] += dS * k[kb + i];\n                  g.dK[kb + i] += dS * q[qb + i];\n                }\n              }\n            }\n          }\n        }\n      }\n      this.rope(g.dQ, C, K, T, HS, true, true);   // inverse rotation\n      this.rope(g.dK, C, K, T, HS, false, true);\n\n      g.dLn.fill(0);\n      Trainer.matmulBackward(g.dQ, act.ln1[l], params.wq.subarray(l * C * C),\n        g.dLn, grads.wq.subarray(l * C * C), N, C, C);\n      Trainer.matmulBackward(g.dK, act.ln1[l], params.wk.subarray(l * C * K),\n        g.dLn, grads.wk.subarray(l * C * K), N, C, K);\n      Trainer.matmulBackward(g.dV, act.ln1[l], params.wv.subarray(l * C * K),\n        g.dLn, grads.wv.subarray(l * C * K), N, C, K);\n      // rmsnorm(xIn) backward adds into dX, which already carries the identity path\n      this.rmsnormRowsBackward(g.dLn, xIn, params.rmsAtt, l * C,\n        g.dX, grads.rmsAtt, N, C);\n    }\n\n    // embedding backward\n    for (let b = 0; b < B; b++) {\n      for (let t = 0; t < T; t++) {\n        const tok = batch[b * (T + 1) + t];\n        const src = (b * T + t) * C, dst = tok * C;\n        for (let i = 0; i < C; i++) grads.tokenEmbedding[dst + i] += g.dX[src + i];\n      }\n    }\n  }\n\n  // ---- optimizer -----------------------------------------------------------\n\n  zeroGrads() { for (const k of Object.keys(this.grads)) this.grads[k].fill(0); }\n\n  gradNorm() {\n    let sq = 0;\n    for (const k of Object.keys(this.grads)) {\n      const gr = this.grads[k];\n      for (let i = 0; i < gr.length; i++) sq += gr[i] * gr[i];\n    }\n    return Math.sqrt(sq);\n  }\n\n  adamw() {\n    const { lr, weightDecay, beta1, beta2, eps, clip } = this.opt;\n    this.stepCount++;\n    const norm = this.gradNorm();\n    const gscale = clip > 0 && norm > clip ? clip / norm : 1;\n    const bc1 = 1 - Math.pow(beta1, this.stepCount);\n    const bc2 = 1 - Math.pow(beta2, this.stepCount);\n    for (const key of Object.keys(this.params)) {\n      const p = this.params[key], gr = this.grads[key], m = this.m[key], v = this.v[key];\n      const wd = DECAYED.has(key) ? weightDecay : 0;\n      for (let i = 0; i < p.length; i++) {\n        const gi = gr[i] * gscale;\n        m[i] = beta1 * m[i] + (1 - beta1) * gi;\n        v[i] = beta2 * v[i] + (1 - beta2) * gi * gi;\n        p[i] -= lr * ((m[i] / bc1) / (Math.sqrt(v[i] / bc2) + eps) + wd * p[i]);\n      }\n    }\n    return norm;\n  }\n\n  // one full training step; returns { loss, gradNorm, ms }\n  step(batch) {\n    const t0 = performance.now();\n    this.zeroGrads();\n    const loss = this.forwardLoss(batch, true);\n    this.backward(batch);\n    const norm = this.adamw();\n    return { loss, gradNorm: norm, ms: performance.now() - t0 };\n  }\n\n  // eval-only mean CE loss on a batch (no grads, no optimizer state touched)\n  evalLoss(batch) { return this.forwardLoss(batch, false); }\n\n  // weights dict compatible with model.js createModel / bin-reader writeCheckpoint\n  modelWeights() {\n    const w = {};\n    for (const k of Object.keys(this.params)) {\n      w[k] = this.params[k] instanceof Float32Array\n        ? this.params[k] : Float32Array.from(this.params[k]);\n    }\n    w.wcls = w.tokenEmbedding;\n    return w;\n  }\n}\n\n// ---- inlined src/llm.js ----\n// llm.js — provider-agnostic chat call for the ghostwriter (Nursery) and the resident\n// interpreter (hunt). Browser + Node (both have fetch). Keys live in the caller's\n// hands; nothing here persists anything. The claude.ai artifact edition adds a\n// 'keyless' provider that posts to the artifact's built-in Anthropic endpoint.\nconst PROVIDERS = {\n  openai: { label: 'OpenAI API', defaultModel: 'gpt-5.4-mini' },\n  anthropic: { label: 'Anthropic API', defaultModel: 'claude-sonnet-4-5' },\n  gemini: { label: 'Gemini API', defaultModel: 'gemini-3.1-flash-lite' },\n  keyless: { label: 'built-in Claude (no key needed)', defaultModel: '(built-in)' },\n};\n\n// true only inside a claude.ai artifact, where window.claude.complete exists\nfunction keylessAvailable() {\n  return typeof globalThis.claude?.complete === 'function';\n}\n\nasync function callLLM({ provider, key, model, prompt, maxTokens = 6000 }) {\n  if (provider === 'keyless') {\n    if (!keylessAvailable()) throw new Error('built-in Claude only works inside a claude.ai artifact');\n    return await globalThis.claude.complete(prompt);\n  }\n  if (provider === 'openai') {\n    const r = await fetch('https://api.openai.com/v1/chat/completions', {\n      method: 'POST',\n      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },\n      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }],\n        ...(model.startsWith('gpt-4') ? { temperature: 0.9 } : {}) }),\n    });\n    const j = await r.json();\n    if (!r.ok) throw new Error(j.error?.message ?? 'OpenAI HTTP ' + r.status);\n    return j.choices[0].message.content;\n  }\n  if (provider === 'anthropic') {\n    const r = await fetch('https://api.anthropic.com/v1/messages', {\n      method: 'POST',\n      headers: { 'content-type': 'application/json', 'x-api-key': key,\n        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },\n      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),\n    });\n    const j = await r.json();\n    if (!r.ok) throw new Error(j.error?.message ?? 'Anthropic HTTP ' + r.status);\n    return j.content[0].text;\n  }\n  if (provider === 'gemini') {\n    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {\n      method: 'POST',\n      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },\n      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),\n    });\n    const j = await r.json();\n    if (!r.ok) throw new Error(j.error?.message ?? 'Gemini HTTP ' + r.status);\n    const cand = j.candidates?.[0];\n    if (!cand?.content?.parts?.length) throw new Error('Gemini: empty response' + (cand?.finishReason ? ' (' + cand.finishReason + ')' : ''));\n    return cand.content.parts.map(p => p.text ?? '').join('');\n  }\n  throw new Error('unknown provider: ' + provider);\n}\n\n\n// ---- nursery/worker.js ----\n// nursery/worker.js — Session B: training-room engine. Holds the tokenizer, the data\n// streams, and a live Trainer; runs the fine-tune loop cooperatively (one step per\n// macrotask) so pause/sample/export messages interleave cleanly.\n// Start points: the pretrained 260K trainee, or \"empty head\" (random init) for the\n// full gibberish→grammar developmental arc.\n\n\n\n\nlet tok = null, config = null, baseCkpt = null;\nlet trainer = null, trainOpts = null, rand = null;\nlet zogStream = null, replayStream = null, zogEval = null, baseEval = null;\nlet running = false, step = 0;\nlet zogHeldMin = Infinity, evalsAboveMin = 0;\n\nfunction randomWeights(c, seed) {\n  // small-transformer init: N(0, 0.02ish) for matrices, ones for norms\n  const r = rng(seed);\n  const gauss = () => { let s = 0; for (let i = 0; i < 12; i++) s += r(); return s - 6; };\n  const mk = (n, sc) => Float32Array.from({ length: n }, () => gauss() * sc);\n  const sc = 0.06;\n  return {\n    tokenEmbedding: mk(c.vocabSize * c.dim, sc),\n    rmsAtt: new Float32Array(c.nLayers * c.dim).fill(1),\n    wq: mk(c.nLayers * c.dim * c.dim, sc), wk: mk(c.nLayers * c.dim * c.kvDim, sc),\n    wv: mk(c.nLayers * c.dim * c.kvDim, sc), wo: mk(c.nLayers * c.dim * c.dim, sc),\n    rmsFfn: new Float32Array(c.nLayers * c.dim).fill(1),\n    w1: mk(c.nLayers * c.hiddenDim * c.dim, sc), w2: mk(c.nLayers * c.dim * c.hiddenDim, sc),\n    w3: mk(c.nLayers * c.hiddenDim * c.dim, sc),\n    rmsFinal: new Float32Array(c.dim).fill(1),\n  };\n}\n\nfunction makeEvalBatch(stream, B, T) {\n  if (!stream || stream.length < T + 2) return null;\n  const batch = new Int32Array(B * (T + 1));\n  const span = stream.length - (T + 1);\n  for (let b = 0; b < B; b++) {\n    const start = Math.floor((span * b) / Math.max(1, B - 1));\n    batch.set(stream.subarray(start, start + T + 1), b * (T + 1));\n  }\n  return batch;\n}\n\nfunction sampleText(promptText, n = 200) {\n  const model = createModel({ config, weights: trainer.modelWeights() });\n  let text = generateGreedy(model, tok, promptText, n).text;\n  // trim to the last complete sentence so the arc timeline never cuts mid-word\n  const m = text.match(/^[\\s\\S]*[.!?][\"”']?(?=\\s|$)/);\n  if (m && m[0].length > promptText.length) text = m[0];\n  return text;\n}\n\nfunction doEval() {\n  const out = { type: 'eval', step };\n  if (zogEval) out.zogHeld = trainer.evalLoss(zogEval);\n  if (baseEval) out.base = trainer.evalLoss(baseEval);\n  if (out.zogHeld !== undefined) {\n    if (out.zogHeld < zogHeldMin - 1e-4) { zogHeldMin = out.zogHeld; evalsAboveMin = 0; }\n    else if (out.zogHeld > zogHeldMin + 0.02) evalsAboveMin++;\n    out.zogHeldMin = zogHeldMin;\n    if (evalsAboveMin >= 2) out.arc = 'parroting'; // past the floor: memorizing the corpus\n    else if (out.zogHeld <= zogHeldMin + 0.01 && step > 0) out.arc = 'absorbed-ish';\n  }\n  self.postMessage(out);\n}\n\nasync function loop() {\n  const { B, T, replayRatio, maxSteps, evalEvery, sampleEvery, prompt } = trainOpts;\n  while (running && step < maxSteps) {\n    const batch = new Int32Array(B * (T + 1));\n    for (let b = 0; b < B; b++) {\n      const src = (replayStream && rand() < replayRatio) ? replayStream : zogStream;\n      const start = Math.floor(rand() * (src.length - T - 1));\n      batch.set(src.subarray(start, start + T + 1), b * (T + 1));\n    }\n    const r = trainer.step(batch);\n    step++;\n    self.postMessage({ type: 'step', step, loss: r.loss, ms: r.ms, gradNorm: r.gradNorm });\n    if (step % evalEvery === 0 || step === maxSteps) doEval();\n    if (step % sampleEvery === 0 || step === maxSteps) {\n      self.postMessage({ type: 'sample', step, text: sampleText(prompt) });\n    }\n    await new Promise(res => setTimeout(res, 0)); // let pause/export messages in\n  }\n  running = false;\n  self.postMessage({ type: 'idle', step });\n}\n\nself.onmessage = async (e) => {\n  const m = e.data;\n  try {\n    if (m.type === 'init') {\n      baseCkpt = readCheckpoint(m.ckptBuf);\n      config = baseCkpt.config;\n      tok = new Tokenizer(m.tokBuf, config.vocabSize);\n      trainer = null; step = 0; running = false;\n      self.postMessage({ type: 'ready', config: { dim: config.dim, nLayers: config.nLayers,\n        nHeads: config.nHeads, hiddenDim: config.hiddenDim, vocabSize: config.vocabSize,\n        seqLen: config.seqLen, maxTokenLength: tok.maxTokenLength } });\n    } else if (m.type === 'alphabet') {\n      self.postMessage({ type: 'alphabet', pieces: tok.vocab, scores: [...tok.scores] });\n    } else if (m.type === 'tokenize-count') {\n      // piece usage over the corpus, for the alphabet heat view\n      const counts = new Array(config.vocabSize).fill(0);\n      for (const s of m.texts) for (const id of tok.encode(s.trim(), false, false)) counts[id]++;\n      self.postMessage({ type: 'tokenize-count', counts });\n    } else if (m.type === 'set-data') {\n      const enc = s => tok.encode(s.trim(), false, false);\n      zogStream = m.stories.length ? packStories(m.stories.map(enc)) : null;\n      const held = m.heldout.length ? packStories(m.heldout.map(enc)) : null;\n      replayStream = m.replayStories.length ? packStories(m.replayStories.slice(0, 150).map(enc)) : null;\n      const baseSlice = m.replayStories.length > 200 ? packStories(m.replayStories.slice(200, 260).map(enc)) : null;\n      const B = m.B ?? 8, T = m.T ?? 192;\n      zogEval = held ? makeEvalBatch(held, B, T) : null;\n      baseEval = baseSlice ? makeEvalBatch(baseSlice, B, T) : null;\n      self.postMessage({ type: 'data-ready',\n        zogTokens: zogStream ? zogStream.length : 0,\n        heldTokens: held ? held.length : 0,\n        replayTokens: replayStream ? replayStream.length : 0,\n        evals: { zog: !!zogEval, base: !!baseEval } });\n    } else if (m.type === 'train') {\n      if (!zogStream) throw new Error('no corpus yet');\n      trainOpts = m.opts;\n      if (!trainer || m.opts.fresh) {\n        const start = m.opts.startFrom === 'random'\n          ? { config, weights: randomWeights(config, 123) }\n          : baseCkpt;\n        trainer = new Trainer(start, { B: m.opts.B, T: m.opts.T, lr: m.opts.lr });\n        rand = rng(m.opts.seed ?? 7);\n        step = 0; zogHeldMin = Infinity; evalsAboveMin = 0;\n        doEval();\n        self.postMessage({ type: 'sample', step: 0, text: sampleText(m.opts.prompt) });\n      } else {\n        trainer.opt.lr = m.opts.lr; // allow live lr tweak on resume\n      }\n      running = true;\n      loop();\n    } else if (m.type === 'pause') {\n      running = false;\n    } else if (m.type === 'sample-now') {\n      if (trainer) self.postMessage({ type: 'sample', step, text: sampleText(m.prompt ?? trainOpts.prompt) });\n    } else if (m.type === 'export') {\n      if (!trainer) throw new Error('nothing trained yet');\n      const bin = writeCheckpoint(config, trainer.modelWeights());\n      self.postMessage({ type: 'export-done', bin, step }, [bin]);\n    }\n  } catch (err) {\n    running = false;\n    self.postMessage({ type: 'error', message: String(err && err.message || err) });\n  }\n};\n";
+// ---- inlined src/bin-reader.js ----
+// bin-reader.js — llama2.c legacy (v0) checkpoint reader/writer.
+// Format verified against vendor/llama2.c/run.c (read_checkpoint + memory_map_weights):
+//   header: 7 x int32 LE: dim, hidden_dim, n_layers, n_heads, n_kv_heads, vocab_size, seq_len
+//   vocab_size < 0 => final classifier wcls is a separate tensor ("unshared"); use abs()
+//   then fp32 weights in the order listed in layout() below,
+//   then TWO legacy blocks (seq_len*head_size/2 floats each — old RoPE freq_cis) to skip,
+//   then wcls [vocab, dim] only if unshared.
+// DOM-free: operates on ArrayBuffer/Uint8Array, runs in Node and browser.
+
+const HEADER_INTS = 7;
+const HEADER_BYTES = HEADER_INTS * 4;
+
+function toArrayBuffer(data) {
+  if (data instanceof ArrayBuffer) return { buf: data, off: 0, len: data.byteLength };
+  if (ArrayBuffer.isView(data)) return { buf: data.buffer, off: data.byteOffset, len: data.byteLength };
+  throw new Error('bin-reader: expected ArrayBuffer or typed array');
+}
+
+// Ordered tensor layout. rows/cols follow run.c matmul convention: w is (d, n) row-major,
+// i.e. output-dim rows of input-dim columns.
+function layout(c) {
+  const headSize = c.dim / c.nHeads;
+  const kvDim = (c.dim * c.nKvHeads) / c.nHeads;
+  return [
+    { name: 'tokenEmbedding', size: c.vocabSize * c.dim },
+    { name: 'rmsAtt',         size: c.nLayers * c.dim },
+    { name: 'wq',             size: c.nLayers * c.dim * c.dim },
+    { name: 'wk',             size: c.nLayers * c.dim * kvDim },
+    { name: 'wv',             size: c.nLayers * c.dim * kvDim },
+    { name: 'wo',             size: c.nLayers * c.dim * c.dim },
+    { name: 'rmsFfn',         size: c.nLayers * c.dim },
+    { name: 'w1',             size: c.nLayers * c.hiddenDim * c.dim },
+    { name: 'w2',             size: c.nLayers * c.dim * c.hiddenDim },
+    { name: 'w3',             size: c.nLayers * c.hiddenDim * c.dim },
+    { name: 'rmsFinal',       size: c.dim },
+    { name: 'legacyFreqCis',  size: c.seqLen * headSize },   // 2 blocks of seq*headSize/2 — skip
+    { name: 'wcls',           size: c.sharedWeights ? 0 : c.vocabSize * c.dim },
+  ];
+}
+
+function readCheckpoint(data) {
+  const { buf, off, len } = toArrayBuffer(data);
+  const dv = new DataView(buf, off, len);
+  const raw = [];
+  for (let i = 0; i < HEADER_INTS; i++) raw.push(dv.getInt32(i * 4, true));
+  const [dim, hiddenDim, nLayers, nHeads, nKvHeads, vocabRaw, seqLen] = raw;
+  const config = {
+    dim, hiddenDim, nLayers, nHeads, nKvHeads,
+    vocabSize: Math.abs(vocabRaw),
+    seqLen,
+    sharedWeights: vocabRaw > 0,
+    headSize: dim / nHeads,
+    kvDim: (dim * nKvHeads) / nHeads,
+  };
+  if ((off + HEADER_BYTES) % 4 !== 0) throw new Error('bin-reader: weights not 4-byte aligned');
+  const floats = new Float32Array(buf, off + HEADER_BYTES, (len - HEADER_BYTES) / 4);
+
+  const weights = {};
+  const offsets = [];   // { name, offsetFloats, size } — for the E1 offset-sum check
+  let p = 0;
+  for (const t of layout(config)) {
+    offsets.push({ name: t.name, offsetFloats: p, size: t.size });
+    if (t.name !== 'legacyFreqCis' && t.size > 0) weights[t.name] = floats.subarray(p, p + t.size);
+    p += t.size;
+  }
+  if (config.sharedWeights) weights.wcls = weights.tokenEmbedding;
+
+  const expectedBytes = HEADER_BYTES + p * 4;
+  if (expectedBytes !== len) {
+    throw new Error(`bin-reader: layout consumed ${expectedBytes} bytes but file is ${len}`);
+  }
+  return { config, weights, offsets, fileBytes: len };
+}
+
+// Serialize a checkpoint in the same legacy format (legacy freq_cis blocks written as zeros;
+// run.c and this reader both skip them). `weights` uses the field names from readCheckpoint.
+function writeCheckpoint(config, weights) {
+  const c = config;
+  const tensors = layout(c);
+  const totalFloats = tensors.reduce((a, t) => a + t.size, 0);
+  const out = new ArrayBuffer(HEADER_BYTES + totalFloats * 4);
+  const dv = new DataView(out);
+  const vocabField = c.sharedWeights ? c.vocabSize : -c.vocabSize;
+  [c.dim, c.hiddenDim, c.nLayers, c.nHeads, c.nKvHeads, vocabField, c.seqLen]
+    .forEach((v, i) => dv.setInt32(i * 4, v, true));
+  const floats = new Float32Array(out, HEADER_BYTES);
+  let p = 0;
+  for (const t of tensors) {
+    if (t.name !== 'legacyFreqCis' && t.size > 0) {
+      const src = weights[t.name];
+      if (!src || src.length !== t.size) {
+        throw new Error(`writeCheckpoint: ${t.name} expected ${t.size} floats, got ${src ? src.length : 'none'}`);
+      }
+      floats.set(src, p);
+    }
+    p += t.size;
+  }
+  return out;
+}
+
+// ---- inlined src/tokenizer.js ----
+// tokenizer.js — sentencepiece-style BPE tokenizer, ported from vendor/llama2.c/run.c
+// (build_tokenizer / encode / decode). Not improvised: same dummy-prefix, same UTF-8
+// codepoint chunking, same byte-fallback (+3), same best-score merge loop.
+//
+// File format: int32 max_token_length, then vocab_size x (float32 score, int32 len, len raw bytes).
+// vocab_size is NOT in the file — it comes from the checkpoint header.
+//
+// Pieces are handled as "byte strings": one JS char per raw byte (latin1), so lookup and
+// concatenation behave exactly like C strcmp/sprintf on bytes. decode() converts back to
+// real text via UTF-8 at the end. DOM-free; Node + browser.
+
+const BOS = 1;
+const EOS = 2;
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder('utf-8');
+
+function bytesToByteString(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return s;
+}
+
+class Tokenizer {
+  constructor(data, vocabSize) {
+    let buf, off, len;
+    if (data instanceof ArrayBuffer) { buf = data; off = 0; len = data.byteLength; }
+    else if (ArrayBuffer.isView(data)) { buf = data.buffer; off = data.byteOffset; len = data.byteLength; }
+    else throw new Error('Tokenizer: expected ArrayBuffer or typed array');
+    const dv = new DataView(buf, off, len);
+    const bytes = new Uint8Array(buf, off, len);
+
+    this.vocabSize = vocabSize;
+    this.maxTokenLength = dv.getInt32(0, true);
+    this.vocab = new Array(vocabSize);       // byte strings
+    this.scores = new Float32Array(vocabSize);
+    let p = 4;
+    for (let i = 0; i < vocabSize; i++) {
+      this.scores[i] = dv.getFloat32(p, true); p += 4;
+      const n = dv.getInt32(p, true); p += 4;
+      this.vocab[i] = bytesToByteString(bytes.subarray(p, p + n)); p += n;
+    }
+    if (p !== len) throw new Error(`Tokenizer: consumed ${p} of ${len} bytes`);
+
+    // piece -> id. C uses qsort+bsearch over unique strings; a Map is equivalent.
+    // Keep the FIRST id for duplicate pieces (higher-scored merges dominate anyway).
+    this.lookup = new Map();
+    for (let i = 0; i < vocabSize; i++) {
+      if (!this.lookup.has(this.vocab[i])) this.lookup.set(this.vocab[i], i);
+    }
+  }
+
+  // encode(text, bos, eos) -> array of token ids. Mirrors run.c encode() exactly.
+  encode(text, bos = false, eos = false) {
+    const tokens = [];
+    if (bos) tokens.push(BOS);
+    if (text.length !== 0) {
+      const dummyPrefix = this.lookup.get(' ');
+      if (dummyPrefix === undefined) throw new Error('Tokenizer: no " " piece in vocab');
+      tokens.push(dummyPrefix);
+    }
+    const utf8 = textEncoder.encode(text);
+
+    // chunk into UTF-8 codepoints (reset on non-continuation byte), lookup or byte-fallback
+    let chunk = '';
+    for (let i = 0; i < utf8.length; i++) {
+      const b = utf8[i];
+      if ((b & 0xC0) !== 0x80) chunk = '';
+      chunk += String.fromCharCode(b);
+      const next = utf8[i + 1];
+      if (next !== undefined && (next & 0xC0) === 0x80 && chunk.length < 4) continue;
+      const id = this.lookup.get(chunk);
+      if (id !== undefined) {
+        tokens.push(id);
+      } else {
+        for (let j = 0; j < chunk.length; j++) tokens.push(chunk.charCodeAt(j) + 3);
+      }
+      chunk = '';
+    }
+
+    // greedy merge: repeatedly merge the adjacent pair whose merged piece has the best score
+    while (true) {
+      let bestScore = -1e10, bestId = -1, bestIdx = -1;
+      for (let i = 0; i < tokens.length - 1; i++) {
+        const merged = this.vocab[tokens[i]] + this.vocab[tokens[i + 1]];
+        const id = this.lookup.get(merged);
+        if (id !== undefined && this.scores[id] > bestScore) {
+          bestScore = this.scores[id]; bestId = id; bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      tokens[bestIdx] = bestId;
+      tokens.splice(bestIdx + 1, 1);
+    }
+
+    if (eos) tokens.push(EOS);
+    return tokens;
+  }
+
+  // Piece for `token` given previous token, as a byte string. Mirrors run.c decode().
+  decodePiece(prevToken, token) {
+    let piece = this.vocab[token];
+    if (prevToken === BOS && piece.charCodeAt(0) === 0x20) piece = piece.slice(1);
+    const m = /^<0x([0-9A-Fa-f]{2})>$/.exec(piece);
+    if (m) piece = String.fromCharCode(parseInt(m[1], 16));
+    return piece;
+  }
+
+  // Full-sequence decode to a real JS string (UTF-8). BOS/EOS contribute no output but
+  // BOS still triggers the leading-space strip on the following piece.
+  decode(tokens) {
+    let bytes = '';
+    let prev = BOS;
+    for (const tok of tokens) {
+      if (tok === BOS || tok === EOS) { prev = tok; continue; }
+      bytes += this.decodePiece(prev, tok);
+      prev = tok;
+    }
+    const arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    return textDecoder.decode(arr);
+  }
+}
+
+// ---- inlined src/model.js ----
+// model.js — CPU fp32 forward pass with KV cache, ported from vendor/llama2.c/run.c
+// forward(). Math.fround is applied at every point where C rounds to float, so logits
+// track the C implementation to within libm 1-ulp differences (cosf/sinf/expf/powf).
+// The parity gate (E2/G1) is exact greedy token match, tested against C fixtures.
+//
+// Optional `tap` hooks expose per-layer internals for capture.js (E3):
+//   tap.attention(l, h, pos, attRow)  — post-softmax scores, view valid 0..pos (COPY if kept)
+//   tap.residual(l, phase, pos, x)    — phase 'attn' | 'ffn', residual stream after the add
+//   tap.ffn(l, pos, hb)               — SwiGLU-gated hidden activations before w2
+// Optional `ablate` (Sessions A/C): either a Set of "l:h" head keys (legacy form), or
+// { heads: Set<"l:h">, neurons: Set<"l:j"> }. Ablated heads contribute zeros to the
+// attention output (their pattern is still computed and tapped, so the microscope can
+// show WHAT was removed); ablated neurons have their SwiGLU-gated activation zeroed
+// before w2. With ablate unset the code path is identical to the G1-parity-tested one.
+// DOM-free; Node + browser.
+
+const f = Math.fround;
+
+function createState(config) {
+  const c = config;
+  return {
+    x: new Float32Array(c.dim),
+    xb: new Float32Array(c.dim),
+    xb2: new Float32Array(c.dim),
+    hb: new Float32Array(c.hiddenDim),
+    hb2: new Float32Array(c.hiddenDim),
+    q: new Float32Array(c.dim),
+    att: new Float32Array(c.nHeads * c.seqLen),
+    logits: new Float32Array(c.vocabSize),
+    keyCache: new Float32Array(c.nLayers * c.seqLen * c.kvDim),
+    valueCache: new Float32Array(c.nLayers * c.seqLen * c.kvDim),
+  };
+}
+
+function createModel(checkpoint) {
+  return { config: checkpoint.config, weights: checkpoint.weights, state: createState(checkpoint.config) };
+}
+
+function rmsnorm(o, x, w, wOff, size) {
+  let ss = 0;
+  for (let j = 0; j < size; j++) ss = f(ss + f(x[j] * x[j]));
+  ss = f(ss / size);
+  ss = f(ss + 1e-5);
+  ss = f(1 / f(Math.sqrt(ss)));
+  for (let j = 0; j < size; j++) o[j] = w[wOff + j] * f(ss * x[j]);
+}
+
+function softmax(x, off, size) {
+  let max = x[off];
+  for (let i = 1; i < size; i++) if (x[off + i] > max) max = x[off + i];
+  let sum = 0;
+  for (let i = 0; i < size; i++) {
+    x[off + i] = f(Math.exp(f(x[off + i] - max)));
+    sum = f(sum + x[off + i]);
+  }
+  for (let i = 0; i < size; i++) x[off + i] = f(x[off + i] / sum);
+}
+
+// xout[d] = W(d,n) @ x(n) ; W row-major at wOff
+function matmul(xout, x, w, wOff, n, d) {
+  for (let i = 0; i < d; i++) {
+    let val = 0;
+    const row = wOff + i * n;
+    for (let j = 0; j < n; j++) val = f(val + f(w[row + j] * x[j]));
+    xout[i] = val;
+  }
+}
+
+function forward(model, token, pos, tap = null, ablate = null) {
+  const c = model.config, w = model.weights, s = model.state;
+  const dim = c.dim, kvDim = c.kvDim, hiddenDim = c.hiddenDim, headSize = c.headSize;
+  const kvMul = c.nHeads / c.nKvHeads;
+  const x = s.x;
+
+  let abH = null, abNL = null;
+  if (ablate) {
+    const abN = ablate instanceof Set ? null : ablate.neurons;
+    abH = ablate instanceof Set ? ablate : (ablate.heads ?? null);
+    if (abN && abN.size) {
+      abNL = Array.from({ length: c.nLayers }, () => []);
+      for (const k of abN) {
+        const [l, j] = k.split(':').map(Number);
+        if (abNL[l]) abNL[l].push(j);
+      }
+    }
+  }
+
+  x.set(w.tokenEmbedding.subarray(token * dim, (token + 1) * dim));
+
+  for (let l = 0; l < c.nLayers; l++) {
+    rmsnorm(s.xb, x, w.rmsAtt, l * dim, dim);
+
+    const loff = l * c.seqLen * kvDim;
+    const kOff = loff + pos * kvDim;
+
+    matmul(s.q, s.xb, w.wq, l * dim * dim, dim, dim);
+    matmul(s.keyCache.subarray(kOff, kOff + kvDim), s.xb, w.wk, l * dim * kvDim, dim, kvDim);
+    matmul(s.valueCache.subarray(kOff, kOff + kvDim), s.xb, w.wv, l * dim * kvDim, dim, kvDim);
+
+    // RoPE, matching C exactly (per-pair freq from head_dim = i % head_size)
+    const k = s.keyCache;
+    for (let i = 0; i < dim; i += 2) {
+      const headDim = i % headSize;
+      const freq = f(1 / f(Math.pow(10000, f(headDim / headSize))));
+      const val = f(pos * freq);
+      const fcr = f(Math.cos(val));
+      const fci = f(Math.sin(val));
+      const rotn = i < kvDim ? 2 : 1;
+      for (let v = 0; v < rotn; v++) {
+        if (v === 0) {
+          const v0 = s.q[i], v1 = s.q[i + 1];
+          s.q[i] = f(v0 * fcr) - f(v1 * fci);
+          s.q[i + 1] = f(v0 * fci) + f(v1 * fcr);
+        } else {
+          const v0 = k[kOff + i], v1 = k[kOff + i + 1];
+          k[kOff + i] = f(v0 * fcr) - f(v1 * fci);
+          k[kOff + i + 1] = f(v0 * fci) + f(v1 * fcr);
+        }
+      }
+    }
+
+    // multihead attention over the KV cache
+    const sqrtHs = f(Math.sqrt(headSize));
+    for (let h = 0; h < c.nHeads; h++) {
+      const qOff = h * headSize;
+      const attOff = h * c.seqLen;
+      const kvHeadOff = ((h / kvMul) | 0) * headSize;
+      for (let t = 0; t <= pos; t++) {
+        const kBase = loff + t * kvDim + kvHeadOff;
+        let score = 0;
+        for (let i = 0; i < headSize; i++) score = f(score + f(s.q[qOff + i] * s.keyCache[kBase + i]));
+        s.att[attOff + t] = f(score / sqrtHs);
+      }
+      softmax(s.att, attOff, pos + 1);
+      if (tap && tap.attention) tap.attention(l, h, pos, s.att.subarray(attOff, attOff + pos + 1));
+
+      const xbOff = h * headSize;
+      s.xb.fill(0, xbOff, xbOff + headSize);
+      if (abH && abH.has(l + ':' + h)) continue; // head contributes zeros
+      for (let t = 0; t <= pos; t++) {
+        const vBase = loff + t * kvDim + kvHeadOff;
+        const a = s.att[attOff + t];
+        for (let i = 0; i < headSize; i++) {
+          s.xb[xbOff + i] = s.xb[xbOff + i] + f(a * s.valueCache[vBase + i]);
+        }
+      }
+    }
+
+    matmul(s.xb2, s.xb, w.wo, l * dim * dim, dim, dim);
+    for (let i = 0; i < dim; i++) x[i] = x[i] + s.xb2[i];
+    if (tap && tap.residual) tap.residual(l, 'attn', pos, x);
+
+    rmsnorm(s.xb, x, w.rmsFfn, l * dim, dim);
+    matmul(s.hb, s.xb, w.w1, l * dim * hiddenDim, dim, hiddenDim);
+    matmul(s.hb2, s.xb, w.w3, l * dim * hiddenDim, dim, hiddenDim);
+    for (let i = 0; i < hiddenDim; i++) {
+      let val = s.hb[i];
+      val = f(val * f(1 / f(1 + f(Math.exp(-val)))));
+      val = f(val * s.hb2[i]);
+      s.hb[i] = val;
+    }
+    if (abNL) for (const j of abNL[l]) s.hb[j] = 0;
+    if (tap && tap.ffn) tap.ffn(l, pos, s.hb);
+
+    matmul(s.xb, s.hb, w.w2, l * hiddenDim * dim, hiddenDim, dim);
+    for (let i = 0; i < dim; i++) x[i] = x[i] + s.xb[i];
+    if (tap && tap.residual) tap.residual(l, 'ffn', pos, x);
+  }
+
+  rmsnorm(x, x, w.rmsFinal, 0, dim);
+  matmul(s.logits, x, w.wcls, 0, dim, c.vocabSize);
+  return s.logits;
+}
+
+function argmax(arr, n = arr.length) {
+  let maxI = 0, maxP = arr[0];
+  for (let i = 1; i < n; i++) if (arr[i] > maxP) { maxI = i; maxP = arr[i]; }
+  return maxI;
+}
+
+// Greedy generation mirroring run.c generate() with temperature 0, except it does NOT
+// stop on BOS — fixtures record a fixed number of steps for strict comparison.
+function generateGreedy(model, tokenizer, prompt, steps, tap = null) {
+  const promptTokens = tokenizer.encode(prompt, true, false);
+  const n = Math.min(steps, model.config.seqLen);
+  const tokens = [promptTokens[0]];
+  let token = promptTokens[0];
+  for (let pos = 0; pos < n - 1; pos++) {
+    const logits = forward(model, token, pos, tap);
+    const next = pos < promptTokens.length - 1 ? promptTokens[pos + 1] : argmax(logits);
+    tokens.push(next);
+    token = next;
+  }
+  return { tokens, text: tokenizer.decode(tokens) };
+}
+
+// ---- inlined src/capture.js ----
+// capture.js — E3: activation capture over a teacher-forced token sequence.
+// This is the microscope's substrate (kickoff §6 E3): per-layer/per-head attention
+// matrices, residual-stream snapshots, FFN activations, top-k next-token logits.
+// Typed arrays internally; toInterpreterJSON() emits a selective, rounded JSON view
+// for the resident interpreter (Session C). DOM-free; Node + browser.
+
+
+class Capture {
+  constructor(config, tokens) {
+    const c = config;
+    const n = tokens.length;
+    this.config = c;
+    this.tokens = tokens.slice();
+    this.nPos = n;
+    // attention[l][h] is an n×n row-major matrix; row p holds post-softmax scores
+    // over positions 0..p (upper triangle stays 0).
+    this.attention = new Float32Array(c.nLayers * c.nHeads * n * n);
+    // residual stream AFTER the attention-add and AFTER the ffn-add, per layer/pos.
+    this.residAttn = new Float32Array(c.nLayers * n * c.dim);
+    this.residFfn = new Float32Array(c.nLayers * n * c.dim);
+    // SwiGLU-gated FFN hidden activations (input to w2), per layer/pos.
+    this.ffn = new Float32Array(c.nLayers * n * c.hiddenDim);
+    this.topK = [];        // per pos: [{token, logit}] descending
+    // Session A additions: full-softmax log partition per pos (exact probabilities
+    // from stored logits: p = exp(logit - logZ)), and the model's probability for
+    // the ACTUAL next token (teacher-forced), null at the last position.
+    this.logZ = new Float32Array(n);
+    this.nextProb = new Float32Array(n);
+  }
+
+  attnAt(l, h, pos = null) {
+    const n = this.nPos;
+    const m = this.attention.subarray((l * this.config.nHeads + h) * n * n,
+                                      (l * this.config.nHeads + h + 1) * n * n);
+    return pos === null ? m : m.subarray(pos * n, pos * n + pos + 1);
+  }
+  residualAt(l, pos, phase = 'ffn') {
+    const c = this.config;
+    const base = phase === 'attn' ? this.residAttn : this.residFfn;
+    return base.subarray((l * this.nPos + pos) * c.dim, (l * this.nPos + pos + 1) * c.dim);
+  }
+  ffnAt(l, pos) {
+    const c = this.config;
+    return this.ffn.subarray((l * this.nPos + pos) * c.hiddenDim,
+                             (l * this.nPos + pos + 1) * c.hiddenDim);
+  }
+
+  bytes() {
+    return (this.attention.length + this.residAttn.length + this.residFfn.length +
+            this.ffn.length) * 4;
+  }
+
+  // Selective JSON for the resident interpreter. Full dumps are too big to ship to an
+  // LLM; callers pick layers/heads and positions. Values rounded to `digits`.
+  toInterpreterJSON({ layers = null, heads = null, positions = null, digits = 4 } = {}) {
+    const c = this.config;
+    const round = v => Number(v.toFixed(digits));
+    const L = layers ?? [...Array(c.nLayers).keys()];
+    const H = heads ?? [...Array(c.nHeads).keys()];
+    const P = positions ?? [...Array(this.nPos).keys()];
+    const out = {
+      schema: 'tiny-mind-capture-v1',
+      config: { dim: c.dim, nLayers: c.nLayers, nHeads: c.nHeads, nKvHeads: c.nKvHeads,
+                hiddenDim: c.hiddenDim, vocabSize: c.vocabSize },
+      tokens: this.tokens,
+      positions: P,
+      topK: P.map(p => this.topK[p].map(({ token, logit }) => ({ token, logit: round(logit) }))),
+      attention: {},
+    };
+    for (const l of L) for (const h of H) {
+      out.attention[`L${l}H${h}`] =
+        P.map(p => Array.from(this.attnAt(l, h, p), round));
+    }
+    return out;
+  }
+}
+
+// Run the model over `tokens` (teacher-forced) recording activations.
+// topK = 0 disables logit capture. ablate: Set of "l:h" (see model.js).
+// onProgress(pos, n) fires per position for UI progress bars.
+function captureRun(model, tokens, { topK = 16, ablate = null, onProgress = null } = {}) {
+  const c = model.config;
+  if (tokens.length > c.seqLen) throw new Error(`captureRun: ${tokens.length} tokens > seqLen ${c.seqLen}`);
+  const cap = new Capture(c, tokens);
+  const n = tokens.length;
+
+  const tap = {
+    attention(l, h, pos, row) {
+      cap.attention.set(row, (l * c.nHeads + h) * n * n + pos * n);
+    },
+    residual(l, phase, pos, x) {
+      (phase === 'attn' ? cap.residAttn : cap.residFfn)
+        .set(x, (l * n + pos) * c.dim);
+    },
+    ffn(l, pos, hb) {
+      cap.ffn.set(hb, (l * n + pos) * c.hiddenDim);
+    },
+  };
+
+  for (let pos = 0; pos < n; pos++) {
+    const logits = forward(model, tokens[pos], pos, tap, ablate);
+    if (topK > 0) {
+      const idx = [...logits.keys()];
+      idx.sort((a, b) => logits[b] - logits[a]);
+      cap.topK.push(idx.slice(0, topK).map(i => ({ token: i, logit: logits[i] })));
+      // exact softmax normalizer + probability of the actual next token
+      let max = -Infinity;
+      for (let i = 0; i < logits.length; i++) if (logits[i] > max) max = logits[i];
+      let sum = 0;
+      for (let i = 0; i < logits.length; i++) sum += Math.exp(logits[i] - max);
+      cap.logZ[pos] = max + Math.log(sum);
+      cap.nextProb[pos] = pos + 1 < n ? Math.exp(logits[tokens[pos + 1]] - cap.logZ[pos]) : 0;
+    } else {
+      cap.topK.push([]);
+    }
+    if (onProgress) onProgress(pos + 1, n);
+  }
+  return cap;
+}
+
+// Neuron contrast scores for a token span (Session A "which neurons light up here?").
+// For every (layer, hidden unit): mean |activation| inside [spanStart, spanEnd] minus
+// mean |activation| outside, in units of the outside std. Returns the top `limit`
+// as { layer, neuron, score, inMean, outMean }. Correlational by design — the
+// microscope pairs it with ablation, which is the arbiter.
+function neuronContrast(cap, spanStart, spanEnd, limit = 20) {
+  const c = cap.config, n = cap.nPos, HD = c.hiddenDim;
+  const results = [];
+  for (let l = 0; l < c.nLayers; l++) {
+    for (let j = 0; j < HD; j++) {
+      let inSum = 0, inN = 0, outSum = 0, outSq = 0, outN = 0;
+      for (let p = 0; p < n; p++) {
+        const v = Math.abs(cap.ffn[(l * n + p) * HD + j]);
+        if (p >= spanStart && p <= spanEnd) { inSum += v; inN++; }
+        else { outSum += v; outSq += v * v; outN++; }
+      }
+      if (!inN || !outN) continue;
+      const inMean = inSum / inN, outMean = outSum / outN;
+      const outStd = Math.sqrt(Math.max(1e-12, outSq / outN - outMean * outMean));
+      results.push({ layer: l, neuron: j, score: (inMean - outMean) / (outStd + 1e-6), inMean, outMean });
+    }
+  }
+  results.sort((a, b) => b.score - a.score);
+  return results.slice(0, limit);
+}
+
+// Logit lens: project a residual-stream snapshot through the final rmsnorm + classifier.
+// "What would the model predict if it stopped at layer l?"
+function logitLens(model, cap, l, pos, phase = 'ffn') {
+  const c = model.config, w = model.weights;
+  const x = cap.residualAt(l, pos, phase);
+  const f = Math.fround;
+  let ss = 0;
+  for (let j = 0; j < c.dim; j++) ss = f(ss + f(x[j] * x[j]));
+  ss = f(1 / f(Math.sqrt(f(f(ss / c.dim) + 1e-5))));
+  const xb = new Float32Array(c.dim);
+  for (let j = 0; j < c.dim; j++) xb[j] = w.rmsFinal[j] * f(ss * x[j]);
+  const logits = new Float32Array(c.vocabSize);
+  for (let i = 0; i < c.vocabSize; i++) {
+    let val = 0;
+    const row = i * c.dim;
+    for (let j = 0; j < c.dim; j++) val = f(val + f(w.wcls[row + j] * xb[j]));
+    logits[i] = val;
+  }
+  return logits;
+}
+
+// ---- inlined src/train.js ----
+// train.js — E4: hand-rolled batched forward/backward + AdamW for the 260K trainee
+// (llm.c-style manual backprop; kickoff §6 E4 prefers this over tfjs: one
+// implementation, zero deps, full activation access). DOM-free; Node + browser.
+//
+// Precision: Float32Array storage with f64 loop accumulation (training has no C-parity
+// gate; model.js remains the fround-faithful inference reference). Pass { f64: true }
+// for Float64Array storage — used by the finite-difference gradient check.
+//
+// Weight names/shapes match bin-reader.js, so trainer params drop straight into
+// model.js (generation from the fine-tuned net) and writeCheckpoint (saving).
+
+// --- deterministic RNG (mulberry32) for reproducible batches/experiments.
+// getState/setState expose the 32-bit internal state so long runs can checkpoint
+// and resume the exact random sequence (arc generation).
+function rng(seed) {
+  let a = seed >>> 0;
+  const next = function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  next.getState = () => a >>> 0;
+  next.setState = (v) => { a = v >>> 0; };
+  return next;
+}
+
+// Pack tokenized stories into one training stream: BOS before each story (matches
+// llama2.c TinyStories pretokenization).
+function packStories(storyTokenLists) {
+  let n = 0;
+  for (const s of storyTokenLists) n += s.length + 1;
+  const out = new Int32Array(n);
+  let p = 0;
+  for (const s of storyTokenLists) { out[p++] = 1; out.set(s, p); p += s.length; }
+  return out;
+}
+
+// Sample B random windows of T+1 tokens from a stream (inputs + shifted targets).
+function sampleBatch(stream, B, T, rand) {
+  const batch = new Int32Array(B * (T + 1));
+  for (let b = 0; b < B; b++) {
+    const start = Math.floor(rand() * (stream.length - T - 1));
+    batch.set(stream.subarray(start, start + T + 1), b * (T + 1));
+  }
+  return batch;
+}
+
+const PARAM_SHAPES = c => ({
+  tokenEmbedding: c.vocabSize * c.dim,
+  rmsAtt: c.nLayers * c.dim,
+  wq: c.nLayers * c.dim * c.dim,
+  wk: c.nLayers * c.dim * c.kvDim,
+  wv: c.nLayers * c.dim * c.kvDim,
+  wo: c.nLayers * c.dim * c.dim,
+  rmsFfn: c.nLayers * c.dim,
+  w1: c.nLayers * c.hiddenDim * c.dim,
+  w2: c.nLayers * c.dim * c.hiddenDim,
+  w3: c.nLayers * c.hiddenDim * c.dim,
+  rmsFinal: c.dim,
+});
+const DECAYED = new Set(['tokenEmbedding', 'wq', 'wk', 'wv', 'wo', 'w1', 'w2', 'w3']);
+
+class Trainer {
+  constructor(checkpoint, {
+    B = 8, T = 256, lr = 1e-4, weightDecay = 0.01,
+    beta1 = 0.9, beta2 = 0.999, eps = 1e-8, clip = 1.0, f64 = false,
+  } = {}) {
+    const c = checkpoint.config;
+    if (!c.sharedWeights) throw new Error('Trainer assumes tied embedding/classifier');
+    if (T > c.seqLen) throw new Error(`T ${T} > seqLen ${c.seqLen}`);
+    this.c = c;
+    this.opt = { lr, weightDecay, beta1, beta2, eps, clip };
+    this.stepCount = 0;
+    this.B = B; this.T = T;
+    const AT = f64 ? Float64Array : Float32Array;
+    this.AT = AT;
+
+    this.params = {}; this.grads = {}; this.m = {}; this.v = {};
+    for (const [name, size] of Object.entries(PARAM_SHAPES(c))) {
+      this.params[name] = new AT(size);
+      this.params[name].set(checkpoint.weights[name]);
+      this.grads[name] = new AT(size);
+      this.m[name] = new AT(size);
+      this.v[name] = new AT(size);
+    }
+
+    // activations (per step); L layers of everything that backward needs
+    const { dim: C, kvDim: K, hiddenDim: HD, nLayers: L, nHeads: H, vocabSize: V } = c;
+    const N = B * T;
+    const per = () => new AT(N * C);
+    this.act = {
+      x0: per(),
+      ln1: [], q: [], k: [], v: [], att: [], attOut: [], res1: [],
+      ln2: [], h1: [], h3: [], hGate: [], res2: [],
+      lnf: new AT(N * C),
+      logits: new AT(N * V), // overwritten with dLogits during loss
+    };
+    for (let l = 0; l < L; l++) {
+      this.act.ln1.push(per()); this.act.q.push(per());
+      this.act.k.push(new AT(N * K)); this.act.v.push(new AT(N * K));
+      this.act.att.push(new AT(B * H * T * T));
+      this.act.attOut.push(per()); this.act.res1.push(per());
+      this.act.ln2.push(per());
+      this.act.h1.push(new AT(N * HD)); this.act.h3.push(new AT(N * HD));
+      this.act.hGate.push(new AT(N * HD));
+      this.act.res2.push(per());
+    }
+    // gradient scratch
+    this.g = {
+      dX: per(), dLn: per(), dQ: per(),
+      dK: new AT(N * K), dV: new AT(N * K),
+      dAttOut: per(),
+      dH1: new AT(N * HD), dH3: new AT(N * HD), dHGate: new AT(N * HD),
+      dLnf: per(),
+    };
+    // contiguous [B][KH][T][HS] transposes of k/v — the attention fast path streams these
+    this.kT = new AT(N * K); this.vT = new AT(N * K);
+    this.dKT = new AT(N * K); this.dVT = new AT(N * K);
+  }
+
+  // [b*T+t]*K + kvh*HS + i  <->  ((b*KH + kvh)*T + t)*HS + i
+  transposeKV(src, dst, invert = false) {
+    const { B, T } = this, { kvDim: K, nKvHeads: KH, headSize: HS } = this.c;
+    for (let b = 0; b < B; b++) {
+      for (let kvh = 0; kvh < KH; kvh++) {
+        const tb = (b * KH + kvh) * T * HS;
+        for (let t = 0; t < T; t++) {
+          const a = (b * T + t) * K + kvh * HS, d = tb + t * HS;
+          if (invert) for (let i = 0; i < HS; i++) dst[a + i] = src[d + i];
+          else for (let i = 0; i < HS; i++) dst[d + i] = src[a + i];
+        }
+      }
+    }
+  }
+
+  // ---- building blocks -----------------------------------------------------
+  // matmul / matmulBackward are register-blocked (4 output rows at a time): V8 keeps
+  // the 4 accumulators in registers and streams the weight rows, ~3x over the naive loop.
+
+  // out[N,O] = in[N,C] @ W[O,C]^T
+  static matmul(out, inp, W, N, C, O) {
+    const O4 = O - (O % 4);
+    for (let n = 0; n < N; n++) {
+      const ib = n * C, ob = n * O;
+      let o = 0;
+      for (; o < O4; o += 4) {
+        const w0 = o * C, w1 = w0 + C, w2 = w1 + C, w3 = w2 + C;
+        let a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+        for (let i = 0; i < C; i++) {
+          const xv = inp[ib + i];
+          a0 += xv * W[w0 + i]; a1 += xv * W[w1 + i];
+          a2 += xv * W[w2 + i]; a3 += xv * W[w3 + i];
+        }
+        out[ob + o] = a0; out[ob + o + 1] = a1; out[ob + o + 2] = a2; out[ob + o + 3] = a3;
+      }
+      for (; o < O; o++) {
+        const wb = o * C;
+        let acc = 0;
+        for (let i = 0; i < C; i++) acc += inp[ib + i] * W[wb + i];
+        out[ob + o] = acc;
+      }
+    }
+  }
+
+  // dIn[N,C] += dOut @ W ; dW[O,C] += dOut^T @ in  (two streaming passes)
+  static matmulBackward(dOut, inp, W, dIn, dW, N, C, O) {
+    const O4 = O - (O % 4);
+    for (let n = 0; n < N; n++) {
+      const ib = n * C, ob = n * O;
+      let o = 0;
+      for (; o < O4; o += 4) {
+        const g0 = dOut[ob + o], g1 = dOut[ob + o + 1], g2 = dOut[ob + o + 2], g3 = dOut[ob + o + 3];
+        const w0 = o * C, w1 = w0 + C, w2 = w1 + C, w3 = w2 + C;
+        for (let i = 0; i < C; i++) {
+          dIn[ib + i] += g0 * W[w0 + i] + g1 * W[w1 + i] + g2 * W[w2 + i] + g3 * W[w3 + i];
+        }
+      }
+      for (; o < O; o++) {
+        const g = dOut[ob + o], wb = o * C;
+        for (let i = 0; i < C; i++) dIn[ib + i] += g * W[wb + i];
+      }
+    }
+    const N4 = N - (N % 4), O2 = O - (O % 2);
+    let n = 0;
+    for (; n < N4; n += 4) {
+      const ib0 = n * C, ib1 = ib0 + C, ib2 = ib1 + C, ib3 = ib2 + C;
+      const ob0 = n * O, ob1 = ob0 + O, ob2 = ob1 + O, ob3 = ob2 + O;
+      let o = 0;
+      for (; o < O2; o += 2) {
+        const g0a = dOut[ob0 + o], g1a = dOut[ob1 + o], g2a = dOut[ob2 + o], g3a = dOut[ob3 + o];
+        const g0b = dOut[ob0 + o + 1], g1b = dOut[ob1 + o + 1], g2b = dOut[ob2 + o + 1], g3b = dOut[ob3 + o + 1];
+        const wa = o * C, wb = wa + C;
+        for (let i = 0; i < C; i++) {
+          const x0 = inp[ib0 + i], x1 = inp[ib1 + i], x2 = inp[ib2 + i], x3 = inp[ib3 + i];
+          dW[wa + i] += g0a * x0 + g1a * x1 + g2a * x2 + g3a * x3;
+          dW[wb + i] += g0b * x0 + g1b * x1 + g2b * x2 + g3b * x3;
+        }
+      }
+      for (; o < O; o++) {
+        const g0 = dOut[ob0 + o], g1 = dOut[ob1 + o], g2 = dOut[ob2 + o], g3 = dOut[ob3 + o];
+        const wc = o * C;
+        for (let i = 0; i < C; i++) {
+          dW[wc + i] += g0 * inp[ib0 + i] + g1 * inp[ib1 + i] + g2 * inp[ib2 + i] + g3 * inp[ib3 + i];
+        }
+      }
+    }
+    for (; n < N; n++) {
+      const ib = n * C, ob = n * O;
+      for (let o = 0; o < O; o++) {
+        const g = dOut[ob + o];
+        const wb = o * C;
+        for (let i = 0; i < C; i++) dW[wb + i] += g * inp[ib + i];
+      }
+    }
+  }
+
+  rmsnormRows(out, inp, w, wOff, N, C) {
+    for (let n = 0; n < N; n++) {
+      const b = n * C;
+      let ss = 0;
+      for (let i = 0; i < C; i++) ss += inp[b + i] * inp[b + i];
+      const inv = 1 / Math.sqrt(ss / C + 1e-5);
+      for (let i = 0; i < C; i++) out[b + i] = w[wOff + i] * inp[b + i] * inv;
+    }
+  }
+
+  // accumulates dIn += backprop(dOut), dW += ...; recomputes inv from inp
+  rmsnormRowsBackward(dOut, inp, w, wOff, dIn, dW, N, C) {
+    for (let n = 0; n < N; n++) {
+      const b = n * C;
+      let ss = 0;
+      for (let i = 0; i < C; i++) ss += inp[b + i] * inp[b + i];
+      const inv = 1 / Math.sqrt(ss / C + 1e-5);
+      let dot = 0; // sum_k dOut_k * w_k * x_k
+      for (let i = 0; i < C; i++) dot += dOut[b + i] * w[wOff + i] * inp[b + i];
+      const k = dot * inv * inv * inv / C;
+      for (let i = 0; i < C; i++) {
+        dW[wOff + i] += dOut[b + i] * inp[b + i] * inv;
+        dIn[b + i] += dOut[b + i] * w[wOff + i] * inv - k * inp[b + i];
+      }
+    }
+  }
+
+  rope(vec, C, K, T, headSize, forQ, invert) {
+    // rotate q rows (width C) or k rows (width K); invert=true applies the transpose
+    if (!this.ropeCos) {
+      const half = headSize / 2;
+      this.ropeCos = new Float64Array(T * half);
+      this.ropeSin = new Float64Array(T * half);
+      for (let pos = 0; pos < T; pos++) {
+        for (let j = 0; j < half; j++) {
+          const freq = 1 / Math.pow(10000, (2 * j) / headSize);
+          this.ropeCos[pos * half + j] = Math.cos(pos * freq);
+          this.ropeSin[pos * half + j] = Math.sin(pos * freq);
+        }
+      }
+    }
+    const B = this.B, W = forQ ? C : K, half = headSize / 2;
+    const sgn = invert ? -1 : 1;
+    for (let bt = 0; bt < B * T; bt++) {
+      const pos = bt % T, base = bt * W, tb = pos * half;
+      for (let i = 0; i < W; i += 2) {
+        const j = (i % headSize) >> 1;
+        const fcr = this.ropeCos[tb + j], fci = sgn * this.ropeSin[tb + j];
+        const v0 = vec[base + i], v1 = vec[base + i + 1];
+        vec[base + i] = v0 * fcr - v1 * fci;
+        vec[base + i + 1] = v0 * fci + v1 * fcr;
+      }
+    }
+  }
+
+  // ---- forward -------------------------------------------------------------
+
+  // batch: Int32Array [B * (T+1)]; returns mean cross-entropy loss.
+  // computeGrads=false -> eval only (activations still written, grads untouched).
+  forwardLoss(batch, computeGrads = true) {
+    const { c, B, T, act, params } = this;
+    const { dim: C, kvDim: K, hiddenDim: HD, nLayers: L, nHeads: H, vocabSize: V, headSize: HS } = c;
+    const kvMul = H / c.nKvHeads;
+    const N = B * T;
+
+    for (let b = 0; b < B; b++) {
+      for (let t = 0; t < T; t++) {
+        const tok = batch[b * (T + 1) + t];
+        act.x0.set(params.tokenEmbedding.subarray(tok * C, (tok + 1) * C), (b * T + t) * C);
+      }
+    }
+
+    let x = act.x0;
+    for (let l = 0; l < L; l++) {
+      this.rmsnormRows(act.ln1[l], x, params.rmsAtt, l * C, N, C);
+      Trainer.matmul(act.q[l], act.ln1[l], params.wq.subarray(l * C * C), N, C, C);
+      Trainer.matmul(act.k[l], act.ln1[l], params.wk.subarray(l * C * K), N, C, K);
+      Trainer.matmul(act.v[l], act.ln1[l], params.wv.subarray(l * C * K), N, C, K);
+      this.rope(act.q[l], C, K, T, HS, true, false);
+      this.rope(act.k[l], C, K, T, HS, false, false);
+
+      // causal attention (fast path for HS=8 — the 260K trainee — streaming contiguous
+      // kT/vT rows with fully unrolled head dots; generic path otherwise)
+      const att = act.att[l], q = act.q[l], k = act.k[l], v = act.v[l], attOut = act.attOut[l];
+      attOut.fill(0);
+      const scale = 1 / Math.sqrt(HS);
+      const KH = c.nKvHeads;
+      if (HS === 8) {
+        this.transposeKV(k, this.kT); this.transposeKV(v, this.vT);
+        const kT = this.kT, vT = this.vT;
+        for (let b = 0; b < B; b++) {
+          for (let h = 0; h < H; h++) {
+            const base = (b * KH + ((h / kvMul) | 0)) * T * HS;
+            for (let t = 0; t < T; t++) {
+              const qb = (b * T + t) * C + h * HS;
+              const q0 = q[qb], q1 = q[qb + 1], q2 = q[qb + 2], q3 = q[qb + 3],
+                    q4 = q[qb + 4], q5 = q[qb + 5], q6 = q[qb + 6], q7 = q[qb + 7];
+              const rowB = ((b * H + h) * T + t) * T;
+              let max = -Infinity;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const kb = base + t2 * 8;
+                const s = (q0 * kT[kb] + q1 * kT[kb + 1] + q2 * kT[kb + 2] + q3 * kT[kb + 3] +
+                           q4 * kT[kb + 4] + q5 * kT[kb + 5] + q6 * kT[kb + 6] + q7 * kT[kb + 7]) * scale;
+                att[rowB + t2] = s;
+                if (s > max) max = s;
+              }
+              let sum = 0;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const e = Math.exp(att[rowB + t2] - max);
+                att[rowB + t2] = e; sum += e;
+              }
+              const inv = 1 / sum;
+              let a0 = 0, a1 = 0, a2 = 0, a3 = 0, a4 = 0, a5 = 0, a6 = 0, a7 = 0;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const p = att[rowB + t2] * inv;
+                att[rowB + t2] = p;
+                const vb = base + t2 * 8;
+                a0 += p * vT[vb];     a1 += p * vT[vb + 1]; a2 += p * vT[vb + 2]; a3 += p * vT[vb + 3];
+                a4 += p * vT[vb + 4]; a5 += p * vT[vb + 5]; a6 += p * vT[vb + 6]; a7 += p * vT[vb + 7];
+              }
+              const ob = (b * T + t) * C + h * HS;
+              attOut[ob] = a0; attOut[ob + 1] = a1; attOut[ob + 2] = a2; attOut[ob + 3] = a3;
+              attOut[ob + 4] = a4; attOut[ob + 5] = a5; attOut[ob + 6] = a6; attOut[ob + 7] = a7;
+            }
+          }
+        }
+      } else {
+        for (let b = 0; b < B; b++) {
+          for (let h = 0; h < H; h++) {
+            const kvh = (h / kvMul) | 0;
+            for (let t = 0; t < T; t++) {
+              const qb = (b * T + t) * C + h * HS;
+              const rowB = ((b * H + h) * T + t) * T;
+              let max = -Infinity;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const kb = (b * T + t2) * K + kvh * HS;
+                let s = 0;
+                for (let i = 0; i < HS; i++) s += q[qb + i] * k[kb + i];
+                s *= scale;
+                att[rowB + t2] = s;
+                if (s > max) max = s;
+              }
+              let sum = 0;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const e = Math.exp(att[rowB + t2] - max);
+                att[rowB + t2] = e; sum += e;
+              }
+              const inv = 1 / sum;
+              const ob = (b * T + t) * C + h * HS;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const p = att[rowB + t2] * inv;
+                att[rowB + t2] = p;
+                const vb = (b * T + t2) * K + kvh * HS;
+                for (let i = 0; i < HS; i++) attOut[ob + i] += p * v[vb + i];
+              }
+            }
+          }
+        }
+      }
+
+      // wo + residual
+      Trainer.matmul(act.res1[l], attOut, params.wo.subarray(l * C * C), N, C, C);
+      for (let i = 0; i < N * C; i++) act.res1[l][i] += x[i];
+
+      // ffn
+      this.rmsnormRows(act.ln2[l], act.res1[l], params.rmsFfn, l * C, N, C);
+      Trainer.matmul(act.h1[l], act.ln2[l], params.w1.subarray(l * HD * C), N, C, HD);
+      Trainer.matmul(act.h3[l], act.ln2[l], params.w3.subarray(l * HD * C), N, C, HD);
+      const h1 = act.h1[l], h3 = act.h3[l], hg = act.hGate[l];
+      for (let i = 0; i < N * HD; i++) {
+        const a = h1[i];
+        hg[i] = (a / (1 + Math.exp(-a))) * h3[i];
+      }
+      Trainer.matmul(act.res2[l], hg, params.w2.subarray(l * C * HD), N, HD, C);
+      for (let i = 0; i < N * C; i++) act.res2[l][i] += act.res1[l][i];
+      x = act.res2[l];
+    }
+
+    this.rmsnormRows(act.lnf, x, params.rmsFinal, 0, N, C);
+    Trainer.matmul(act.logits, act.lnf, params.tokenEmbedding, N, C, V); // tied classifier
+
+    // softmax CE; overwrite logits with dLogits if computeGrads
+    let loss = 0;
+    const invN = 1 / N;
+    for (let n = 0; n < N; n++) {
+      const b = (n / T) | 0, t = n % T;
+      const target = batch[b * (T + 1) + t + 1];
+      const lb = n * V;
+      let max = -Infinity;
+      for (let i = 0; i < V; i++) if (act.logits[lb + i] > max) max = act.logits[lb + i];
+      let sum = 0;
+      for (let i = 0; i < V; i++) sum += Math.exp(act.logits[lb + i] - max);
+      const logZ = max + Math.log(sum);
+      loss += logZ - act.logits[lb + target];
+      if (computeGrads) {
+        for (let i = 0; i < V; i++) {
+          act.logits[lb + i] = Math.exp(act.logits[lb + i] - logZ) * invN;
+        }
+        act.logits[lb + target] -= invN;
+      }
+    }
+    return loss * invN;
+  }
+
+  // ---- backward ------------------------------------------------------------
+
+  backward(batch) {
+    const { c, B, T, act, params, grads, g } = this;
+    const { dim: C, kvDim: K, hiddenDim: HD, nLayers: L, nHeads: H, vocabSize: V, headSize: HS } = c;
+    const kvMul = H / c.nKvHeads;
+    const N = B * T;
+
+    // classifier (tied): dLnf, dEmb
+    g.dLnf.fill(0);
+    Trainer.matmulBackward(act.logits, act.lnf, params.tokenEmbedding,
+      g.dLnf, grads.tokenEmbedding, N, C, V);
+
+    // final rmsnorm -> dX = grad wrt res2[L-1]
+    g.dX.fill(0);
+    this.rmsnormRowsBackward(g.dLnf, act.res2[L - 1], params.rmsFinal, 0,
+      g.dX, grads.rmsFinal, N, C);
+
+    const scale = 1 / Math.sqrt(HS);
+    for (let l = L - 1; l >= 0; l--) {
+      const xIn = l === 0 ? act.x0 : act.res2[l - 1];
+
+      // ---- FFN block: res2 = res1 + w2(silu(w1 ln2) * w3 ln2)
+      g.dHGate.fill(0);
+      Trainer.matmulBackward(g.dX, act.hGate[l], params.w2.subarray(l * C * HD),
+        g.dHGate, grads.w2.subarray(l * C * HD), N, HD, C);
+      const h1 = act.h1[l], h3 = act.h3[l];
+      for (let i = 0; i < N * HD; i++) {
+        const a = h1[i], sig = 1 / (1 + Math.exp(-a));
+        const silu = a * sig;
+        g.dH1[i] = g.dHGate[i] * h3[i] * (sig + a * sig * (1 - sig));
+        g.dH3[i] = g.dHGate[i] * silu;
+      }
+      g.dLn.fill(0);
+      Trainer.matmulBackward(g.dH1, act.ln2[l], params.w1.subarray(l * HD * C),
+        g.dLn, grads.w1.subarray(l * HD * C), N, C, HD);
+      Trainer.matmulBackward(g.dH3, act.ln2[l], params.w3.subarray(l * HD * C),
+        g.dLn, grads.w3.subarray(l * HD * C), N, C, HD);
+      // rmsnorm(res1) backward adds into dX (identity path already there)
+      this.rmsnormRowsBackward(g.dLn, act.res1[l], params.rmsFfn, l * C,
+        g.dX, grads.rmsFfn, N, C);
+
+      // ---- attention block: res1 = xIn + wo(attnOut)
+      g.dAttOut.fill(0);
+      Trainer.matmulBackward(g.dX, act.attOut[l], params.wo.subarray(l * C * C),
+        g.dAttOut, grads.wo.subarray(l * C * C), N, C, C);
+
+      g.dQ.fill(0); g.dK.fill(0); g.dV.fill(0);
+      const att = act.att[l], q = act.q[l], k = act.k[l], v = act.v[l];
+      const dPRow = new this.AT(T);
+      const KH = c.nKvHeads;
+      if (HS === 8) {
+        this.transposeKV(k, this.kT); this.transposeKV(v, this.vT);
+        this.dKT.fill(0); this.dVT.fill(0);
+        const kT = this.kT, vT = this.vT, dKT = this.dKT, dVT = this.dVT, dAO = g.dAttOut;
+        for (let b = 0; b < B; b++) {
+          for (let h = 0; h < H; h++) {
+            const base = (b * KH + ((h / kvMul) | 0)) * T * HS;
+            for (let t = 0; t < T; t++) {
+              const rowB = ((b * H + h) * T + t) * T;
+              const ob = (b * T + t) * C + h * HS;
+              const d0 = dAO[ob], d1 = dAO[ob + 1], d2 = dAO[ob + 2], d3 = dAO[ob + 3],
+                    d4 = dAO[ob + 4], d5 = dAO[ob + 5], d6 = dAO[ob + 6], d7 = dAO[ob + 7];
+              let pdSum = 0;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const vb = base + t2 * 8;
+                const p = att[rowB + t2];
+                const dp = d0 * vT[vb] + d1 * vT[vb + 1] + d2 * vT[vb + 2] + d3 * vT[vb + 3] +
+                           d4 * vT[vb + 4] + d5 * vT[vb + 5] + d6 * vT[vb + 6] + d7 * vT[vb + 7];
+                dVT[vb] += p * d0; dVT[vb + 1] += p * d1; dVT[vb + 2] += p * d2; dVT[vb + 3] += p * d3;
+                dVT[vb + 4] += p * d4; dVT[vb + 5] += p * d5; dVT[vb + 6] += p * d6; dVT[vb + 7] += p * d7;
+                dPRow[t2] = dp;
+                pdSum += p * dp;
+              }
+              const q0 = q[ob], q1 = q[ob + 1], q2 = q[ob + 2], q3 = q[ob + 3],
+                    q4 = q[ob + 4], q5 = q[ob + 5], q6 = q[ob + 6], q7 = q[ob + 7];
+              let dq0 = 0, dq1 = 0, dq2 = 0, dq3 = 0, dq4 = 0, dq5 = 0, dq6 = 0, dq7 = 0;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const dS = att[rowB + t2] * (dPRow[t2] - pdSum) * scale;
+                const kb = base + t2 * 8;
+                dq0 += dS * kT[kb];     dq1 += dS * kT[kb + 1]; dq2 += dS * kT[kb + 2]; dq3 += dS * kT[kb + 3];
+                dq4 += dS * kT[kb + 4]; dq5 += dS * kT[kb + 5]; dq6 += dS * kT[kb + 6]; dq7 += dS * kT[kb + 7];
+                dKT[kb] += dS * q0;     dKT[kb + 1] += dS * q1; dKT[kb + 2] += dS * q2; dKT[kb + 3] += dS * q3;
+                dKT[kb + 4] += dS * q4; dKT[kb + 5] += dS * q5; dKT[kb + 6] += dS * q6; dKT[kb + 7] += dS * q7;
+              }
+              g.dQ[ob] = dq0; g.dQ[ob + 1] = dq1; g.dQ[ob + 2] = dq2; g.dQ[ob + 3] = dq3;
+              g.dQ[ob + 4] = dq4; g.dQ[ob + 5] = dq5; g.dQ[ob + 6] = dq6; g.dQ[ob + 7] = dq7;
+            }
+          }
+        }
+        this.transposeKV(dKT, g.dK, true);  // dKT -> dK layout
+        this.transposeKV(dVT, g.dV, true);
+      } else {
+        for (let b = 0; b < B; b++) {
+          for (let h = 0; h < H; h++) {
+            const kvh = (h / kvMul) | 0;
+            for (let t = 0; t < T; t++) {
+              const rowB = ((b * H + h) * T + t) * T;
+              const ob = (b * T + t) * C + h * HS;
+              const qb = ob; // q and attOut share head slot layout
+              let pdSum = 0;
+              for (let t2 = 0; t2 <= t; t2++) {
+                const vb = (b * T + t2) * K + kvh * HS;
+                let dp = 0;
+                for (let i = 0; i < HS; i++) {
+                  dp += g.dAttOut[ob + i] * v[vb + i];
+                  g.dV[vb + i] += att[rowB + t2] * g.dAttOut[ob + i];
+                }
+                dPRow[t2] = dp;
+                pdSum += att[rowB + t2] * dp;
+              }
+              for (let t2 = 0; t2 <= t; t2++) {
+                const dS = att[rowB + t2] * (dPRow[t2] - pdSum) * scale;
+                const kb = (b * T + t2) * K + kvh * HS;
+                for (let i = 0; i < HS; i++) {
+                  g.dQ[qb + i] += dS * k[kb + i];
+                  g.dK[kb + i] += dS * q[qb + i];
+                }
+              }
+            }
+          }
+        }
+      }
+      this.rope(g.dQ, C, K, T, HS, true, true);   // inverse rotation
+      this.rope(g.dK, C, K, T, HS, false, true);
+
+      g.dLn.fill(0);
+      Trainer.matmulBackward(g.dQ, act.ln1[l], params.wq.subarray(l * C * C),
+        g.dLn, grads.wq.subarray(l * C * C), N, C, C);
+      Trainer.matmulBackward(g.dK, act.ln1[l], params.wk.subarray(l * C * K),
+        g.dLn, grads.wk.subarray(l * C * K), N, C, K);
+      Trainer.matmulBackward(g.dV, act.ln1[l], params.wv.subarray(l * C * K),
+        g.dLn, grads.wv.subarray(l * C * K), N, C, K);
+      // rmsnorm(xIn) backward adds into dX, which already carries the identity path
+      this.rmsnormRowsBackward(g.dLn, xIn, params.rmsAtt, l * C,
+        g.dX, grads.rmsAtt, N, C);
+    }
+
+    // embedding backward
+    for (let b = 0; b < B; b++) {
+      for (let t = 0; t < T; t++) {
+        const tok = batch[b * (T + 1) + t];
+        const src = (b * T + t) * C, dst = tok * C;
+        for (let i = 0; i < C; i++) grads.tokenEmbedding[dst + i] += g.dX[src + i];
+      }
+    }
+  }
+
+  // ---- optimizer -----------------------------------------------------------
+
+  zeroGrads() { for (const k of Object.keys(this.grads)) this.grads[k].fill(0); }
+
+  gradNorm() {
+    let sq = 0;
+    for (const k of Object.keys(this.grads)) {
+      const gr = this.grads[k];
+      for (let i = 0; i < gr.length; i++) sq += gr[i] * gr[i];
+    }
+    return Math.sqrt(sq);
+  }
+
+  adamw() {
+    const { lr, weightDecay, beta1, beta2, eps, clip } = this.opt;
+    this.stepCount++;
+    const norm = this.gradNorm();
+    const gscale = clip > 0 && norm > clip ? clip / norm : 1;
+    const bc1 = 1 - Math.pow(beta1, this.stepCount);
+    const bc2 = 1 - Math.pow(beta2, this.stepCount);
+    for (const key of Object.keys(this.params)) {
+      const p = this.params[key], gr = this.grads[key], m = this.m[key], v = this.v[key];
+      const wd = DECAYED.has(key) ? weightDecay : 0;
+      for (let i = 0; i < p.length; i++) {
+        const gi = gr[i] * gscale;
+        m[i] = beta1 * m[i] + (1 - beta1) * gi;
+        v[i] = beta2 * v[i] + (1 - beta2) * gi * gi;
+        p[i] -= lr * ((m[i] / bc1) / (Math.sqrt(v[i] / bc2) + eps) + wd * p[i]);
+      }
+    }
+    return norm;
+  }
+
+  // one full training step; returns { loss, gradNorm, ms }
+  step(batch) {
+    const t0 = performance.now();
+    this.zeroGrads();
+    const loss = this.forwardLoss(batch, true);
+    this.backward(batch);
+    const norm = this.adamw();
+    return { loss, gradNorm: norm, ms: performance.now() - t0 };
+  }
+
+  // eval-only mean CE loss on a batch (no grads, no optimizer state touched)
+  evalLoss(batch) { return this.forwardLoss(batch, false); }
+
+  // weights dict compatible with model.js createModel / bin-reader writeCheckpoint
+  modelWeights() {
+    const w = {};
+    for (const k of Object.keys(this.params)) {
+      w[k] = this.params[k] instanceof Float32Array
+        ? this.params[k] : Float32Array.from(this.params[k]);
+    }
+    w.wcls = w.tokenEmbedding;
+    return w;
+  }
+}
+
+// ---- inlined src/llm.js ----
+// llm.js — provider-agnostic chat call for the ghostwriter (Nursery) and the resident
+// interpreter (hunt). Browser + Node (both have fetch). Keys live in the caller's
+// hands; nothing here persists anything. The claude.ai artifact edition adds a
+// 'keyless' provider that posts to the artifact's built-in Anthropic endpoint.
+const PROVIDERS = {
+  openai: { label: 'OpenAI API', defaultModel: 'gpt-5.4-mini' },
+  anthropic: { label: 'Anthropic API', defaultModel: 'claude-sonnet-4-5' },
+  gemini: { label: 'Gemini API', defaultModel: 'gemini-3.1-flash-lite' },
+  keyless: { label: 'built-in Claude (no key needed)', defaultModel: '(built-in)' },
+};
+
+// true only inside a claude.ai artifact, where window.claude.complete exists
+function keylessAvailable() {
+  return typeof globalThis.claude?.complete === 'function';
+}
+
+async function callLLM({ provider, key, model, prompt, maxTokens = 6000 }) {
+  if (provider === 'keyless') {
+    if (!keylessAvailable()) throw new Error('built-in Claude only works inside a claude.ai artifact');
+    return await globalThis.claude.complete(prompt);
+  }
+  if (provider === 'openai') {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }],
+        ...(model.startsWith('gpt-4') ? { temperature: 0.9 } : {}) }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error?.message ?? 'OpenAI HTTP ' + r.status);
+    return j.choices[0].message.content;
+  }
+  if (provider === 'anthropic') {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key,
+        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error?.message ?? 'Anthropic HTTP ' + r.status);
+    return j.content[0].text;
+  }
+  if (provider === 'gemini') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error?.message ?? 'Gemini HTTP ' + r.status);
+    const cand = j.candidates?.[0];
+    if (!cand?.content?.parts?.length) throw new Error('Gemini: empty response' + (cand?.finishReason ? ' (' + cand.finishReason + ')' : ''));
+    return cand.content.parts.map(p => p.text ?? '').join('');
+  }
+  throw new Error('unknown provider: ' + provider);
+}
+
+const llmCall = callLLM;
+
+
+const $ = id => document.getElementById(id);
+const worker = new Worker(URL.createObjectURL(new Blob([__WORKER_SRC__], { type: 'text/javascript' })));
+
+// browser-storage helpers (Pages/dev edition; the artifact edition swaps these for
+// window.storage — kickoff's no-localStorage rule is deliberately relaxed here at
+// Ken's request for key + storybook persistence on the child's own machine)
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode etc. */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { } },
+};
+
+const S = {
+  config: null, wordlist: null, replayStories: null,
+  train: [], heldout: [],
+  counts: null, alphaPieces: null,
+  running: false, trained: false,
+  hist: { steps: [], loss: [], evalSteps: [], zog: [], base: [] },
+  maxSteps: 120,
+};
+const B = 8, T = 192;
+
+function status(msg, cls) { $('status').textContent = msg; $('status').className = cls || ''; }
+
+// ---------- boot data ----------
+(async () => {
+  try {
+    S.wordlist = new Set((await (await fetch('../corpus/wordlist.json')).json()).words);
+    S.replayStories = await (await fetch('../corpus/replay/replay.json')).json();
+  } catch {
+    status('could not fetch wordlist/replay from the dev server — validator and replay disabled', 'warn');
+  }
+})();
+
+// ---------- model ----------
+async function loadModel(ckptBuf, tokBuf) {
+  worker.postMessage({ type: 'init', ckptBuf, tokBuf });
+}
+$('load260').onclick = async () => {
+  status('fetching 260K + tok512…');
+  const [a, b] = await Promise.all([fetch('../models/stories260K.bin'), fetch('../models/tok512.bin')]);
+  loadModel(await a.arrayBuffer(), await b.arrayBuffer());
+};
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', async e => {
+  e.preventDefault();
+  let ck = null, tk = null;
+  for (const f of e.dataTransfer.files) {
+    const buf = await f.arrayBuffer();
+    if (buf.byteLength > 500000) ck = buf; else tk = buf;
+  }
+  if (ck && tk) loadModel(ck, tk);
+  else status('drop the model .bin and tok512.bin together', 'warn');
+});
+
+// ---------- character + validator ----------
+const unsmart = t => t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+const words = t => [...unsmart(t).toLowerCase().matchAll(/[a-z]+(?:'[a-z]+)?/g)].map(m => m[0]);
+function sheet() {
+  return { name: $('chName').value.trim(), kind: $('chKind').value.trim(),
+           attr1: $('chAttr1').value.trim(), attr2: $('chAttr2').value.trim() };
+}
+function whitelist() {
+  const ws = new Set();
+  for (const f of Object.values(sheet())) for (const w of words(f)) {
+    ws.add(w); ws.add(w + 's'); ws.add(w + "'s");
+  }
+  return ws;
+}
+// glue words never required by the attribute check (modals, articles, pronouns, degree
+// words). Position words (behind, under, over…) are NOT here — they carry meaning.
+const STOP = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'to', 'is', 'it', 'its',
+  'can', 'could', 'will', 'would', 'may', 'might', 'must', 'should', 'do', 'does', 'did',
+  'has', 'have', 'had', 'be', 'been', 'was', 'were', 'are', 'am', 'he', 'she', 'they',
+  'his', 'her', 'their', 'very', 'really', 'always', 'only', 'likes', 'loves', 'that',
+  // dwelling verbs are linking words — "lives behind the moon" is about the moon
+  // ("home is behind the moon" must pass; Phase 0 checked the place phrase only)
+  'live', 'lives', 'lived', 'living']);
+// irregular kid-verbs: attribute matching accepts any form of the word's family
+const IRREG = {
+  eat: ['ate', 'eaten'], fly: ['flew', 'flown', 'flies'], go: ['went', 'gone', 'goes'],
+  run: ['ran'], swim: ['swam', 'swum'], sleep: ['slept'], sing: ['sang', 'sung'],
+  see: ['saw', 'seen'], say: ['said'], give: ['gave', 'given'], get: ['got'],
+  make: ['made'], ride: ['rode', 'ridden'], hide: ['hid', 'hidden'], sit: ['sat'],
+  stand: ['stood'], drink: ['drank', 'drunk'], fall: ['fell', 'fallen'], feel: ['felt'],
+  find: ['found'], keep: ['kept'], know: ['knew', 'known'], leave: ['left'],
+  tell: ['told'], think: ['thought'], bring: ['brought'], catch: ['caught'],
+  come: ['came'], draw: ['drew', 'drawn'], grow: ['grew', 'grown'], hold: ['held'],
+  put: [], read: [], take: ['took', 'taken'], wear: ['wore', 'worn'], blow: ['blew', 'blown'],
+};
+function familyOf(w) {
+  const bases = new Set([w]);
+  if (w.endsWith('ies')) bases.add(w.slice(0, -3) + 'y');
+  if (w.endsWith('es')) bases.add(w.slice(0, -2));
+  if (w.endsWith('s')) bases.add(w.slice(0, -1));
+  const out = new Set();
+  for (const b of bases) {
+    out.add(b); out.add(b + 's'); out.add(b + 'es'); out.add(b + 'ed'); out.add(b + 'd');
+    out.add(b + 'ing');
+    if (b.endsWith('e')) out.add(b.slice(0, -1) + 'ing');
+    if (b.endsWith('y')) out.add(b.slice(0, -1) + 'ies');
+    for (const x of IRREG[b] ?? []) out.add(x);
+  }
+  return out;
+}
+function validateStory(text) {
+  const probs = [], offList = [], missing = [];
+  const w = words(text);
+  const wset = new Set(w);
+  if (w.length < 100 || w.length > 180) probs.push(`length ${w.length} (want 100–180 words)`);
+  if (S.wordlist) {
+    const wl = whitelist();
+    const off = [...new Set(w.filter(x => !S.wordlist.has(x) && !wl.has(x)))];
+    if (off.length) { probs.push('words too big for a tiny mind: ' + off.join(', ')); offList.push(...off); }
+  }
+  for (const s of text.split(/[.!?]+/)) {
+    const n = (s.match(/[a-z']+/gi) || []).length;
+    if (n > 20) probs.push(`sentence too long (${n} words): "${s.trim().slice(0, 40)}…"`);
+  }
+  const lower = unsmart(text).toLowerCase();
+  const sh = sheet();
+  const kindPhrase = sh.kind.replace(/^(a|an|the)\s+/i, '').toLowerCase();
+  if (!lower.includes(kindPhrase)) { probs.push(`missing "${kindPhrase}"`); missing.push(`is ${sh.kind}`); }
+  for (const attr of [sh.attr1, sh.attr2]) {
+    for (const cw of words(attr).filter(x => !STOP.has(x) && x.length > 2)) {
+      const fam = familyOf(cw);
+      if (![...fam].some(f => wset.has(f))) {
+        probs.push(`missing "${cw}" (from "${attr}")`); missing.push(attr);
+        break;
+      }
+    }
+  }
+  if (!lower.includes(sh.name.toLowerCase())) probs.push(`missing the name "${sh.name}"`);
+  return { probs, offList, missing, wordCount: w.length };
+}
+
+// ---------- corpus management ----------
+S.feedback = null; // rejection summary of the LAST batch — folded into the next prompt
+function addStories(texts, from) {
+  let ok = 0, bad = 0, report = [];
+  const fb = { offList: new Set(), missing: new Set(), shortCounts: [] };
+  for (const t of texts) {
+    const text = t.trim();
+    if (!text) continue;
+    const v = validateStory(text);
+    if (v.probs.length) {
+      bad++; report.push('✗ ' + v.probs.join('; '));
+      v.offList.forEach(w => fb.offList.add(w));
+      v.missing.forEach(m => fb.missing.add(m));
+      if (v.wordCount < 100) fb.shortCounts.push(v.wordCount);
+      continue;
+    }
+    ok++;
+    const total = S.train.length + S.heldout.length;
+    if ((total + 1) % 6 === 0 && S.heldout.length < 10) S.heldout.push(text);
+    else S.train.push(text);
+  }
+  // accumulate across batches so a word rejected in round 1 stays banned in round 3
+  if (bad) {
+    if (!S.feedback) S.feedback = fb;
+    else {
+      fb.offList.forEach(w => S.feedback.offList.add(w));
+      fb.missing.forEach(m => S.feedback.missing.add(m));
+      S.feedback.shortCounts = fb.shortCounts;
+    }
+  } else if (ok) S.feedback = null;
+  $('genOut').innerHTML = `<span class="${bad ? 'warn' : 'ok'}">${from}: ${ok} accepted, ${bad} rejected</span>` +
+    (report.length ? '<br>' + report.slice(0, 6).map(r => `<span class="err">${r.replace(/</g, '&lt;')}</span>`).join('<br>') : '') +
+    (bad && from === 'ghostwriter'
+      ? '<br><span class="warn">click ✍️ again — the ghostwriter will be told exactly what went wrong</span>' : '');
+  renderBook(); refreshAlphaCounts(); pushData();
+}
+// the train button is NEVER silently gray: updateTrainGate always says why, and a
+// small storybook only warns — watching a 5-story model parrot IS the lesson
+function updateTrainGate() {
+  let block = '';
+  if (!S.config) block = 'load the tiny mind first (step 1) — then you can train';
+  else if (!S.train.length) block = 'the storybook is empty — add or load stories first';
+  $('trainBtn').disabled = !!block || S.running;
+  let hint = block;
+  if (!block) {
+    const n = S.train.length;
+    if (n < 30) hint = `only ${n} learning ${n === 1 ? 'story' : 'stories'} — it will start parroting them very fast. Fun to watch! But ~50 makes a better mind.`;
+    else if (!S.heldout.length) hint = 'no secret stories — you will not be able to see when it starts parroting';
+    else hint = '';
+  }
+  $('trainHint').textContent = hint;
+}
+function renderBook() {
+  const n = S.train.length + S.heldout.length;
+  $('bookCount').textContent = `${S.train.length} learning + ${S.heldout.length} secret`;
+  $('prog').firstElementChild.style.width = Math.min(100, 100 * n / 60) + '%';
+  const el = $('storyList');
+  el.innerHTML = '';
+  [...S.train.map(t => ['learn', t]), ...S.heldout.map(t => ['secret', t])].forEach(([kind, t], i) => {
+    const d = document.createElement('div');
+    d.className = 'story-row';
+    d.innerHTML = `<span class="${kind === 'secret' ? 'warn' : 'ok'}">${kind} · ${words(t).length} words</span><div class="txt"></div>`;
+    d.querySelector('.txt').textContent = t;
+    el.appendChild(d);
+  });
+  updateTrainGate();
+  LS.set('tm-storybook', JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }));
+}
+$('clearBook').onclick = () => { S.train = []; S.heldout = []; renderBook(); refreshAlphaCounts(); };
+$('saveBook').onclick = () => {
+  const blob = new Blob([JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }, null, 1)],
+    { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = ($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-storybook.json';
+  a.click();
+};
+function loadBookData(data) {
+  if (data.sheet) {
+    $('chName').value = data.sheet.name ?? $('chName').value;
+    $('chKind').value = data.sheet.kind ?? $('chKind').value;
+    $('chAttr1').value = data.sheet.attr1 ?? $('chAttr1').value;
+    $('chAttr2').value = data.sheet.attr2 ?? $('chAttr2').value;
+  }
+  S.train = data.train ?? [];
+  S.heldout = data.heldout ?? [];
+  renderBook(); refreshAlphaCounts(); pushData();
+}
+$('loadBook').onclick = () => $('loadBookFile').click();
+$('saveBookTop').onclick = () => $('saveBook').onclick();
+$('loadBookTop').onclick = () => $('loadBookFile').click();
+$('loadBookFile').onchange = async () => {
+  const f = $('loadBookFile').files[0];
+  if (!f) return;
+  try { loadBookData(JSON.parse(await f.text())); $('genOut').innerHTML = '<span class="ok">storybook loaded from ' + f.name + '</span>'; }
+  catch (e) { $('genOut').innerHTML = '<span class="err">could not read that file: ' + String(e).replace(/</g, '&lt;') + '</span>'; }
+  $('loadBookFile').value = '';
+};
+$('demoBtn').onclick = async () => {
+  const all = await (await fetch('../corpus/zog/stories.json')).json();
+  S.train = all.filter(s => s.split === 'train').map(s => s.text);
+  S.heldout = all.filter(s => s.split === 'heldout').map(s => s.text);
+  $('genOut').innerHTML = '<span class="ok">loaded the Phase 0 Zog storybook (50 + 10)</span>';
+  renderBook(); refreshAlphaCounts(); pushData();
+};
+function pushData() {
+  if (!S.config || !S.train.length) return;
+  worker.postMessage({ type: 'set-data', stories: S.train, heldout: S.heldout,
+    replayStories: S.replayStories ?? [], B, T });
+}
+
+// ---------- ghostwriter ----------
+$('provider').onchange = () => {
+  const p = $('provider').value;
+  $('apiFields').style.display = p === 'manual' ? 'none' : 'inline';
+  $('manualFields').style.display = p === 'manual' ? 'inline' : 'none';
+  if (p !== 'manual') {
+    $('apiModel').value = PROVIDERS[p].defaultModel;
+    $('apiKey').value = ($('rememberKey').checked && LS.get('tm-key-' + p)) || '';
+    const needsKey = p !== 'keyless';
+    $('apiKey').parentElement.style.display = needsKey ? '' : 'none';
+    $('rememberKey').parentElement.style.display = needsKey ? '' : 'none';
+  }
+};
+$('rememberKey').onchange = () => {
+  const p = $('provider').value;
+  LS.set('tm-remember', $('rememberKey').checked ? '1' : '');
+  if (!$('rememberKey').checked) {
+    for (const prov of Object.keys(PROVIDERS)) LS.del('tm-key-' + prov);
+  } else if (p !== 'manual' && $('apiKey').value.trim()) {
+    LS.set('tm-key-' + p, $('apiKey').value.trim());
+  }
+};
+$('apiKey').addEventListener('change', () => {
+  const p = $('provider').value;
+  if ($('rememberKey').checked && p !== 'manual') LS.set('tm-key-' + p, $('apiKey').value.trim());
+});
+function buildPrompt(count) {
+  const sh = sheet();
+  return `You are writing tiny stories for a 4-year-old, in the exact style of the TinyStories dataset: very simple words, short sentences, a small story arc with a warm ending.
+
+Character (invented by a child — keep every detail exactly consistent):
+- Name: ${sh.name}
+- Kind: ${sh.kind} (always this exact phrase)
+- Special thing 1: ${sh.name} ${sh.attr1} — never anything else
+- Special thing 2: ${sh.name} ${sh.attr2} — always
+
+Rules:
+1. Write ${count} separate stories. Number them "1.", "2.", ... Each story must be
+   120-170 words. NEVER fewer than 110 words — count carefully, short stories are rejected.
+2. Every story must say, in natural story language: that ${sh.name} is ${sh.kind}, that ${sh.name} ${sh.attr1}, and that ${sh.name} ${sh.attr2}. Never contradict these.
+3. Vocabulary of a 4-year-old only. No sentence longer than 20 words.
+4. Vary everything else: friends, places, small problems, feelings, weather.
+5. Simple dialogue with quotation marks is good. A gentle happy ending is good.`
+  + allowedWordsBlock() + feedbackBlock();
+}
+function allowedWordsBlock() {
+  if (!S.wordlist || !$('strictWords').checked) return '';
+  return `\n\nALLOWED WORDS — every word you write must be on this list, or be a form of the character words above. If a word you want is not here, pick a simpler one that is:\n` +
+    [...S.wordlist].join(' ');
+}
+function feedbackBlock() {
+  const fb = S.feedback;
+  if (!fb) return '';
+  const lines = [];
+  if (fb.shortCounts.length) {
+    lines.push(`- Your stories were TOO SHORT (${fb.shortCounts.join(', ')} words). Every story must be at least 120 words. Add more little events and dialogue.`);
+  }
+  if (fb.offList.size) {
+    lines.push(`- These words were too hard for the reader — do NOT use them or words like them: ${[...fb.offList].join(', ')}. Use the simplest possible words instead.`);
+  }
+  if (fb.missing.size) {
+    lines.push(`- Some stories forgot to say these clearly — every single story must state them: ${[...fb.missing].map(m => `"${m}"`).join(', ')}.`);
+  }
+  return lines.length
+    ? `\n\nIMPORTANT — your previous batch had rejects. Fix these:\n${lines.join('\n')}`
+    : '';
+}
+function parseStories(text) {
+  // tolerate markdown numbering: "1.", "**2.**", "### Story 3:", "3)"…
+  const t = unsmart(text);
+  const splitter = /^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):]?[*_\s]*$|^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):][*_]*\s*/gim;
+  const parts = t.split(splitter).map(s => s.replace(/^[#*_\s]+/, '').trim()).filter(s => words(s).length >= 60);
+  if (parts.length) return parts;
+  return t.split(/\n\s*\n/).map(s => s.trim()).filter(s => words(s).length >= 60);
+}
+function callProvider(content) {
+  return llmCall({ provider: $('provider').value, key: $('apiKey').value.trim(),
+    model: $('apiModel').value.trim(), prompt: content });
+}
+// a story is auto-repairable if its ONLY problem is a few off-list words
+function repairPrompt(items) {
+  return `These children's stories are almost perfect. Each one uses a few banned words. Rewrite each story so it no longer contains ANY banned word: swap each banned word for a very simple word or phrase a 4-year-old knows (for example, "slept" could become "was asleep"). Change nothing else. Output ONLY the fixed stories, numbered to match. Do not repeat a banned word anywhere.\n\n` +
+    items.map((it, i) => `${i + 1}. (banned: ${it.v.offList.join(', ')})\n${it.s}`).join('\n\n');
+}
+$('genBtn').onclick = async () => {
+  if ($('provider').value !== 'keyless' && !$('apiKey').value.trim()) {
+    $('genOut').innerHTML = '<span class="err">paste an API key first</span>'; return;
+  }
+  $('genBtn').disabled = true;
+  $('genOut').textContent = 'the ghostwriter is writing…';
+  try {
+    const stories = parseStories(await callProvider(buildPrompt(8)));
+    const fine = [], broken = [];
+    for (const s of stories) {
+      const v = validateStory(s);
+      (v.probs.length ? broken : fine).push({ s, v });
+    }
+    const repairable = broken.filter(b =>
+      b.v.offList.length > 0 && b.v.offList.length <= 4 &&
+      b.v.probs.every(p => p.startsWith('words too big')));
+    let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
+    if (repairable.length) {
+      $('genOut').textContent = `${fine.length} good on the first try — repairing ${repairable.length} that used ${repairable.length === 1 ? 'a big word' : 'big words'}…`;
+      try {
+        final = [...fine.map(f => f.s), ...parseStories(await callProvider(repairPrompt(repairable))),
+                 ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
+      } catch { final = stories; /* repair call failed: fall back to first batch */ }
+    }
+    addStories(final, 'ghostwriter');
+  } catch (err) {
+    $('genOut').innerHTML = '<span class="err">' + String(err).replace(/</g, '&lt;') + '</span>';
+  }
+  $('genBtn').disabled = false;
+};
+$('pasteBtn').onclick = () => {
+  addStories(parseStories($('pasteBox').value), 'pasted');
+  $('pasteBox').value = '';
+};
+
+// ---------- alphabet ----------
+function renderAlphabet() {
+  if (!S.alphaPieces) return;
+  const el = $('alpha');
+  el.classList.remove('hint');
+  el.innerHTML = '';
+  const maxC = S.counts ? Math.max(1, ...S.counts) : 1;
+  S.alphaPieces.forEach((piece, i) => {
+    const d = document.createElement('div');
+    let label = piece.replace(/ /g, '␣');
+    if (/^<0x[0-9A-F]{2}>$/i.test(piece)) label = '·';
+    if (i === 1) label = '‹s›'; if (i === 2) label = '‹/s›'; if (i === 0) label = '?';
+    d.textContent = label.slice(0, 4);
+    const c = S.counts ? S.counts[i] : 0;
+    if (c > 0) d.style.background = `rgba(255,158,194,${(0.12 + 0.85 * Math.log1p(c) / Math.log1p(maxC)).toFixed(2)})`;
+    d.title = `piece ${i}: ${JSON.stringify(piece)}` + (S.counts ? ` — used ${c}× in your storybook` : '');
+    el.appendChild(d);
+  });
+  $('alphaInfo').textContent = S.counts
+    ? `your storybook uses ${S.counts.filter(c => c > 0).length} of the ${S.alphaPieces.length} pieces`
+    : '';
+}
+function refreshAlphaCounts() {
+  if (!S.config) return;
+  const texts = [...S.train, ...S.heldout];
+  if (texts.length) worker.postMessage({ type: 'tokenize-count', texts });
+  else { S.counts = null; renderAlphabet(); }
+}
+
+// ---------- training room ----------
+function drawChart() {
+  const cv = $('chart'), ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const H = S.hist;
+  const maxY = Math.max(3, ...H.loss.slice(0, 50), ...H.zog, ...H.base) * 1.05;
+  const X = s => 40 + (cv.width - 50) * s / Math.max(1, S.maxSteps);
+  const Y = v => cv.height - 18 - (cv.height - 30) * v / maxY;
+  ctx.strokeStyle = '#2b3140'; ctx.fillStyle = '#8791a3'; ctx.font = '10px sans-serif';
+  for (let v = 0; v <= maxY; v += 1) {
+    ctx.beginPath(); ctx.moveTo(40, Y(v)); ctx.lineTo(cv.width - 8, Y(v)); ctx.stroke();
+    ctx.fillText(v.toFixed(0), 24, Y(v) + 3);
+  }
+  const line = (xs, ys, color, width) => {
+    if (!xs.length) return;
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath();
+    xs.forEach((s, i) => { const x = X(s), y = Y(ys[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke(); ctx.lineWidth = 1;
+  };
+  line(H.steps, H.loss, 'rgba(221,227,236,0.35)', 1);
+  line(H.evalSteps, H.base, '#9ecbff', 2);
+  line(H.evalSteps, H.zog, '#ff9ec2', 2);
+}
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'error') {
+    status(m.message, 'err');
+    S.running = false;
+    $('pauseBtn').disabled = true;
+    updateTrainGate();
+    return;
+  }
+  if (m.type === 'ready') {
+    S.config = m.config;
+    $('modelInfo').textContent = `dim ${m.config.dim} · ${m.config.nLayers} layers · vocab ${m.config.vocabSize}`;
+    status('model ready');
+    if (m.config.vocabSize <= 512) worker.postMessage({ type: 'alphabet' });
+    else { $('alpha').textContent = 'the alphabet view is for the 512-piece trainee'; }
+    renderBook(); pushData();
+  }
+  if (m.type === 'alphabet') { S.alphaPieces = m.pieces; renderAlphabet(); refreshAlphaCounts(); }
+  if (m.type === 'tokenize-count') { S.counts = m.counts; renderAlphabet(); }
+  if (m.type === 'data-ready') {
+    status(`storybook tokenized: ${m.zogTokens} pieces to learn from, ${m.heldTokens} kept secret, ${m.replayTokens} replay`);
+  }
+  if (m.type === 'step') {
+    S.hist.steps.push(m.step); S.hist.loss.push(m.loss);
+    if (m.step % 5 === 0) drawChart();
+    status(`step ${m.step}/${S.maxSteps} — training loss ${m.loss.toFixed(3)} (${m.ms.toFixed(0)} ms/step)`);
+  }
+  if (m.type === 'eval') {
+    S.hist.evalSteps.push(m.step);
+    if (m.zogHeld !== undefined) S.hist.zog.push(m.zogHeld);
+    if (m.base !== undefined) S.hist.base.push(m.base);
+    drawChart();
+    if (m.arc === 'parroting') {
+      $('arcBadge').innerHTML = '<span class="badge parrot">⚠ it has started PARROTING your stories — good moment to stop</span>';
+    }
+  }
+  if (m.type === 'sample') {
+    const d = document.createElement('div');
+    d.className = 'sample';
+    d.innerHTML = `<b>step ${m.step}:</b> `;
+    d.append(m.text);
+    $('samples').prepend(d);
+  }
+  if (m.type === 'idle') {
+    S.running = false; S.trained = true; S.lastStep = m.step;
+    $('trainBtn').textContent = '🐣 keep raising';
+    $('pauseBtn').disabled = true;
+    $('exportBtn').disabled = $('sampleBtn').disabled = false;
+    updateTrainGate();
+    status(`paused at step ${m.step}`);
+  }
+  if (m.type === 'export-done') {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([m.bin], { type: 'application/octet-stream' }));
+    a.download = ($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-260K.bin';
+    a.click();
+    status(`saved after step ${m.step} — drop this .bin into the Microscope to hunt for where ${$('chName').value} lives`);
+  }
+};
+let fresh = true;
+S.lastStep = 0;
+$('trainBtn').onclick = () => {
+  const ask = Math.max(10, +$('maxSteps').value);
+  S.maxSteps = fresh ? ask : S.lastStep + ask; // "keep raising" runs N MORE steps
+  if (fresh) { S.hist = { steps: [], loss: [], evalSteps: [], zog: [], base: [] }; $('samples').innerHTML = ''; $('arcBadge').innerHTML = ''; }
+  worker.postMessage({ type: 'train', opts: {
+    B, T, lr: parseFloat($('lr').value) || 3e-4,
+    replayRatio: Math.min(0.9, Math.max(0, (+$('replayPct').value || 0) / 100)),
+    maxSteps: S.maxSteps, evalEvery: 10, sampleEvery: 20,
+    startFrom: $('startFrom').value === 'random' ? 'random' : 'trained',
+    prompt: `Once upon a time, ${$('chName').value.trim()}`,
+    fresh,
+  }});
+  fresh = false;
+  S.running = true;
+  updateTrainGate();
+  $('pauseBtn').disabled = false;
+  $('sampleBtn').disabled = false;
+};
+$('startFrom').onchange = () => { fresh = true; S.lastStep = 0; $('trainBtn').textContent = '🐣 start raising'; };
+$('pauseBtn').onclick = () => { worker.postMessage({ type: 'pause' }); };
+$('sampleBtn').onclick = () => worker.postMessage({ type: 'sample-now', prompt: `Once upon a time, ${$('chName').value.trim()}` });
+$('exportBtn').onclick = () => worker.postMessage({ type: 'export' });
+
+// ---------- boot: arc-pack autoload (manifest ONLY — .bins stay lazy; the
+// scrubber UI that consumes this arrives in a later artifact-edition session) ----------
+(async () => {
+  try {
+    const r = await fetch('../arc/arc-manifest.json');
+    if (!r.ok) return;
+    S.arcManifest = await r.json();
+    const n = S.arcManifest.snapshots.length;
+    const el = document.createElement('span');
+    el.className = 'badge';
+    el.textContent = `📼 arc pack: ${n} snapshots to step ${S.arcManifest.snapshots[n - 1].step} (scrubber coming soon)`;
+    $('modelInfo').after(el);
+  } catch { /* no arc pack on this host */ }
+})();
+
+// ---------- boot: artifact keyless option + restore key/storybook ----------
+if (keylessAvailable()) {
+  const opt = new Option(PROVIDERS.keyless.label, 'keyless');
+  $('provider').add(opt, 1);
+}
+if (LS.get('tm-remember') === '1') $('rememberKey').checked = true;
+try {
+  const saved = LS.get('tm-storybook');
+  if (saved) {
+    const data = JSON.parse(saved);
+    if (data.train?.length || data.heldout?.length) {
+      loadBookData(data);
+      $('genOut').innerHTML = `<span class="ok">restored your saved storybook (${data.train.length} + ${data.heldout.length})</span>`;
+    }
+  }
+} catch { /* corrupt save — ignore */ }
+updateTrainGate();
+status('load the trainee to begin');
+</script>
+</body>
+</html>
