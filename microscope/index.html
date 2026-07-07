@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Tiny Mind — Microscope</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%AC%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%239ecbff%27%20stroke-width%3D%271.5%27%20fill%3D%27%239ecbff%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
@@ -133,8 +133,13 @@
 </div>
 
 <script type="module">
+import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
 const $ = id => document.getElementById(id);
-const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+// @tm-worker-boot — build-release swaps this block for the blob boot with the
+// inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
+let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+let workerMode = 'background worker';
+// @tm-worker-boot-end
 
 const S = {
   config: null,
@@ -199,15 +204,17 @@ window.addEventListener('dragover', e => { e.preventDefault(); drop.classList.ad
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('over'); });
 window.addEventListener('drop', async e => {
   e.preventDefault(); drop.classList.remove('over');
+  const snap = [...e.dataTransfer.files];   // snapshot before any await — DataTransfer can be neutered
   const files = [];
-  for (const f of e.dataTransfer.files) files.push({ name: f.name, buf: await f.arrayBuffer() });
+  for (const f of snap) files.push({ name: f.name, buf: await f.arrayBuffer() });
   if (files.length) classifyAndSend(files);
 });
 async function fetchPair(ck, tk) {
   status('fetching ' + ck + '…');
-  const [a, b] = await Promise.all([fetch('../models/' + ck), fetch('../models/' + tk)]);
-  if (!a.ok || !b.ok) { status('fetch failed (dev server only)', true); return; }
-  classifyAndSend([{ name: ck, buf: await a.arrayBuffer() }, { name: tk, buf: await b.arrayBuffer() }]);
+  try {
+    const [a, b] = await Promise.all([fetchFirst([ck, '../models/' + ck]), fetchFirst([tk, '../models/' + tk])]);
+    classifyAndSend([{ name: ck, buf: await a.arrayBuffer() }, { name: tk, buf: await b.arrayBuffer() }]);
+  } catch { status('no hosted models here — drop the .bin files onto the page instead', true); }
 }
 $('load15').onclick = () => fetchPair('stories15M.bin', 'tokenizer.bin');
 $('load260').onclick = () => fetchPair('stories260K.bin', 'tok512.bin');
@@ -218,6 +225,7 @@ worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'error') { status(m.message, true); S.busy = false; $('runBtn').disabled = !S.config; return; }
   if (m.type === 'loaded') {
+    if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
     S.run = null; S.att = null; S.ablRun = null; S.neuron = null;
     $('modelInfo').textContent =
@@ -464,6 +472,15 @@ $('ablClear').onclick = () => {
 };
 
 status('load a model to begin');
+
+window.__tmLoadPair = (ck, tok) => classifyAndSend([ck, tok]);
+
+if (window.__tmBridge) {
+  for (const id of ['load15', 'load260', 'loadZog']) {
+    const b = document.getElementById(id);
+    if (b) b.style.display = 'none';
+  }
+}
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Tiny Mind — Nursery</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%A3%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%23ff9ec2%27%20stroke-width%3D%271.5%27%20fill%3D%27%23ff9ec2%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
@@ -135,31 +135,39 @@
   <div id="trainHint" class="hint warn"></div>
   <button class="small" id="sampleBtn" disabled>ask for a story now</button>
   <button class="alt small" id="exportBtn" disabled>💾 save my tiny mind (.bin)</button>
+  <button class="alt small" id="restartBtn" disabled title="new training run from the ORIGINAL 260K weights — your storybook is kept">↺ start over from the original 260K</button>
   <span id="arcBadge"></span>
   <div style="margin-top:.5rem"><canvas id="chart" width="900" height="220"></canvas></div>
-  <div class="hint">■ pink: how surprised it is by YOUR secret stories · ■ blue: by ordinary stories (up = forgetting) · thin line: training loss</div>
+  <div class="hint"><b style="color:#ff9ec2">■ pink</b>: how surprised it is by YOUR secret stories · <b style="color:#9ecbff">■ blue</b>: by ordinary stories (up = forgetting) · <span style="color:rgba(221,227,236,0.7)">— thin line</span>: training loss</div>
+  <button class="alt small" id="saveSamples" disabled>💾 save these stories</button>
   <div id="samples"></div>
 </div>
 
 <script type="module">
 import { callLLM as llmCall, PROVIDERS, keylessAvailable } from '../src/llm.js';
+import { createStore, makeDeliverFile, makeInlineWorker, fetchFirst } from '../src/app-shims.js';
+import { unzip, looksLikeZip, tokenizerEntryCount, checkpointVocab, collectDrop } from '../src/ingest.js';
+import { EMBEDDED_WORDLIST } from '../src/embed-data.js';
 const $ = id => document.getElementById(id);
-const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+// @tm-worker-boot — build-release swaps this block for the blob boot with the
+// inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
+let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+let workerMode = 'background worker';
+// @tm-worker-boot-end
+const SANDBOXED = workerMode !== 'background worker';
 
-// browser-storage helpers (Pages/dev edition; the artifact edition swaps these for
-// window.storage — kickoff's no-localStorage rule is deliberately relaxed here at
-// Ken's request for key + storybook persistence on the child's own machine)
-const LS = {
-  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode etc. */ } },
-  del(k) { try { localStorage.removeItem(k); } catch { } },
-};
+// persistence + egress via the shared shims (Store cascade: window.storage inside an
+// artifact, else localStorage — Ken's relaxation of the kickoff no-localStorage rule —
+// else memory; deliverFile: bridge -> download -> clipboard/storage backup)
+const Store = createStore();
+const deliverFile = makeDeliverFile({ status: (m, c) => status(m, c), store: Store, isSandboxed: () => SANDBOXED });
 
 const S = {
   config: null, wordlist: null, replayStories: null,
   train: [], heldout: [],
   counts: null, alphaPieces: null,
   running: false, trained: false,
+  samples: [],
   hist: { steps: [], loss: [], evalSteps: [], zog: [], base: [] },
   maxSteps: 120,
 };
@@ -169,11 +177,15 @@ function status(msg, cls) { $('status').textContent = msg; $('status').className
 
 // ---------- boot data ----------
 (async () => {
+  S.wordlist = new Set(EMBEDDED_WORDLIST);   // built in (1500 TinyStories words); a dropped wordlist.json overrides
   try {
-    S.wordlist = new Set((await (await fetch('../corpus/wordlist.json')).json()).words);
-    S.replayStories = await (await fetch('../corpus/replay/replay.json')).json();
+    // framed: the shell supplies replay (eager-load or drop), so no 404 in the sandbox
+    if (!window.__tmBridge) {
+      S.replayStories = await (await fetchFirst(['replay.json', '../corpus/replay/replay.json'])).json();
+      pushData();
+    }
   } catch {
-    status('could not fetch wordlist/replay from the dev server — validator and replay disabled', 'warn');
+    status('no hosted replay stories here — replay-mix off unless you drop a replay .json (everything else works)', 'warn');
   }
 })();
 
@@ -183,19 +195,89 @@ async function loadModel(ckptBuf, tokBuf) {
 }
 $('load260').onclick = async () => {
   status('fetching 260K + tok512…');
-  const [a, b] = await Promise.all([fetch('../models/stories260K.bin'), fetch('../models/tok512.bin')]);
-  loadModel(await a.arrayBuffer(), await b.arrayBuffer());
+  try {
+    const [a, b] = await Promise.all([
+      fetchFirst(['stories260K.bin', '../models/stories260K.bin']),
+      fetchFirst(['tok512.bin', '../models/tok512.bin']),
+    ]);
+    loadModel(await a.arrayBuffer(), await b.arrayBuffer());
+  } catch {
+    status('no hosted models here — drop stories260K.bin + tok512.bin onto the page instead', 'warn');
+  }
 };
 window.addEventListener('dragover', e => e.preventDefault());
+// ---------- ingest: anything droppable ----------
+// One drop can be: .bin files (model/tokenizer, together or in separate drops), .json
+// (storybook / {words:[…]} wordlist / replay stories), a .zip bundling any of those,
+// or a whole folder. Bins are classified by parsing, not filename. From a multi-model
+// bundle the Nursery picks the vocab-512 trainee pair and says what it ignored.
+const pendingDrop = { ck: null, tk: null };
+
+async function routeJson(name, text) {
+  try {
+    const data = JSON.parse(text);
+    if (data && Array.isArray(data.words)) {
+      S.wordlist = new Set(data.words);
+      status(`wordlist loaded from ${name} (${S.wordlist.size} words)`);
+      return;
+    }
+    if (Array.isArray(data) && data.length && typeof data[0] === 'object' && data[0] && 'split' in data[0]) {
+      S.train = data.filter(s => s.split === 'train').map(s => s.text);
+      S.heldout = data.filter(s => s.split === 'heldout').map(s => s.text);
+      renderBook(); refreshAlphaCounts(); pushData();
+      $('genOut').innerHTML = '<span class="ok">storybook loaded from ' + name + '</span>';
+      return;
+    }
+    if (data && (data.train || data.heldout)) {
+      loadBookData(data);
+      $('genOut').innerHTML = '<span class="ok">storybook loaded from ' + name + '</span>';
+      return;
+    }
+    if (Array.isArray(data) && data.length && typeof data[0] === 'string' && /replay/i.test(name)) {
+      S.replayStories = data; pushData();
+      status(`replay stories loaded from ${name} (${data.length} stories)`);
+      return;
+    }
+    status(`could not tell what ${name} is — expected a storybook, a {words:[…]} wordlist, or replay stories`, 'warn');
+  } catch { status(`could not parse ${name} as JSON`, 'warn'); }
+}
+
+async function ingestFiles(recs) {
+  const queue = [...recs], models = [], toks = [], skipped = [];
+  while (queue.length) {
+    const r = queue.shift();
+    if (/\.json$/i.test(r.name)) { await routeJson(r.name, new TextDecoder().decode(r.u8)); continue; }
+    if (/\.zip$/i.test(r.name) || looksLikeZip(r.u8)) {
+      try { queue.push(...await unzip(r.u8)); } catch (e) { status(`could not unzip ${r.name}: ${e.message}`, 'warn'); }
+      continue;
+    }
+    const tokCount = tokenizerEntryCount(r.u8);
+    if (tokCount > 0) { toks.push({ ...r, vocab: tokCount }); continue; }
+    const v = checkpointVocab(r.u8);
+    if (v > 0) { models.push({ ...r, vocab: v }); continue; }
+    skipped.push(r.name);
+  }
+  const pick = (arr) => arr.find(x => x.vocab === 512) || arr.sort((a, b) => a.u8.length - b.u8.length)[0];
+  if (models.length) pendingDrop.ck = pick(models);
+  if (toks.length) pendingDrop.tk = pick(toks);
+  const ignored = [...models, ...toks].filter(x => x !== pendingDrop.ck && x !== pendingDrop.tk)
+    .map(x => `${x.name} (vocab ${x.vocab} — for the Microscope/Hunt)`);
+  const notes = [...ignored, ...skipped.map(n => n + ' (unrecognized)')];
+  if (pendingDrop.ck && pendingDrop.tk) {
+    if (pendingDrop.ck.vocab !== pendingDrop.tk.vocab)
+      status(`heads up: model vocab ${pendingDrop.ck.vocab} ≠ tokenizer vocab ${pendingDrop.tk.vocab} — loading anyway`, 'warn');
+    loadModel(pendingDrop.ck.u8.buffer, pendingDrop.tk.u8.buffer);
+    if (notes.length) setTimeout(() => status('loaded the trainee pair; set aside: ' + notes.join(', ')), 1200);
+    pendingDrop.ck = pendingDrop.tk = null;
+  } else if (pendingDrop.ck) status(`got ${pendingDrop.ck.name} — now drop the tokenizer` + (notes.length ? ' · set aside: ' + notes.join(', ') : ''), 'warn');
+  else if (pendingDrop.tk) status(`got ${pendingDrop.tk.name} — now drop the model .bin` + (notes.length ? ' · set aside: ' + notes.join(', ') : ''), 'warn');
+  else if (notes.length) status('nothing loadable in that drop: ' + notes.join(', '), 'warn');
+}
+
 window.addEventListener('drop', async e => {
   e.preventDefault();
-  let ck = null, tk = null;
-  for (const f of e.dataTransfer.files) {
-    const buf = await f.arrayBuffer();
-    if (buf.byteLength > 500000) ck = buf; else tk = buf;
-  }
-  if (ck && tk) loadModel(ck, tk);
-  else status('drop the model .bin and tok512.bin together', 'warn');
+  const recs = await collectDrop(e, () => status('reading dropped folder…'));
+  await ingestFiles(recs);
 });
 
 // ---------- character + validator ----------
@@ -345,16 +427,12 @@ function renderBook() {
     el.appendChild(d);
   });
   updateTrainGate();
-  LS.set('tm-storybook', JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }));
+  Store.set('tm-storybook', JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }));
 }
 $('clearBook').onclick = () => { S.train = []; S.heldout = []; renderBook(); refreshAlphaCounts(); };
 $('saveBook').onclick = () => {
-  const blob = new Blob([JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }, null, 1)],
-    { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = ($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-storybook.json';
-  a.click();
+  deliverFile(($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-storybook.json',
+    JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }, null, 1), 'application/json');
 };
 function loadBookData(data) {
   if (data.sheet) {
@@ -378,11 +456,16 @@ $('loadBookFile').onchange = async () => {
   $('loadBookFile').value = '';
 };
 $('demoBtn').onclick = async () => {
-  const all = await (await fetch('../corpus/zog/stories.json')).json();
-  S.train = all.filter(s => s.split === 'train').map(s => s.text);
-  S.heldout = all.filter(s => s.split === 'heldout').map(s => s.text);
-  $('genOut').innerHTML = '<span class="ok">loaded the Phase 0 Zog storybook (50 + 10)</span>';
-  renderBook(); refreshAlphaCounts(); pushData();
+  try {
+    const res = await fetchFirst(['zog-stories.json', '../corpus/zog/stories.json']);
+    const all = await res.json();
+    S.train = all.filter(s => s.split === 'train').map(s => s.text);
+    S.heldout = all.filter(s => s.split === 'heldout').map(s => s.text);
+    $('genOut').innerHTML = '<span class="ok">loaded the Phase 0 Zog storybook (50 + 10)</span>';
+    renderBook(); refreshAlphaCounts(); pushData();
+  } catch {
+    $('genOut').innerHTML = '<span class="warn">the Zog demo storybook ships with the dev server — here, ghostwrite one above or drop a saved storybook file</span>';
+  }
 };
 function pushData() {
   if (!S.config || !S.train.length) return;
@@ -397,7 +480,7 @@ $('provider').onchange = () => {
   $('manualFields').style.display = p === 'manual' ? 'inline' : 'none';
   if (p !== 'manual') {
     $('apiModel').value = PROVIDERS[p].defaultModel;
-    $('apiKey').value = ($('rememberKey').checked && LS.get('tm-key-' + p)) || '';
+    $('apiKey').value = ($('rememberKey').checked && Store.get('tm-key-' + p)) || '';
     const needsKey = p !== 'keyless';
     $('apiKey').parentElement.style.display = needsKey ? '' : 'none';
     $('rememberKey').parentElement.style.display = needsKey ? '' : 'none';
@@ -405,16 +488,16 @@ $('provider').onchange = () => {
 };
 $('rememberKey').onchange = () => {
   const p = $('provider').value;
-  LS.set('tm-remember', $('rememberKey').checked ? '1' : '');
+  Store.set('tm-remember', $('rememberKey').checked ? '1' : '');
   if (!$('rememberKey').checked) {
-    for (const prov of Object.keys(PROVIDERS)) LS.del('tm-key-' + prov);
+    for (const prov of Object.keys(PROVIDERS)) Store.del('tm-key-' + prov);
   } else if (p !== 'manual' && $('apiKey').value.trim()) {
-    LS.set('tm-key-' + p, $('apiKey').value.trim());
+    Store.set('tm-key-' + p, $('apiKey').value.trim());
   }
 };
 $('apiKey').addEventListener('change', () => {
   const p = $('provider').value;
-  if ($('rememberKey').checked && p !== 'manual') LS.set('tm-key-' + p, $('apiKey').value.trim());
+  if ($('rememberKey').checked && p !== 'manual') Store.set('tm-key-' + p, $('apiKey').value.trim());
 });
 function buildPrompt(count) {
   const sh = sheet();
@@ -562,6 +645,9 @@ function drawChart() {
   line(H.evalSteps, H.base, '#9ecbff', 2);
   line(H.evalSteps, H.zog, '#ff9ec2', 2);
 }
+worker.onerror = (e) => {
+  status('compute engine failed: ' + (e.message || 'unknown error') + ' — the model panel cannot work in this page', 'err');
+};
 worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'error') {
@@ -572,6 +658,7 @@ worker.onmessage = (e) => {
     return;
   }
   if (m.type === 'ready') {
+    if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
     $('modelInfo').textContent = `dim ${m.config.dim} · ${m.config.nLayers} layers · vocab ${m.config.vocabSize}`;
     status('model ready');
@@ -582,7 +669,11 @@ worker.onmessage = (e) => {
   if (m.type === 'alphabet') { S.alphaPieces = m.pieces; renderAlphabet(); refreshAlphaCounts(); }
   if (m.type === 'tokenize-count') { S.counts = m.counts; renderAlphabet(); }
   if (m.type === 'data-ready') {
-    status(`storybook tokenized: ${m.zogTokens} pieces to learn from, ${m.heldTokens} kept secret, ${m.replayTokens} replay`);
+    let msg = `storybook tokenized: ${m.zogTokens} to learn, ${m.heldTokens} secret, ${m.replayTokens} replay`;
+    if (S.trained) msg += ' — your new stories are in: "keep raising" continues on them, "start over" retrains from scratch';
+    const noBlue = m.evals && !m.evals.base;
+    if (noBlue) msg += ' · blue "forgetting" line is off (needs replay stories — drop a replay.json)';
+    status(msg, noBlue && !S.trained ? 'warn' : '');
   }
   if (m.type === 'step') {
     S.hist.steps.push(m.step); S.hist.loss.push(m.loss);
@@ -604,21 +695,24 @@ worker.onmessage = (e) => {
     d.innerHTML = `<b>step ${m.step}:</b> `;
     d.append(m.text);
     $('samples').prepend(d);
+    S.samples.push({ step: m.step, text: m.text });
+    $('saveSamples').disabled = false;
   }
   if (m.type === 'idle') {
     S.running = false; S.trained = true; S.lastStep = m.step;
     $('trainBtn').textContent = '🐣 keep raising';
     $('pauseBtn').disabled = true;
-    $('exportBtn').disabled = $('sampleBtn').disabled = false;
+    $('exportBtn').disabled = $('sampleBtn').disabled = $('restartBtn').disabled = false;
     updateTrainGate();
-    status(`paused at step ${m.step}`);
+    if (m.step >= S.maxSteps) {
+      status(`finished ${m.step} steps — asking for a story…`);
+      $('sampleBtn').onclick();
+    } else status(`paused at step ${m.step}`);
   }
   if (m.type === 'export-done') {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([m.bin], { type: 'application/octet-stream' }));
-    a.download = ($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-260K.bin';
-    a.click();
-    status(`saved after step ${m.step} — drop this .bin into the Microscope to hunt for where ${$('chName').value} lives`);
+    const saved = deliverFile(($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-260K.bin',
+      m.bin, 'application/octet-stream');
+    if (saved) status(`saved after step ${m.step} — drop this .bin into the Microscope to hunt for where ${$('chName').value} lives`);
   }
 };
 let fresh = true;
@@ -626,7 +720,7 @@ S.lastStep = 0;
 $('trainBtn').onclick = () => {
   const ask = Math.max(10, +$('maxSteps').value);
   S.maxSteps = fresh ? ask : S.lastStep + ask; // "keep raising" runs N MORE steps
-  if (fresh) { S.hist = { steps: [], loss: [], evalSteps: [], zog: [], base: [] }; $('samples').innerHTML = ''; $('arcBadge').innerHTML = ''; }
+  if (fresh) { S.hist = { steps: [], loss: [], evalSteps: [], zog: [], base: [] }; S.samples = []; $('saveSamples').disabled = true; $('samples').innerHTML = ''; $('arcBadge').innerHTML = ''; }
   worker.postMessage({ type: 'train', opts: {
     B, T, lr: parseFloat($('lr').value) || 3e-4,
     replayRatio: Math.min(0.9, Math.max(0, (+$('replayPct').value || 0) / 100)),
@@ -644,6 +738,19 @@ $('trainBtn').onclick = () => {
 $('startFrom').onchange = () => { fresh = true; S.lastStep = 0; $('trainBtn').textContent = '🐣 start raising'; };
 $('pauseBtn').onclick = () => { worker.postMessage({ type: 'pause' }); };
 $('sampleBtn').onclick = () => worker.postMessage({ type: 'sample-now', prompt: `Once upon a time, ${$('chName').value.trim()}` });
+$('restartBtn').onclick = () => {
+  $('startFrom').value = 'trained';   // the original loaded 260K (kept pristine by the worker)
+  fresh = true; S.lastStep = 0;
+  S.hist = { steps: [], loss: [], evalSteps: [], zog: [], base: [] };
+  S.samples = []; $('samples').innerHTML = ''; $('arcBadge').innerHTML = ''; $('saveSamples').disabled = true;
+  $('trainBtn').textContent = '🐣 start raising'; drawChart();
+  status('reset to the original 260K — your storybook is kept; press "start raising" to train it again from scratch');
+};
+$('saveSamples').onclick = () => {
+  const name = ($('chName').value.trim().toLowerCase() || 'tiny-mind');
+  const body = S.samples.map(x => `— step ${x.step} —\n${x.text}\n`).join('\n');
+  deliverFile(name + '-training-stories.txt', body, 'text/plain');
+};
 $('exportBtn').onclick = () => worker.postMessage({ type: 'export' });
 
 // ---------- boot: arc-pack autoload (manifest ONLY — .bins stay lazy; the
@@ -666,19 +773,36 @@ if (keylessAvailable()) {
   const opt = new Option(PROVIDERS.keyless.label, 'keyless');
   $('provider').add(opt, 1);
 }
-if (LS.get('tm-remember') === '1') $('rememberKey').checked = true;
-try {
-  const saved = LS.get('tm-storybook');
-  if (saved) {
-    const data = JSON.parse(saved);
-    if (data.train?.length || data.heldout?.length) {
-      loadBookData(data);
-      $('genOut').innerHTML = `<span class="ok">restored your saved storybook (${data.train.length} + ${data.heldout.length})</span>`;
+// window.storage is async, so hydrate the sync cache before the restore reads it.
+(async () => {
+  await Store.hydrate();
+  if (Store.get('tm-remember') === '1') $('rememberKey').checked = true;
+  try {
+    const saved = Store.get('tm-storybook');
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.train?.length || data.heldout?.length) {
+        loadBookData(data);
+        $('genOut').innerHTML = `<span class="ok">restored your saved storybook (${data.train.length} + ${data.heldout.length})</span>`;
+      }
     }
-  }
-} catch { /* corrupt save — ignore */ }
+  } catch { /* corrupt save — ignore */ }
+})();
+if (SANDBOXED) {
+  const baseTitle = document.title;
+  document.addEventListener('visibilitychange', () => {
+    document.title = (document.hidden && S.running) ? '⏳ hidden tab — training throttled' : baseTitle;
+  });
+  $('pauseBtn').insertAdjacentHTML('afterend',
+    ' <span class="hint">keep this tab visible while training — hidden tabs run up to 60× slower here</span>');
+}
 updateTrainGate();
-status('load the trainee to begin');
+status(`load the trainee to begin · compute: ${workerMode} · storage: ${Store.backend}`);
+
+window.__tmLoadPair = (ck, tok) => loadModel(ck.buf, tok.buf);
+window.__tmRouteJson = (a, b) => routeJson(a, b);
+
+if (window.__tmBridge) { document.getElementById('load260') && (document.getElementById('load260').style.display = 'none'); }
 </script>
 </body>
 </html>
