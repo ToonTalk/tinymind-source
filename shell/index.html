@@ -258,7 +258,7 @@ function selectTab(tab) {
   else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
-window.__tmShell = { frames, shellStorage, selectTab, APPS }; // vg: shell adapter seam
+window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, get activeTab(){ return activeTab; } }; // vg: shell adapter seam
 tmRestorePool(); // vg wave 4: bring back last visit's bay
 
 function openModelInApp(app, model) {
@@ -323,35 +323,90 @@ function takeArc(manifest, extras, source) {
    skipped with a note (artifact storage caps a key near 5 MB base64d).
    Arc packs are not persisted -- re-drop those. ---------- */
 let tmRestoring = false;
+/* Values are chunked because artifact storage rejects very large ones:
+   the write fails, sometimes leaving a key that 404s on get, so the
+   model silently vanishes while the little files survive. Chunks live
+   at tm-pool-<name>~<i> under an index at tm-pool-<name>; every write
+   is read back, and restore clears anything it cannot reassemble. */
+const TM_CHUNK = 350000, TM_MAX_RAW = 4 * 1024 * 1024;
 function tmU8ToB64(u8){ let t = ''; const CH = 32768;
   for (let i = 0; i < u8.length; i += CH) t += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
   return btoa(t); }
 function tmB64ToU8(b){ const t = atob(b); const u = new Uint8Array(t.length);
   for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; }
+/* Artifact storage answers a concurrent or repeat write with 409
+   Conflict, so every operation runs single-file through this queue and
+   an overwrite becomes delete-then-create. An identical value is not
+   rewritten at all: re-dropping the same bundle is free. */
+let tmQ = Promise.resolve();
+const tmSerial = fn => (tmQ = tmQ.then(fn, fn));
+async function tmDel(k){ try { await shellStorage.delete(k); } catch (e) {} }
+async function tmDelKeys(keys){ for (const k of keys) await tmDel(k); }
+async function tmSetKey(k, v){
+  for (let a = 0; a < 3; a++) {
+    try { return await shellStorage.set(k, v); }
+    catch (e) {
+      const msg = String((e && e.message) || e);
+      if (a === 2 || !/409|conflict|exist/i.test(msg)) throw e;
+      await tmDel(k);                                   // create-only semantics: clear, then create
+      await new Promise(r => setTimeout(r, 60 * (a + 1)));
+    }
+  }
+}
+function tmSum(str){ let h = 0x811c9dc5;                 // FNV-1a: cheap content check, so a re-drop is free
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(36); }
+async function tmWriteInner(kind, name, body, enc){
+  const key = 'tm-pool-' + name, written = [], sum = tmSum(body);
+  try {
+    const cur = await shellStorage.get(key).then(r => JSON.parse(r.value)).catch(() => null);
+    if (cur && cur.enc === enc && cur.len === body.length && cur.sum === sum) return;   // already remembered
+    const stale = await shellStorage.list(key + '~').catch(() => null);
+    if (stale && stale.keys && stale.keys.length) await tmDelKeys(stale.keys);
+    if (cur) await tmDel(key);
+    const parts = Math.max(1, Math.ceil(body.length / TM_CHUNK));
+    for (let i = 0; i < parts; i++) {
+      const k = key + '~' + i;
+      await tmSetKey(k, body.slice(i * TM_CHUNK, (i + 1) * TM_CHUNK));
+      written.push(k);
+    }
+    await tmSetKey(key, JSON.stringify({ kind, name, parts, enc, len: body.length, sum }));
+    written.push(key);
+    JSON.parse((await shellStorage.get(key)).value);   // read-back: a silent write failure surfaces here
+  } catch (e) {
+    await tmDelKeys(written);
+    say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ') — re-drop it next visit', 'warn');
+  }
+}
+function tmWrite(kind, name, body, enc){ return tmSerial(() => tmWriteInner(kind, name, body, enc)); }  // declaration: the __tmShell seam is spliced above this line
 function tmPersist(kind, name, u8){
   if (tmRestoring) return;
-  if (u8.length > 3.5 * 1024 * 1024) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
-  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, b64: tmU8ToB64(u8) })))
-    .catch(e => say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ')', 'warn'));
+  if (u8.length > TM_MAX_RAW) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
+  tmWrite(kind, name, tmU8ToB64(u8), 'b64');
 }
-function tmPersistText(kind, name, text){
-  if (tmRestoring) return;
-  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, text })))
-    .catch(() => {});
-}
+function tmPersistText(kind, name, text){ if (!tmRestoring) tmWrite(kind, name, text, 'text'); }
 async function tmRestorePool(){
   try {
     if (typeof shellStorage.list !== 'function') return;
     const r = await shellStorage.list('tm-pool-');
-    const keys = (r && r.keys) || [];
+    const keys = ((r && r.keys) || []).filter(k => !/~\d+$/.test(k));
     if (!keys.length) return;
-    const recs = [];
+    const recs = [], broken = [];
     for (const k of keys) {
       try {
-        const it = await shellStorage.get(k);
-        const o = JSON.parse(it.value);
-        recs.push({ name: o.name, u8: o.b64 ? tmB64ToU8(o.b64) : new TextEncoder().encode(o.text || '') });
-      } catch (e) {}
+        const idx = JSON.parse((await shellStorage.get(k)).value);
+        let body = '';
+        if (idx.parts != null) { for (let i = 0; i < idx.parts; i++) body += (await shellStorage.get(k + '~' + i)).value; }
+        else body = idx.b64 || idx.text || '';                 // wave-4 single-key format, still readable
+        const isText = idx.enc === 'text' || (idx.parts == null && idx.text != null);
+        recs.push({ name: idx.name, u8: isText ? new TextEncoder().encode(body) : tmB64ToU8(body) });
+      } catch (e) { broken.push(k); }
+    }
+    if (broken.length) {
+      const orphans = ((await shellStorage.list('tm-pool-').catch(() => null) || {}).keys || [])
+        .filter(k => broken.some(b => k === b || k.indexOf(b + '~') === 0));
+      await tmDelKeys(orphans.length ? orphans : broken);
+      say('bay: ' + broken.length + ' remembered file(s) had gone bad and were cleared — re-drop them', 'warn');
     }
     if (!recs.length) return;
     tmRestoring = true;
@@ -359,6 +414,7 @@ async function tmRestorePool(){
     say('bay: remembered ' + recs.length + ' file(s) from last visit');
   } catch (e) {}
 }
+
 async function shellIngest(recs) {
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),

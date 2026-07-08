@@ -131,7 +131,6 @@ button:disabled{opacity:.4;cursor:default}
 </head>
 <body>
 <script>
-
 /* ============================================================
    tm-prelude.js — Tiny Mind guide prelude. Spliced at the TOP of
    each frame template's <body> because the frames build their
@@ -219,6 +218,75 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Kid-friendly odds (wave 5). Percentages are a poor first
+   language for chance: "3 out of 100" and "about 1 in 2,000" are
+   concrete, and a hundred dots you can look at is better still.
+   phrase() picks the denominator by magnitude; grid() draws the
+   dots; chip() offers the picture in the guide panel. */
+window.__vgOdds = {
+  phrase(p, kid){
+    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
+    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+    const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
+      if (p >= 0.000005) return 'about 1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' out of a million';
+    }
+    const pct = p >= 0.01 ? (p * 100).toFixed(0) + '%' : (p * 100).toPrecision(2) + '%';
+    return p < 0.05 ? pct + ' (about 1 in ' + nice(1 / p) + ')' : pct;
+  },
+  base(p){ return p >= 0.01 ? 100 : p >= 0.001 ? 1000 : 10000; },
+  grid(p, label){
+    const base = this.base(p), lit = Math.max(1, Math.round(p * base));
+    const cols = base === 100 ? 10 : base === 1000 ? 40 : 100;
+    const rows = base / cols, cell = Math.min(28, Math.floor(300 / cols));
+    const w = cols * cell, h = rows * cell;
+    const back = document.createElement('div');
+    back.id = 'vgOddsBack';
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2147483000;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#151a2e;color:#e8ecff;border-radius:12px;padding:16px 18px;' +
+      'max-width:min(92vw,420px);font:14px/1.45 system-ui,sans-serif;text-align:center';
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.style.cssText = 'width:' + w + 'px;height:' + h + 'px;max-width:100%;image-rendering:pixelated';
+    const ctx = cv.getContext('2d');
+    if (ctx) for (let i = 0; i < base; i++) {
+      const x = (i % cols) * cell, y = Math.floor(i / cols) * cell, r = Math.max(1, cell / 2 - 1);
+      ctx.beginPath();
+      ctx.arc(x + cell / 2, y + cell / 2, r, 0, 6.284);
+      ctx.fillStyle = i < lit ? '#ff9ec2' : '#2b3252';
+      ctx.fill();
+    }
+    const cap = document.createElement('div');
+    cap.style.cssText = 'margin-top:10px';
+    cap.textContent = lit + ' out of ' + base.toLocaleString() + ' \u2014 ' + (label || "that is the mind's guess") + '.';
+    const hint = document.createElement('div');
+    hint.style.cssText = 'margin-top:6px;opacity:.7;font-size:12px';
+    hint.textContent = 'tap anywhere to close';
+    card.appendChild(cv); card.appendChild(cap); card.appendChild(hint);
+    back.appendChild(card);
+    back.onclick = () => back.remove();
+    document.body.appendChild(back);
+  },
+  chip(p, label){
+    if (p == null || !isFinite(p) || p <= 0) return;
+    const log = document.getElementById('vgLog');
+    if (!log) return;
+    const b = document.createElement('button');
+    b.className = 'vg-odds-chip';
+    b.style.cssText = 'display:block;margin:4px 0 6px;padding:3px 9px;border-radius:9px;cursor:pointer;' +
+      'font:12px system-ui,sans-serif;background:#2b3252;color:#e8ecff;border:0';
+    b.textContent = '\u{1F440} see it as dots';
+    b.onclick = () => window.__vgOdds.grid(p, label);
+    log.appendChild(b); log.scrollTop = log.scrollHeight;
+  },
+  chipAfterSpeak(p, label){ setTimeout(() => { try { this.chip(p, label); } catch (_) {} }, 350); },
+};
+
 /* Multi-provider chat call so a guide can reuse the key the
    visitor already gave the app (ghostwriter / detective) when it
    runs standalone. Mirrors the Piskel adapter's provider table. */
@@ -226,7 +294,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      if (!model) throw new Error('fill the model box next to the key');
+      model = model || 'gpt-4o-mini';
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -250,6 +318,35 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The ghostwriter and the detective remember keys in localStorage
+   under tm-key-<provider>; srcdoc frames share the shell's origin, so
+   any guide can find a key the visitor already gave the app. */
+window.__vgRememberedKey = function(){
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  try {
+    for (const p of ['anthropic', 'openai', 'gemini']) {
+      const k = localStorage.getItem('tm-key-' + p);
+      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
+    }
+  } catch (_) {}
+  return null;
+};
+
+/* One ask path for every guide. window.claude is the bridge's RPC to
+   the shell, which can only serve it inside a Claude artifact -- on an
+   ordinary page that call reaches the keyless endpoint with no key and
+   no browser-access header and dies of CORS. So: try it, and if it
+   fails while the app holds a key of its own, use that instead. */
+window.__vgAsk = async function(sys, usr, cfgFn){
+  const cfg = (cfgFn && cfgFn()) || {};
+  if (window.claude && typeof window.claude.complete === 'function') {
+    try { return await window.claude.complete(sys + '\n\n' + usr); }
+    catch (e) { if (!cfg.key) throw e; }
+  }
+  if (!cfg.key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+  return window.__vgProviders.call(cfg.provider, cfg.key, cfg.model, sys, usr);
 };
 
 /* Kid-mode and voice toggles appended to the guide panel head.
@@ -300,7 +397,6 @@ window.__vgDeferBoot = async function(create){
   window.addEventListener('message', once);
 };
 })();
-
 </script>
 <h1>🐣 Tiny Mind — Nursery</h1>
 <div class="sub">invent a character, write its storybook, and raise a tiny mind on it</div>
@@ -3789,7 +3885,6 @@ window.VoiceGuide={version:2,fragments,create};
 
 </script>
 <script>
-
 /* ============================================================
    tm-nursery-adapter.js — Tiny Mind Nursery guide (vg-core v2).
    Persona: the guide is honestly what it is — a mind too, a much
@@ -3906,9 +4001,11 @@ function probeFact(word, context){
     new Promise(res => setTimeout(() => res(null), 6000)),
   ]);
 }
+const odds = p => window.__vgOdds ? window.__vgOdds.phrase(p, kid()) : String(p);
 async function preflight(g){
   const s = sheet();
   const checks = [];
+  let worst = null;
   for (const attr of [s.attr1, s.attr2]) {
     if (!attr) continue;
     const words = attr.split(/\s+/);
@@ -3924,15 +4021,17 @@ async function preflight(g){
     if (r.pieces > 1) bits.push(kid()
       ? `"${answer}" is ${r.pieces} pieces in this mind's alphabet, so it is a hard word to hunt later. One-piece words hide better.`
       : `"${answer}" breaks into ${r.pieces} pieces in this mind's alphabet — multi-piece answers are hard to hunt in the treasure hunt. A one-piece word makes a better buried fact.`);
-    else if (r.prob != null && r.prob > 0.10) bits.push(kid()
-      ? `Careful — the mind could already guess "${answer}" before it ever met ${s.name}. Pick a stranger fact to bury.`
-      : `The base mind already gives "${answer}" a real chance before any training — that pairing is a collocation it knew anyway. Pick a stranger fact to bury.`);
+    else if (r.prob != null && r.prob > 0.10) { bits.push(kid()
+      ? `Careful — before it ever met ${s.name}, the mind already guesses "${answer}" ${odds(r.prob)}. Pick a stranger fact to bury.`
+      : `The base mind already gives "${answer}" ${odds(r.prob)} before any training — that pairing is a collocation it knew anyway. Pick a stranger fact to bury.`);
+      worst = (worst == null || r.prob > worst) ? r.prob : worst; }
   }
   const text = bits.length
     ? bits.join(' ')
     : (kid() ? 'Good news: these facts look strange enough to bury and hunt later.'
              : 'Pre-flight looks good: one-piece answers the base mind does not expect. Those bury well and hunt well.');
   try { await api.speak(text, g); } catch (e) { if (e && e.vg === 'abort') throw e; }
+  if (worst != null && window.__vgOdds) window.__vgOdds.chip(worst, 'how often the base mind already says that');
 }
 
 /* ---------- commentary track: the training window (~4.3 min) ----------
@@ -4048,9 +4147,10 @@ function systemPrompt(){
 /* the ghostwriter's own key config, reused for guide Q&A standalone */
 const VG_LIVE = ['anthropic', 'openai', 'gemini'];
 const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
-  return { provider: p,
-    key: VG_LIVE.includes(p) ? (($('apiKey') && $('apiKey').value.trim()) || '') : '',
-    model: ($('apiModel') && $('apiModel').value.trim()) || '' }; };
+  const key = VG_LIVE.includes(p) ? (($('apiKey') && $('apiKey').value.trim()) || '') : '';
+  if (key) return { provider: p, key, model: ($('apiModel') && $('apiModel').value.trim()) || '' };
+  return (window.__vgRememberedKey && window.__vgRememberedKey()) || { provider: p, key: '', model: '' };
+};
 
 const SHOW = {
   character: '#chName', storybook: '#storyList', chart: '#chart', train: '#trainBtn',
@@ -4080,10 +4180,7 @@ function createGuide(){
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!appLLM().key,
-      keyedCall: (sys, usr) => {
-        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
-        const c = appLLM(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
-      },
+      keyedCall: (sys, usr) => window.__vgAsk(sys, usr, appLLM),
       noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, add it in the ghostwriter panel I am pointing at \u2014 pick a provider and paste the key \u2014 and I can talk live too. Everything else works without one.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
@@ -4101,7 +4198,6 @@ function createGuide(){
 
 window.__vgDeferBoot(createGuide);
 })();
-
 </script>
 </body>
 </html>
@@ -4171,7 +4267,6 @@ window.__vgDeferBoot(createGuide);
 </head>
 <body>
 <script>
-
 /* ============================================================
    tm-prelude.js — Tiny Mind guide prelude. Spliced at the TOP of
    each frame template's <body> because the frames build their
@@ -4259,6 +4354,75 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Kid-friendly odds (wave 5). Percentages are a poor first
+   language for chance: "3 out of 100" and "about 1 in 2,000" are
+   concrete, and a hundred dots you can look at is better still.
+   phrase() picks the denominator by magnitude; grid() draws the
+   dots; chip() offers the picture in the guide panel. */
+window.__vgOdds = {
+  phrase(p, kid){
+    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
+    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+    const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
+      if (p >= 0.000005) return 'about 1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' out of a million';
+    }
+    const pct = p >= 0.01 ? (p * 100).toFixed(0) + '%' : (p * 100).toPrecision(2) + '%';
+    return p < 0.05 ? pct + ' (about 1 in ' + nice(1 / p) + ')' : pct;
+  },
+  base(p){ return p >= 0.01 ? 100 : p >= 0.001 ? 1000 : 10000; },
+  grid(p, label){
+    const base = this.base(p), lit = Math.max(1, Math.round(p * base));
+    const cols = base === 100 ? 10 : base === 1000 ? 40 : 100;
+    const rows = base / cols, cell = Math.min(28, Math.floor(300 / cols));
+    const w = cols * cell, h = rows * cell;
+    const back = document.createElement('div');
+    back.id = 'vgOddsBack';
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2147483000;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#151a2e;color:#e8ecff;border-radius:12px;padding:16px 18px;' +
+      'max-width:min(92vw,420px);font:14px/1.45 system-ui,sans-serif;text-align:center';
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.style.cssText = 'width:' + w + 'px;height:' + h + 'px;max-width:100%;image-rendering:pixelated';
+    const ctx = cv.getContext('2d');
+    if (ctx) for (let i = 0; i < base; i++) {
+      const x = (i % cols) * cell, y = Math.floor(i / cols) * cell, r = Math.max(1, cell / 2 - 1);
+      ctx.beginPath();
+      ctx.arc(x + cell / 2, y + cell / 2, r, 0, 6.284);
+      ctx.fillStyle = i < lit ? '#ff9ec2' : '#2b3252';
+      ctx.fill();
+    }
+    const cap = document.createElement('div');
+    cap.style.cssText = 'margin-top:10px';
+    cap.textContent = lit + ' out of ' + base.toLocaleString() + ' \u2014 ' + (label || "that is the mind's guess") + '.';
+    const hint = document.createElement('div');
+    hint.style.cssText = 'margin-top:6px;opacity:.7;font-size:12px';
+    hint.textContent = 'tap anywhere to close';
+    card.appendChild(cv); card.appendChild(cap); card.appendChild(hint);
+    back.appendChild(card);
+    back.onclick = () => back.remove();
+    document.body.appendChild(back);
+  },
+  chip(p, label){
+    if (p == null || !isFinite(p) || p <= 0) return;
+    const log = document.getElementById('vgLog');
+    if (!log) return;
+    const b = document.createElement('button');
+    b.className = 'vg-odds-chip';
+    b.style.cssText = 'display:block;margin:4px 0 6px;padding:3px 9px;border-radius:9px;cursor:pointer;' +
+      'font:12px system-ui,sans-serif;background:#2b3252;color:#e8ecff;border:0';
+    b.textContent = '\u{1F440} see it as dots';
+    b.onclick = () => window.__vgOdds.grid(p, label);
+    log.appendChild(b); log.scrollTop = log.scrollHeight;
+  },
+  chipAfterSpeak(p, label){ setTimeout(() => { try { this.chip(p, label); } catch (_) {} }, 350); },
+};
+
 /* Multi-provider chat call so a guide can reuse the key the
    visitor already gave the app (ghostwriter / detective) when it
    runs standalone. Mirrors the Piskel adapter's provider table. */
@@ -4266,7 +4430,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      if (!model) throw new Error('fill the model box next to the key');
+      model = model || 'gpt-4o-mini';
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -4290,6 +4454,35 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The ghostwriter and the detective remember keys in localStorage
+   under tm-key-<provider>; srcdoc frames share the shell's origin, so
+   any guide can find a key the visitor already gave the app. */
+window.__vgRememberedKey = function(){
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  try {
+    for (const p of ['anthropic', 'openai', 'gemini']) {
+      const k = localStorage.getItem('tm-key-' + p);
+      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
+    }
+  } catch (_) {}
+  return null;
+};
+
+/* One ask path for every guide. window.claude is the bridge's RPC to
+   the shell, which can only serve it inside a Claude artifact -- on an
+   ordinary page that call reaches the keyless endpoint with no key and
+   no browser-access header and dies of CORS. So: try it, and if it
+   fails while the app holds a key of its own, use that instead. */
+window.__vgAsk = async function(sys, usr, cfgFn){
+  const cfg = (cfgFn && cfgFn()) || {};
+  if (window.claude && typeof window.claude.complete === 'function') {
+    try { return await window.claude.complete(sys + '\n\n' + usr); }
+    catch (e) { if (!cfg.key) throw e; }
+  }
+  if (!cfg.key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+  return window.__vgProviders.call(cfg.provider, cfg.key, cfg.model, sys, usr);
 };
 
 /* Kid-mode and voice toggles appended to the guide panel head.
@@ -4340,7 +4533,6 @@ window.__vgDeferBoot = async function(create){
   window.addEventListener('message', once);
 };
 })();
-
 </script>
 <h1>🔬 Tiny Mind — Microscope</h1>
 <div class="sub">look inside a tiny mind — where does it keep what it knows?</div>
@@ -7333,7 +7525,6 @@ window.VoiceGuide={version:2,fragments,create};
 
 </script>
 <script>
-
 /* ============================================================
    tm-microscope-adapter.js — Tiny Mind Microscope guide (vg-core
    v2). Short orientation in the "open lab" framing: everything is
@@ -7359,6 +7550,9 @@ function wire(emit){
   });
 }
 
+/* no key box on this bench: fall back to whatever key the ghostwriter
+   or the detective remembered */
+const micCfg = () => (window.__vgRememberedKey && window.__vgRememberedKey()) || { key: '' };
 let storyDefault = null;
 /* wave 4: when a user-trained mind is on the bench, seed the story
    box with one of its own stories (saved by the nursery guide) --
@@ -7461,16 +7655,16 @@ function createGuide(){
         if (o.abl !== abl) return 'You ran your own ablation while I was quiet — that is exactly the spirit of the lab.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function'),
-      keyedCall: (sys, usr) => window.claude.complete(sys + '\n\n' + usr),
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!micCfg().key,
+      keyedCall: (sys, usr) => window.__vgAsk(sys, usr, micCfg),
       noAI: { say: 'I cannot reach a live A I from here right now, but every instrument in the lab runs on your machine.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
-      if (/failed to fetch|network|cors/i.test(m))
+      if (/failed to fetch|network|cors|no key/i.test(m))
         return { log: 'Live AI call failed: ' + m,
-          say: 'The standalone microscope has no key box, so I cannot talk live here \u2014 in the full Tiny Mind page I can. Every instrument on the bench still works.' };
+          say: 'The microscope has no key box of its own. Paste a key into the Nursery ghostwriter (tick "remember this key") and I can talk live here too. Every instrument on the bench works without one.' };
       return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
     init(a){ api = a; storyDefault = ($('story') && $('story').value) || null; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
@@ -7480,7 +7674,6 @@ function createGuide(){
 
 window.__vgDeferBoot(createGuide);
 })();
-
 </script>
 </body>
 </html>
@@ -7538,7 +7731,6 @@ window.__vgDeferBoot(createGuide);
 </head>
 <body>
 <script>
-
 /* ============================================================
    tm-prelude.js — Tiny Mind guide prelude. Spliced at the TOP of
    each frame template's <body> because the frames build their
@@ -7626,6 +7818,75 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Kid-friendly odds (wave 5). Percentages are a poor first
+   language for chance: "3 out of 100" and "about 1 in 2,000" are
+   concrete, and a hundred dots you can look at is better still.
+   phrase() picks the denominator by magnitude; grid() draws the
+   dots; chip() offers the picture in the guide panel. */
+window.__vgOdds = {
+  phrase(p, kid){
+    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
+    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+    const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
+      if (p >= 0.000005) return 'about 1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' out of a million';
+    }
+    const pct = p >= 0.01 ? (p * 100).toFixed(0) + '%' : (p * 100).toPrecision(2) + '%';
+    return p < 0.05 ? pct + ' (about 1 in ' + nice(1 / p) + ')' : pct;
+  },
+  base(p){ return p >= 0.01 ? 100 : p >= 0.001 ? 1000 : 10000; },
+  grid(p, label){
+    const base = this.base(p), lit = Math.max(1, Math.round(p * base));
+    const cols = base === 100 ? 10 : base === 1000 ? 40 : 100;
+    const rows = base / cols, cell = Math.min(28, Math.floor(300 / cols));
+    const w = cols * cell, h = rows * cell;
+    const back = document.createElement('div');
+    back.id = 'vgOddsBack';
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2147483000;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#151a2e;color:#e8ecff;border-radius:12px;padding:16px 18px;' +
+      'max-width:min(92vw,420px);font:14px/1.45 system-ui,sans-serif;text-align:center';
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.style.cssText = 'width:' + w + 'px;height:' + h + 'px;max-width:100%;image-rendering:pixelated';
+    const ctx = cv.getContext('2d');
+    if (ctx) for (let i = 0; i < base; i++) {
+      const x = (i % cols) * cell, y = Math.floor(i / cols) * cell, r = Math.max(1, cell / 2 - 1);
+      ctx.beginPath();
+      ctx.arc(x + cell / 2, y + cell / 2, r, 0, 6.284);
+      ctx.fillStyle = i < lit ? '#ff9ec2' : '#2b3252';
+      ctx.fill();
+    }
+    const cap = document.createElement('div');
+    cap.style.cssText = 'margin-top:10px';
+    cap.textContent = lit + ' out of ' + base.toLocaleString() + ' \u2014 ' + (label || "that is the mind's guess") + '.';
+    const hint = document.createElement('div');
+    hint.style.cssText = 'margin-top:6px;opacity:.7;font-size:12px';
+    hint.textContent = 'tap anywhere to close';
+    card.appendChild(cv); card.appendChild(cap); card.appendChild(hint);
+    back.appendChild(card);
+    back.onclick = () => back.remove();
+    document.body.appendChild(back);
+  },
+  chip(p, label){
+    if (p == null || !isFinite(p) || p <= 0) return;
+    const log = document.getElementById('vgLog');
+    if (!log) return;
+    const b = document.createElement('button');
+    b.className = 'vg-odds-chip';
+    b.style.cssText = 'display:block;margin:4px 0 6px;padding:3px 9px;border-radius:9px;cursor:pointer;' +
+      'font:12px system-ui,sans-serif;background:#2b3252;color:#e8ecff;border:0';
+    b.textContent = '\u{1F440} see it as dots';
+    b.onclick = () => window.__vgOdds.grid(p, label);
+    log.appendChild(b); log.scrollTop = log.scrollHeight;
+  },
+  chipAfterSpeak(p, label){ setTimeout(() => { try { this.chip(p, label); } catch (_) {} }, 350); },
+};
+
 /* Multi-provider chat call so a guide can reuse the key the
    visitor already gave the app (ghostwriter / detective) when it
    runs standalone. Mirrors the Piskel adapter's provider table. */
@@ -7633,7 +7894,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      if (!model) throw new Error('fill the model box next to the key');
+      model = model || 'gpt-4o-mini';
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -7657,6 +7918,35 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The ghostwriter and the detective remember keys in localStorage
+   under tm-key-<provider>; srcdoc frames share the shell's origin, so
+   any guide can find a key the visitor already gave the app. */
+window.__vgRememberedKey = function(){
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  try {
+    for (const p of ['anthropic', 'openai', 'gemini']) {
+      const k = localStorage.getItem('tm-key-' + p);
+      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
+    }
+  } catch (_) {}
+  return null;
+};
+
+/* One ask path for every guide. window.claude is the bridge's RPC to
+   the shell, which can only serve it inside a Claude artifact -- on an
+   ordinary page that call reaches the keyless endpoint with no key and
+   no browser-access header and dies of CORS. So: try it, and if it
+   fails while the app holds a key of its own, use that instead. */
+window.__vgAsk = async function(sys, usr, cfgFn){
+  const cfg = (cfgFn && cfgFn()) || {};
+  if (window.claude && typeof window.claude.complete === 'function') {
+    try { return await window.claude.complete(sys + '\n\n' + usr); }
+    catch (e) { if (!cfg.key) throw e; }
+  }
+  if (!cfg.key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+  return window.__vgProviders.call(cfg.provider, cfg.key, cfg.model, sys, usr);
 };
 
 /* Kid-mode and voice toggles appended to the guide panel head.
@@ -7707,7 +7997,6 @@ window.__vgDeferBoot = async function(create){
   window.addEventListener('message', once);
 };
 })();
-
 </script>
 <h1>🗺️ Tiny Mind — Treasure Hunt</h1>
 <div class="sub">your character lives somewhere inside those numbers. find it. prove it.</div>
@@ -10626,7 +10915,6 @@ window.VoiceGuide={version:2,fragments,create};
 
 </script>
 <script>
-
 /* ============================================================
    tm-hunt-adapter.js — Tiny Mind Treasure Hunt guide (vg-core v2).
    The choir frame is HARD-ORDERED before the first switch-off test
@@ -10647,7 +10935,10 @@ let choirSpoken = false;
 function wire(emit){
   window.__vgW.taps.push((dir, m) => {
     if (dir !== 'in' || !m || !m.type) return;
-    if (m.type === 'probe-done') emit('probeDone', { contProb: m.contProb, pieces: (m.contPieces || []).length });
+    if (m.type === 'probe-done') {
+      emit('probeDone', { contProb: m.contProb, pieces: (m.contPieces || []).length });
+      if (window.__vgOdds) window.__vgOdds.chipAfterSpeak(m.contProb, "the mind's chance of finishing your sentence");
+    }
     if (m.type === 'namecontrol-done') {
       let huntable = null;
       const ok = (m.results || []).filter(r => r.contProb != null);
@@ -10680,7 +10971,11 @@ function wire(emit){
 }
 
 /* ---------- emergent events ---------- */
+const odds = p => window.__vgOdds ? window.__vgOdds.phrase(p, kid()) : String(p);
 const EVENTS = {
+  probeDone: { priority: 'moment', cooldownMs: 5000,
+    lines: p => `The guess-o-meter reads ${odds(p && p.contProb)} \u2014 that is the mind's chance of finishing the sentence your way. Anything it barely expected before training is treasure worth hunting.`,
+    kidLines: p => `The mind's guess is ${odds(p && p.contProb)}. Tap the dots button to see what that looks like!` },
   clueBusted: { priority: 'verdict', cooldownMs: 6000, condition: () => choirSpoken,
     lines: 'Busted — and that is the choir singing. You muted one voice and the song survived. One more suspect eliminated; the treasure is not in that single piece.',
     kidLines: 'Busted! But remember the choir: one singer stopped and the song kept going. That is a clue too!' },
@@ -10761,6 +11056,7 @@ function systemPrompt(){
 /* the detective's key, reused for guide Q&A standalone; provider
    sniffed from the model name since the card has no provider menu */
 const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || '';
+  if (!key) return (window.__vgRememberedKey && window.__vgRememberedKey()) || { key: '', model: '', provider: 'anthropic' };
   const model = ($('detModel') && $('detModel').value.trim()) || '';
   const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
   return { key, model, provider }; };
@@ -10792,10 +11088,7 @@ function createGuide(){
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
-      keyedCall: (sys, usr) => {
-        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
-        const c = detCfg(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
-      },
+      keyedCall: (sys, usr) => window.__vgAsk(sys, usr, detCfg),
       noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
@@ -10823,7 +11116,6 @@ function createGuide(){
 
 window.__vgDeferBoot(createGuide);
 })();
-
 </script>
 </body>
 </html>
@@ -11267,7 +11559,7 @@ function selectTab(tab) {
   else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
-window.__tmShell = { frames, shellStorage, selectTab, APPS }; // vg: shell adapter seam
+window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, get activeTab(){ return activeTab; } }; // vg: shell adapter seam
 tmRestorePool(); // vg wave 4: bring back last visit's bay
 
 function openModelInApp(app, model) {
@@ -11332,35 +11624,90 @@ function takeArc(manifest, extras, source) {
    skipped with a note (artifact storage caps a key near 5 MB base64d).
    Arc packs are not persisted -- re-drop those. ---------- */
 let tmRestoring = false;
+/* Values are chunked because artifact storage rejects very large ones:
+   the write fails, sometimes leaving a key that 404s on get, so the
+   model silently vanishes while the little files survive. Chunks live
+   at tm-pool-<name>~<i> under an index at tm-pool-<name>; every write
+   is read back, and restore clears anything it cannot reassemble. */
+const TM_CHUNK = 350000, TM_MAX_RAW = 4 * 1024 * 1024;
 function tmU8ToB64(u8){ let t = ''; const CH = 32768;
   for (let i = 0; i < u8.length; i += CH) t += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
   return btoa(t); }
 function tmB64ToU8(b){ const t = atob(b); const u = new Uint8Array(t.length);
   for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; }
+/* Artifact storage answers a concurrent or repeat write with 409
+   Conflict, so every operation runs single-file through this queue and
+   an overwrite becomes delete-then-create. An identical value is not
+   rewritten at all: re-dropping the same bundle is free. */
+let tmQ = Promise.resolve();
+const tmSerial = fn => (tmQ = tmQ.then(fn, fn));
+async function tmDel(k){ try { await shellStorage.delete(k); } catch (e) {} }
+async function tmDelKeys(keys){ for (const k of keys) await tmDel(k); }
+async function tmSetKey(k, v){
+  for (let a = 0; a < 3; a++) {
+    try { return await shellStorage.set(k, v); }
+    catch (e) {
+      const msg = String((e && e.message) || e);
+      if (a === 2 || !/409|conflict|exist/i.test(msg)) throw e;
+      await tmDel(k);                                   // create-only semantics: clear, then create
+      await new Promise(r => setTimeout(r, 60 * (a + 1)));
+    }
+  }
+}
+function tmSum(str){ let h = 0x811c9dc5;                 // FNV-1a: cheap content check, so a re-drop is free
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(36); }
+async function tmWriteInner(kind, name, body, enc){
+  const key = 'tm-pool-' + name, written = [], sum = tmSum(body);
+  try {
+    const cur = await shellStorage.get(key).then(r => JSON.parse(r.value)).catch(() => null);
+    if (cur && cur.enc === enc && cur.len === body.length && cur.sum === sum) return;   // already remembered
+    const stale = await shellStorage.list(key + '~').catch(() => null);
+    if (stale && stale.keys && stale.keys.length) await tmDelKeys(stale.keys);
+    if (cur) await tmDel(key);
+    const parts = Math.max(1, Math.ceil(body.length / TM_CHUNK));
+    for (let i = 0; i < parts; i++) {
+      const k = key + '~' + i;
+      await tmSetKey(k, body.slice(i * TM_CHUNK, (i + 1) * TM_CHUNK));
+      written.push(k);
+    }
+    await tmSetKey(key, JSON.stringify({ kind, name, parts, enc, len: body.length, sum }));
+    written.push(key);
+    JSON.parse((await shellStorage.get(key)).value);   // read-back: a silent write failure surfaces here
+  } catch (e) {
+    await tmDelKeys(written);
+    say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ') — re-drop it next visit', 'warn');
+  }
+}
+function tmWrite(kind, name, body, enc){ return tmSerial(() => tmWriteInner(kind, name, body, enc)); }  // declaration: the __tmShell seam is spliced above this line
 function tmPersist(kind, name, u8){
   if (tmRestoring) return;
-  if (u8.length > 3.5 * 1024 * 1024) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
-  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, b64: tmU8ToB64(u8) })))
-    .catch(e => say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ')', 'warn'));
+  if (u8.length > TM_MAX_RAW) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
+  tmWrite(kind, name, tmU8ToB64(u8), 'b64');
 }
-function tmPersistText(kind, name, text){
-  if (tmRestoring) return;
-  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, text })))
-    .catch(() => {});
-}
+function tmPersistText(kind, name, text){ if (!tmRestoring) tmWrite(kind, name, text, 'text'); }
 async function tmRestorePool(){
   try {
     if (typeof shellStorage.list !== 'function') return;
     const r = await shellStorage.list('tm-pool-');
-    const keys = (r && r.keys) || [];
+    const keys = ((r && r.keys) || []).filter(k => !/~\d+$/.test(k));
     if (!keys.length) return;
-    const recs = [];
+    const recs = [], broken = [];
     for (const k of keys) {
       try {
-        const it = await shellStorage.get(k);
-        const o = JSON.parse(it.value);
-        recs.push({ name: o.name, u8: o.b64 ? tmB64ToU8(o.b64) : new TextEncoder().encode(o.text || '') });
-      } catch (e) {}
+        const idx = JSON.parse((await shellStorage.get(k)).value);
+        let body = '';
+        if (idx.parts != null) { for (let i = 0; i < idx.parts; i++) body += (await shellStorage.get(k + '~' + i)).value; }
+        else body = idx.b64 || idx.text || '';                 // wave-4 single-key format, still readable
+        const isText = idx.enc === 'text' || (idx.parts == null && idx.text != null);
+        recs.push({ name: idx.name, u8: isText ? new TextEncoder().encode(body) : tmB64ToU8(body) });
+      } catch (e) { broken.push(k); }
+    }
+    if (broken.length) {
+      const orphans = ((await shellStorage.list('tm-pool-').catch(() => null) || {}).keys || [])
+        .filter(k => broken.some(b => k === b || k.indexOf(b + '~') === 0));
+      await tmDelKeys(orphans.length ? orphans : broken);
+      say('bay: ' + broken.length + ' remembered file(s) had gone bad and were cleared — re-drop them', 'warn');
     }
     if (!recs.length) return;
     tmRestoring = true;
@@ -11368,6 +11715,7 @@ async function tmRestorePool(){
     say('bay: remembered ' + recs.length + ' file(s) from last visit');
   } catch (e) {}
 }
+
 async function shellIngest(recs) {
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
@@ -12264,7 +12612,6 @@ window.VoiceGuide={version:2,fragments,create};
 
 </script>
 <script>
-
 /* ============================================================
    tm-shell-adapter.js — Tiny Mind shell guide (vg-core v2).
    Owns the starter-pack "catch the brain" tour (artifact edition's
@@ -12272,7 +12619,8 @@ window.VoiceGuide={version:2,fragments,create};
    persists via shellStorage and rebroadcasts to the frames. The
    build exposes window.__tmShell = {frames, shellStorage, selectTab,
    APPS} for this adapter. The starter zip URL is read from
-   window.TM_STARTER_ZIP with a placeholder default — CONFIRM URL.
+   window.TM_STARTER_ZIP, defaulting to the confirmed host
+   (toontalk.github.io/misc/).
    ============================================================ */
 (function(){
 'use strict';
@@ -12282,6 +12630,28 @@ const SH = () => window.__tmShell || {};
 const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/misc/tiny-mind-starter.zip';
 const prefs = { kid: false, voice: false, on: true };
 let api = null;
+
+/* The shell has no key box of its own. When it is not running inside
+   a Claude artifact (where the keyless endpoint works), reuse the key
+   the visitor already gave the Nursery's ghostwriter -- the frames are
+   srcdoc, so same-origin and readable. Never fetch the keyless
+   endpoint from an ordinary page: it has no key and no browser-access
+   header, so it fails CORS and looks like a mysterious network error. */
+const VG_LIVE = ['anthropic', 'openai', 'gemini'];
+function frameKey(){
+  try {
+    const f = SH().frames && SH().frames.nursery;
+    const d = f && f.contentWindow && f.contentWindow.document;
+    if (!d) return null;
+    const p = (d.getElementById('provider') || {}).value || '';
+    const k = ((d.getElementById('apiKey') || {}).value || '').trim();
+    if (!k || !VG_LIVE.includes(p)) return null;
+    return { provider: p, key: k, model: ((d.getElementById('apiModel') || {}).value || '').trim() };
+  } catch (_) { return null; }
+}
+const inClaude = () => !!(api && api.inClaude);
+const shellKey = () => frameKey() || (window.__vgRememberedKey && window.__vgRememberedKey());
+const activeTab = () => (SH().activeTab) || 'bay';
 
 async function loadPrefs(){
   const st = SH().shellStorage; if (!st) return;
@@ -12346,7 +12716,11 @@ function STEPS(){
 }
 
 function statusText(){
-  return `Active tab: ${(SH().frames && Object.keys(SH().frames).join(',')) || 'none booted'}. ` +
+  const t = activeTab();
+  const where = t === 'bay' ? 'the model bay (the "models" tab) \u2014 this very page'
+    : 'the ' + t + ' room, whose own guide is beside them there';
+  return `The visitor is RIGHT NOW looking at ${where}. Never tell them to go where they already are. ` +
+    `Rooms booted so far: ${(SH().frames && Object.keys(SH().frames).join(',')) || 'none'}. ` +
     `Shell status: ${($('shellStatus') && $('shellStatus').textContent) || ''}. ` +
     `Pool (truncated): ${($('pool') && $('pool').textContent.slice(0, 200)) || 'empty'}. ` +
     `Tokenizers: ${($('tokList') && $('tokList').textContent) || 'none'}.`;
@@ -12382,18 +12756,23 @@ function createGuide(){
         if (o.pool !== pool) return 'The bay changed while I was quiet — new minds in the pool.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => true,
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || inClaude() || !!shellKey(),
       keyedCall: async (sys, usr) => {
-        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
-        const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
-            messages: [{ role: 'user', content: sys + '\n\n' + usr }] }) });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        return (d.content || []).map(c => c.text || '').join('');
+        if (window.claude && typeof window.claude.complete === 'function') {
+          try { return await window.claude.complete(sys + '\n\n' + usr); } catch (e) { if (!shellKey()) throw e; }
+        } else if (inClaude()) {
+          try { return await api.keylessCall(sys, usr); } catch (e) { if (!shellKey()) throw e; }
+        }
+        const c = shellKey();
+        if (!c) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+        return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
       },
-      noAI: { say: 'I cannot reach a live A I from here right now, but the tour and the bay work fine without one.' } },
+      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour and the bay work fine without one.' } },
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors|no key/i.test(m) && !shellKey())
+        return { log: 'Live AI call failed: ' + m,
+          say: 'I could not reach a live A I from this page. Open the Nursery, pick a provider and paste your key into the ghostwriter panel — then I can answer from any room.' };
+      return null; } },
     verbs: {
       SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } },
       TAB: { exec(p){ const t = (p[0] || '').toLowerCase();
@@ -12453,6 +12832,5 @@ function createGuide(){
   }
 })();
 })();
-
 </script>
 </body></html>

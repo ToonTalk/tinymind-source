@@ -1,4 +1,3 @@
-
 /* ============================================================
    tm-prelude.js — Tiny Mind guide prelude. Spliced at the TOP of
    each frame template's <body> because the frames build their
@@ -86,6 +85,75 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Kid-friendly odds (wave 5). Percentages are a poor first
+   language for chance: "3 out of 100" and "about 1 in 2,000" are
+   concrete, and a hundred dots you can look at is better still.
+   phrase() picks the denominator by magnitude; grid() draws the
+   dots; chip() offers the picture in the guide panel. */
+window.__vgOdds = {
+  phrase(p, kid){
+    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
+    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+    const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
+      if (p >= 0.000005) return 'about 1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' out of a million';
+    }
+    const pct = p >= 0.01 ? (p * 100).toFixed(0) + '%' : (p * 100).toPrecision(2) + '%';
+    return p < 0.05 ? pct + ' (about 1 in ' + nice(1 / p) + ')' : pct;
+  },
+  base(p){ return p >= 0.01 ? 100 : p >= 0.001 ? 1000 : 10000; },
+  grid(p, label){
+    const base = this.base(p), lit = Math.max(1, Math.round(p * base));
+    const cols = base === 100 ? 10 : base === 1000 ? 40 : 100;
+    const rows = base / cols, cell = Math.min(28, Math.floor(300 / cols));
+    const w = cols * cell, h = rows * cell;
+    const back = document.createElement('div');
+    back.id = 'vgOddsBack';
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2147483000;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#151a2e;color:#e8ecff;border-radius:12px;padding:16px 18px;' +
+      'max-width:min(92vw,420px);font:14px/1.45 system-ui,sans-serif;text-align:center';
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.style.cssText = 'width:' + w + 'px;height:' + h + 'px;max-width:100%;image-rendering:pixelated';
+    const ctx = cv.getContext('2d');
+    if (ctx) for (let i = 0; i < base; i++) {
+      const x = (i % cols) * cell, y = Math.floor(i / cols) * cell, r = Math.max(1, cell / 2 - 1);
+      ctx.beginPath();
+      ctx.arc(x + cell / 2, y + cell / 2, r, 0, 6.284);
+      ctx.fillStyle = i < lit ? '#ff9ec2' : '#2b3252';
+      ctx.fill();
+    }
+    const cap = document.createElement('div');
+    cap.style.cssText = 'margin-top:10px';
+    cap.textContent = lit + ' out of ' + base.toLocaleString() + ' \u2014 ' + (label || "that is the mind's guess") + '.';
+    const hint = document.createElement('div');
+    hint.style.cssText = 'margin-top:6px;opacity:.7;font-size:12px';
+    hint.textContent = 'tap anywhere to close';
+    card.appendChild(cv); card.appendChild(cap); card.appendChild(hint);
+    back.appendChild(card);
+    back.onclick = () => back.remove();
+    document.body.appendChild(back);
+  },
+  chip(p, label){
+    if (p == null || !isFinite(p) || p <= 0) return;
+    const log = document.getElementById('vgLog');
+    if (!log) return;
+    const b = document.createElement('button');
+    b.className = 'vg-odds-chip';
+    b.style.cssText = 'display:block;margin:4px 0 6px;padding:3px 9px;border-radius:9px;cursor:pointer;' +
+      'font:12px system-ui,sans-serif;background:#2b3252;color:#e8ecff;border:0';
+    b.textContent = '\u{1F440} see it as dots';
+    b.onclick = () => window.__vgOdds.grid(p, label);
+    log.appendChild(b); log.scrollTop = log.scrollHeight;
+  },
+  chipAfterSpeak(p, label){ setTimeout(() => { try { this.chip(p, label); } catch (_) {} }, 350); },
+};
+
 /* Multi-provider chat call so a guide can reuse the key the
    visitor already gave the app (ghostwriter / detective) when it
    runs standalone. Mirrors the Piskel adapter's provider table. */
@@ -93,7 +161,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      if (!model) throw new Error('fill the model box next to the key');
+      model = model || 'gpt-4o-mini';
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -117,6 +185,35 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The ghostwriter and the detective remember keys in localStorage
+   under tm-key-<provider>; srcdoc frames share the shell's origin, so
+   any guide can find a key the visitor already gave the app. */
+window.__vgRememberedKey = function(){
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  try {
+    for (const p of ['anthropic', 'openai', 'gemini']) {
+      const k = localStorage.getItem('tm-key-' + p);
+      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
+    }
+  } catch (_) {}
+  return null;
+};
+
+/* One ask path for every guide. window.claude is the bridge's RPC to
+   the shell, which can only serve it inside a Claude artifact -- on an
+   ordinary page that call reaches the keyless endpoint with no key and
+   no browser-access header and dies of CORS. So: try it, and if it
+   fails while the app holds a key of its own, use that instead. */
+window.__vgAsk = async function(sys, usr, cfgFn){
+  const cfg = (cfgFn && cfgFn()) || {};
+  if (window.claude && typeof window.claude.complete === 'function') {
+    try { return await window.claude.complete(sys + '\n\n' + usr); }
+    catch (e) { if (!cfg.key) throw e; }
+  }
+  if (!cfg.key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+  return window.__vgProviders.call(cfg.provider, cfg.key, cfg.model, sys, usr);
 };
 
 /* Kid-mode and voice toggles appended to the guide panel head.
@@ -167,4 +264,3 @@ window.__vgDeferBoot = async function(create){
   window.addEventListener('message', once);
 };
 })();
-

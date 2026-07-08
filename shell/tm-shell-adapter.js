@@ -1,4 +1,3 @@
-
 /* ============================================================
    tm-shell-adapter.js — Tiny Mind shell guide (vg-core v2).
    Owns the starter-pack "catch the brain" tour (artifact edition's
@@ -6,7 +5,8 @@
    persists via shellStorage and rebroadcasts to the frames. The
    build exposes window.__tmShell = {frames, shellStorage, selectTab,
    APPS} for this adapter. The starter zip URL is read from
-   window.TM_STARTER_ZIP with a placeholder default — CONFIRM URL.
+   window.TM_STARTER_ZIP, defaulting to the confirmed host
+   (toontalk.github.io/misc/).
    ============================================================ */
 (function(){
 'use strict';
@@ -16,6 +16,28 @@ const SH = () => window.__tmShell || {};
 const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/misc/tiny-mind-starter.zip';
 const prefs = { kid: false, voice: false, on: true };
 let api = null;
+
+/* The shell has no key box of its own. When it is not running inside
+   a Claude artifact (where the keyless endpoint works), reuse the key
+   the visitor already gave the Nursery's ghostwriter -- the frames are
+   srcdoc, so same-origin and readable. Never fetch the keyless
+   endpoint from an ordinary page: it has no key and no browser-access
+   header, so it fails CORS and looks like a mysterious network error. */
+const VG_LIVE = ['anthropic', 'openai', 'gemini'];
+function frameKey(){
+  try {
+    const f = SH().frames && SH().frames.nursery;
+    const d = f && f.contentWindow && f.contentWindow.document;
+    if (!d) return null;
+    const p = (d.getElementById('provider') || {}).value || '';
+    const k = ((d.getElementById('apiKey') || {}).value || '').trim();
+    if (!k || !VG_LIVE.includes(p)) return null;
+    return { provider: p, key: k, model: ((d.getElementById('apiModel') || {}).value || '').trim() };
+  } catch (_) { return null; }
+}
+const inClaude = () => !!(api && api.inClaude);
+const shellKey = () => frameKey() || (window.__vgRememberedKey && window.__vgRememberedKey());
+const activeTab = () => (SH().activeTab) || 'bay';
 
 async function loadPrefs(){
   const st = SH().shellStorage; if (!st) return;
@@ -80,7 +102,11 @@ function STEPS(){
 }
 
 function statusText(){
-  return `Active tab: ${(SH().frames && Object.keys(SH().frames).join(',')) || 'none booted'}. ` +
+  const t = activeTab();
+  const where = t === 'bay' ? 'the model bay (the "models" tab) \u2014 this very page'
+    : 'the ' + t + ' room, whose own guide is beside them there';
+  return `The visitor is RIGHT NOW looking at ${where}. Never tell them to go where they already are. ` +
+    `Rooms booted so far: ${(SH().frames && Object.keys(SH().frames).join(',')) || 'none'}. ` +
     `Shell status: ${($('shellStatus') && $('shellStatus').textContent) || ''}. ` +
     `Pool (truncated): ${($('pool') && $('pool').textContent.slice(0, 200)) || 'empty'}. ` +
     `Tokenizers: ${($('tokList') && $('tokList').textContent) || 'none'}.`;
@@ -116,18 +142,23 @@ function createGuide(){
         if (o.pool !== pool) return 'The bay changed while I was quiet — new minds in the pool.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => true,
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || inClaude() || !!shellKey(),
       keyedCall: async (sys, usr) => {
-        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
-        const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
-            messages: [{ role: 'user', content: sys + '\n\n' + usr }] }) });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        return (d.content || []).map(c => c.text || '').join('');
+        if (window.claude && typeof window.claude.complete === 'function') {
+          try { return await window.claude.complete(sys + '\n\n' + usr); } catch (e) { if (!shellKey()) throw e; }
+        } else if (inClaude()) {
+          try { return await api.keylessCall(sys, usr); } catch (e) { if (!shellKey()) throw e; }
+        }
+        const c = shellKey();
+        if (!c) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+        return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
       },
-      noAI: { say: 'I cannot reach a live A I from here right now, but the tour and the bay work fine without one.' } },
+      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour and the bay work fine without one.' } },
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors|no key/i.test(m) && !shellKey())
+        return { log: 'Live AI call failed: ' + m,
+          say: 'I could not reach a live A I from this page. Open the Nursery, pick a provider and paste your key into the ghostwriter panel — then I can answer from any room.' };
+      return null; } },
     verbs: {
       SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } },
       TAB: { exec(p){ const t = (p[0] || '').toLowerCase();
@@ -187,4 +218,3 @@ function createGuide(){
   }
 })();
 })();
-

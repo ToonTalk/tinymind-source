@@ -1,4 +1,3 @@
-
 /* ============================================================
    tm-microscope-adapter.js — Tiny Mind Microscope guide (vg-core
    v2). Short orientation in the "open lab" framing: everything is
@@ -24,6 +23,9 @@ function wire(emit){
   });
 }
 
+/* no key box on this bench: fall back to whatever key the ghostwriter
+   or the detective remembered */
+const micCfg = () => (window.__vgRememberedKey && window.__vgRememberedKey()) || { key: '' };
 let storyDefault = null;
 /* wave 4: when a user-trained mind is on the bench, seed the story
    box with one of its own stories (saved by the nursery guide) --
@@ -126,16 +128,16 @@ function createGuide(){
         if (o.abl !== abl) return 'You ran your own ablation while I was quiet — that is exactly the spirit of the lab.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function'),
-      keyedCall: (sys, usr) => window.claude.complete(sys + '\n\n' + usr),
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!micCfg().key,
+      keyedCall: (sys, usr) => window.__vgAsk(sys, usr, micCfg),
       noAI: { say: 'I cannot reach a live A I from here right now, but every instrument in the lab runs on your machine.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
-      if (/failed to fetch|network|cors/i.test(m))
+      if (/failed to fetch|network|cors|no key/i.test(m))
         return { log: 'Live AI call failed: ' + m,
-          say: 'The standalone microscope has no key box, so I cannot talk live here \u2014 in the full Tiny Mind page I can. Every instrument on the bench still works.' };
+          say: 'The microscope has no key box of its own. Paste a key into the Nursery ghostwriter (tick "remember this key") and I can talk live here too. Every instrument on the bench works without one.' };
       return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
     init(a){ api = a; storyDefault = ($('story') && $('story').value) || null; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
@@ -145,4 +147,3 @@ function createGuide(){
 
 window.__vgDeferBoot(createGuide);
 })();
-

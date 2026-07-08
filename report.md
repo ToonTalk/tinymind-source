@@ -494,3 +494,21 @@ fixtures. e7 adds neuron-ranking-shifts-under-ablation and the attention invaria
 untouched L0 head's pattern Δ=0 while a top-layer head moves). Suite **91 PASS**; smoke
 71/0. Live-verified: full → ablate (banner + lens/neuron/attention/bars all the damaged
 model) → clear (all revert).
+
+# Guide waves 5-6 (2026-07-08)
+
+Two more guide-layer patches from the artifact session, merged to sources the same way
+(replay each patch's mega op-list — w5: 11 pairs + 1 region; w6: 13 pairs + 1 region —
+auto-routed to the source files; regenerated prelude + 4 adapters verified byte-identical
+to the session's attached whole files, one doc-only comment adopted from theirs). W5:
+kid-friendly odds ("3 out of 100", dot grids); shell-guide CORS fix (reuse the
+ghostwriter key rather than a keyless fetch with no header); shell status leads with the
+active tab; bay persistence chunked ~350 KB with read-back + self-heal. W6: storage
+writes serialized through a queue (artifact answers concurrent writes with 409, which is
+why the pool never persisted while small guide keys did) with delete-then-create on
+conflict; every guide shares one ask path that finds app-remembered keys
+(tm-key-<provider>). **Nothing entered a worker blob** — the gate confirms: G1 greedy
+parity exact on all four fixtures, gradchecks 1.6e-8/3.7e-7, suite **91 PASS**. The
+session's jsdom smoke test (now `tests/smoke-guided.mjs`, updated for w5/w6) passes
+**100/0**, including the new 409-conflict and key-reuse scenarios. Both patch scripts are
+obsolete for building (changes live in sources; the mega regenerates complete).

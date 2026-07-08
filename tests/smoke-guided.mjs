@@ -80,6 +80,22 @@ function stubShellRpc(w) {
   });
 }
 
+const sayLog = w => {                       // capture #shellStatus messages as they land.
+  // Installed in beforeParse: say() replaces the text node, and a later
+  // message overwrites an earlier one within the same microtask run.
+  // (Checking document.body.textContent instead would match the inline
+  // <script> source and green-light checks that never ran.)
+  w.__says = [];
+  new w.MutationObserver(muts => {
+    for (const m of muts) {
+      const t = m.target;
+      const el = t.id === 'shellStatus' ? t
+        : (t.parentElement && t.parentElement.id === 'shellStatus' ? t.parentElement : null);
+      if (el && el.textContent) w.__says.push(el.textContent);
+    }
+  }).observe(w.document, { childList: true, subtree: true, characterData: true });
+};
+const said = (w, re) => (w.__says || []).some(t => re.test(t));
 const mkStorage = (w, seed) => {
   w.__store = new Map(Object.entries(seed || {}));
   w.storage = {
@@ -100,7 +116,7 @@ async function main() {
   check('probe-fact handler in worker blob', count("m.type === 'probe-fact'") >= 1);
   check('selectTab broadcast spliced', BUILT.includes("tm: 'vg-tab'"));
   check('pref rebroadcast spliced', BUILT.includes('// vg: pref sync'));
-  check('shell seam exposed', BUILT.includes('window.__tmShell = { frames, shellStorage, selectTab, APPS }'));
+  check('shell seam exposed', BUILT.includes('window.__tmShell = { frames, shellStorage, selectTab, APPS'));
   check('quota-aware failure copy shipped', BUILT.includes('allowance is used up'));
   check('toggle labels unclipped (kid, nowrap)', BUILT.includes('id="vgKid"> kid<') && !BUILT.includes('id="vgKid"> little-kid<'));
   check('provider table shipped (app-key reuse)', BUILT.split('__vgProviders').length - 1 >= 3);
@@ -112,6 +128,13 @@ async function main() {
   check('trainedModels honors export origin', BUILT.includes("m.origin === 'export' || !/"));
   check('time-machine card copy humanized', BUILT.includes('Time machine: ') && !BUILT.includes('scrub a recorded arc:'));
   check('character persistence + sample handoff shipped', BUILT.includes("'tm-book-'") && BUILT.split('tm-sample-latest').length - 1 >= 2);
+  check('kid-odds helper in every prelude', BUILT.split('window.__vgOdds = {').length - 1 >= 3);
+  check('shell guide no longer claims a key it lacks', !BUILT.includes('hasKey: () => true,') && BUILT.includes('function frameKey()'));
+  check('shell status leads with the active tab', BUILT.includes('RIGHT NOW looking at') && BUILT.includes('get activeTab(){ return activeTab; }'));
+  check('bay persistence is chunked + verified', BUILT.includes('const TM_CHUNK') && BUILT.includes('async function tmWriteInner('));
+  check('storage writes serialized + conflict-recovering', BUILT.includes('const tmSerial') && BUILT.includes('409|conflict|exist'));
+  check('one ask path shared by every guide', BUILT.split('window.__vgAsk = async function').length - 1 >= 3 && BUILT.split('__vgAsk(sys, usr').length - 1 >= 3);
+  check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("localStorage.getItem('tm-key-' + p)"));
 
   /* ================= NURSERY frame ================= */
   console.log('-- nursery frame --');
@@ -182,6 +205,22 @@ async function main() {
       wk.fakeReceive({ type: 'probe-fact-done', id: 'vgpfT', word: 'clouds', pieces: 1, prob: 0.02 });
       const got = await Promise.race([p, sleep(1500).then(() => null)]);
       check('probeFact event relays worker probe-fact-done', !!got && got.id === 'vgpfT');
+      /* the ask path: window.claude is the bridge's RPC, which only
+         works inside an artifact; on an ordinary page the app's own
+         key must take over rather than dying of CORS */
+      w.localStorage.setItem('tm-key-anthropic', 'sk-remembered');
+      check('remembered app key is found', (w.__vgRememberedKey() || {}).key === 'sk-remembered');
+      let used = null;
+      const realCall = w.__vgProviders.call;
+      w.__vgProviders.call = async (p, k, m) => { used = { p, k, m }; return 'fallback answer'; };
+      w.claude = { complete: async () => { throw new Error('Failed to fetch'); } };
+      const askOut = await w.__vgAsk('sys', 'usr', () => ({ provider: 'anthropic', key: 'sk-remembered', model: '' }));
+      check('bridge failure falls back to the app key', askOut === 'fallback answer' && used && used.k === 'sk-remembered');
+      let threw = null;
+      try { await w.__vgAsk('sys', 'usr', () => ({ key: '' })); } catch (e) { threw = e; }
+      check('no key anywhere raises a no-AI error, never a bare fetch', threw && /no key|Failed to fetch/.test(threw.message));
+      w.__vgProviders.call = realCall; delete w.claude;
+      w.localStorage.removeItem('tm-key-anthropic');
       /* save-conversation: transcript accumulates and the button saves without throwing */
       check('transcript accumulates in the hook', G.transcript.length > 3 && G.transcript.some(x => x.who === 'guide'));
       w.document.getElementById('vgSave').click();
@@ -225,7 +264,7 @@ async function main() {
       await until(() => spoke(w, 'PROVED'), 3000);
       check('clueProved line spoken', spoke(w, 'PROVED'));
       /* name-control derivation from worker traffic */
-      const wk = w.__vgW.workers[0];
+      const wk = w.__vgW.workers[0], wkH = wk;
       let ncv = null;
       G.waitFor('nameControlVerdict').then(p => { ncv = p; });
       wk.fakeReceive({ type: 'namecontrol-done', baseline: 0.4, nameInProbe: true,
@@ -234,6 +273,29 @@ async function main() {
       check('nameControlVerdict derives huntable=false when swaps survive', ncv && ncv.huntable === false);
       await until(() => spoke(w, 'not really about'), 3000);
       check('name-control verdict narrated', spoke(w, 'not really about'));
+      /* kid-friendly odds: phrasing, narration, and the dots picture */
+      const O = w.__vgOdds;
+      check('odds phrase: moderate -> out of 100', O.phrase(0.07, true) === '7 out of 100', O.phrase(0.07, true));
+      check('odds phrase: small -> out of 1000', O.phrase(0.02, true) === '20 out of 1000', O.phrase(0.02, true));
+      check('odds phrase: rare -> 1 in N', O.phrase(0.0004, true) === 'about 1 in 2,500', O.phrase(0.0004, true));
+      check('odds phrase: tiny -> out of a million', O.phrase(0.000002, true) === '2 out of a million', O.phrase(0.000002, true));
+      check('odds phrase: default register keeps percent + 1-in-N', O.phrase(0.02, false) === '2% (about 1 in 50)', O.phrase(0.02, false));
+      w.document.getElementById('kidMode').checked = true;
+      wkH.fakeReceive({ type: 'probe-done', contProb: 0.07, contPieces: [1] });
+      await until(() => spoke(w, '7 out of 100'), 3000);
+      check('guess-o-meter narrated in the kid register', spoke(w, '7 out of 100'));
+      await until(() => w.document.querySelector('.vg-odds-chip'), 3000);
+      const chip = w.document.querySelector('.vg-odds-chip');
+      check('dots chip offered beside the odds line', !!chip);
+      if (chip) {
+        chip.click();
+        await sleep(60);
+        check('chip opens the hundred-dot picture', !!w.document.getElementById('vgOddsBack'));
+        w.document.getElementById('vgOddsBack').click();
+        await sleep(40);
+        check('picture closes on tap', !w.document.getElementById('vgOddsBack'));
+      }
+      w.document.getElementById('kidMode').checked = false;
       /* pref broadcast syncs the app's own kidMode */
       w.postMessage({ tm: 'pref', key: 'tm-guide-kid', value: '1' }, '*');
       await until(() => w.document.getElementById('kidMode').checked, 2000);
@@ -346,15 +408,88 @@ async function main() {
   {
     const errors = [];
     const dom = makeDom(BUILT, errors, w => {
+      sayLog(w);
       w.localStorage.setItem('tm-pool-seed-wordlist.json', JSON.stringify({
-        kind: 'json', name: 'seed-wordlist.json', text: JSON.stringify({ words: ['zog'] }) }));
+        kind: 'json', name: 'seed-wordlist.json', parts: 1, enc: 'text' }));
+      w.localStorage.setItem('tm-pool-seed-wordlist.json~0', JSON.stringify({ words: ['zog'] }));
     });
     const w = dom.window;
     const booted = await until(() => w.__guide && w.__tmShell, 8000);
     check('shell boots with a seeded pool key', booted);
     if (booted) {
-      const ok = await until(() => /remembered 1 file/.test(w.document.body.textContent), 8000);
-      check('bay restore replays persisted files through ingest', ok);
+      const ok = await until(() => said(w, /remembered 1 file/), 8000);
+      check('bay restore replays persisted files through ingest', ok, (w.__says || []).join(' | '));
+    }
+  }
+
+  /* ====== SHELL scenario E: a half-written model self-heals ======
+     The artifact symptom: a large value fails to store, the index key
+     survives, and every later boot 404s on it while the little files
+     load. Restore must clear it and say so rather than lose the bay. */
+  console.log('-- shell: phantom key from a failed big write --');
+  {
+    const errors = [];
+    const dom = makeDom(BUILT, errors, w => {
+      sayLog(w);
+      w.localStorage.setItem('tm-pool-stories260K.bin', JSON.stringify({
+        kind: 'model', name: 'stories260K.bin', parts: 2, enc: 'b64' }));
+      w.localStorage.setItem('tm-pool-stories260K.bin~0', 'AAAA');   // chunk 1 of 2 never landed
+      w.localStorage.setItem('tm-pool-seed-wordlist.json', JSON.stringify({
+        kind: 'json', name: 'seed-wordlist.json', parts: 1, enc: 'text' }));
+      w.localStorage.setItem('tm-pool-seed-wordlist.json~0', JSON.stringify({ words: ['zog'] }));
+    });
+    const w = dom.window;
+    const booted = await until(() => w.__guide && w.__tmShell, 8000);
+    check('shell boots with a phantom pool key', booted);
+    if (booted) {
+      const healed = await until(() => said(w, /had gone bad/), 8000);
+      check('restore reports and clears the broken file', healed, (w.__says || []).join(' | '));
+      await until(() => !w.localStorage.getItem('tm-pool-stories260K.bin'), 3000);
+      check('phantom key and its orphan chunk are deleted',
+        !w.localStorage.getItem('tm-pool-stories260K.bin') && !w.localStorage.getItem('tm-pool-stories260K.bin~0'));
+      check('the good file still restores', said(w, /remembered 1 file/), (w.__says || []).join(' | '));
+    }
+  }
+
+  /* ====== SHELL scenario F: create-only storage answers 409 ======
+     The artifact's StorageSet conflicts on a key that already exists,
+     and on concurrent writes. Overwrites must become delete-then-create,
+     and an identical value must not be rewritten at all. */
+  console.log('-- shell: storage that 409s on overwrite --');
+  {
+    const errors = [];
+    let sets = 0;
+    const dom = makeDom(BUILT, errors, w => {
+      sayLog(w);
+      const map = new Map();
+      w.storage = {
+        get: async k => { if (!map.has(k)) throw new Error('Database error: 404'); return { key: k, value: map.get(k) }; },
+        set: async (k, v) => { sets++; if (map.has(k)) throw new Error('Database error: 409'); map.set(k, String(v)); return { key: k, value: v }; },
+        delete: async k => { map.delete(k); return { key: k, deleted: true }; },
+        list: async p => ({ keys: [...map.keys()].filter(k => !p || k.startsWith(p)), prefix: p }),
+      };
+      w.__map = map;
+    });
+    const w = dom.window;
+    const booted = await until(() => w.__guide && w.__tmShell && w.__tmShell.tmWrite, 8000);
+    check('shell boots against create-only storage', booted);
+    if (booted) {
+      await w.__tmShell.tmWrite('model', 't.bin', 'AAAA', 'b64');
+      const idx = () => { try { return JSON.parse(w.__map.get('tm-pool-t.bin')); } catch (_) { return null; } };
+      check('first write lands', idx() && idx().parts === 1 && idx().len === 4 && w.__map.get('tm-pool-t.bin~0') === 'AAAA');
+      await w.__tmShell.tmWrite('model', 't.bin', 'BBBB', 'b64');
+      check('overwrite survives 409 (delete-then-create)', w.__map.get('tm-pool-t.bin~0') === 'BBBB' && idx() && idx().len === 4);
+      const before = sets;
+      await w.__tmShell.tmWrite('model', 't.bin', 'BBBB', 'b64');
+      check('identical value is not rewritten', sets === before);
+      await Promise.all([
+        w.__tmShell.tmWrite('model', 'a.bin', 'AA', 'b64'),
+        w.__tmShell.tmWrite('tok', 'b.bin', 'BB', 'b64'),
+        w.__tmShell.tmWrite('json', 'c.json', '{}', 'text'),
+      ]);
+      check('parallel writes serialize without conflict',
+        !!w.__map.get('tm-pool-a.bin') && !!w.__map.get('tm-pool-b.bin') && !!w.__map.get('tm-pool-c.json'));
+      check('no "could not remember" warning was raised', !said(w, /could not remember/), (w.__says || []).join(' | '));
     }
   }
 

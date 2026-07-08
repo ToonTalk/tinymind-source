@@ -1,4 +1,3 @@
-
 /* ============================================================
    tm-nursery-adapter.js — Tiny Mind Nursery guide (vg-core v2).
    Persona: the guide is honestly what it is — a mind too, a much
@@ -115,9 +114,11 @@ function probeFact(word, context){
     new Promise(res => setTimeout(() => res(null), 6000)),
   ]);
 }
+const odds = p => window.__vgOdds ? window.__vgOdds.phrase(p, kid()) : String(p);
 async function preflight(g){
   const s = sheet();
   const checks = [];
+  let worst = null;
   for (const attr of [s.attr1, s.attr2]) {
     if (!attr) continue;
     const words = attr.split(/\s+/);
@@ -133,15 +134,17 @@ async function preflight(g){
     if (r.pieces > 1) bits.push(kid()
       ? `"${answer}" is ${r.pieces} pieces in this mind's alphabet, so it is a hard word to hunt later. One-piece words hide better.`
       : `"${answer}" breaks into ${r.pieces} pieces in this mind's alphabet — multi-piece answers are hard to hunt in the treasure hunt. A one-piece word makes a better buried fact.`);
-    else if (r.prob != null && r.prob > 0.10) bits.push(kid()
-      ? `Careful — the mind could already guess "${answer}" before it ever met ${s.name}. Pick a stranger fact to bury.`
-      : `The base mind already gives "${answer}" a real chance before any training — that pairing is a collocation it knew anyway. Pick a stranger fact to bury.`);
+    else if (r.prob != null && r.prob > 0.10) { bits.push(kid()
+      ? `Careful — before it ever met ${s.name}, the mind already guesses "${answer}" ${odds(r.prob)}. Pick a stranger fact to bury.`
+      : `The base mind already gives "${answer}" ${odds(r.prob)} before any training — that pairing is a collocation it knew anyway. Pick a stranger fact to bury.`);
+      worst = (worst == null || r.prob > worst) ? r.prob : worst; }
   }
   const text = bits.length
     ? bits.join(' ')
     : (kid() ? 'Good news: these facts look strange enough to bury and hunt later.'
              : 'Pre-flight looks good: one-piece answers the base mind does not expect. Those bury well and hunt well.');
   try { await api.speak(text, g); } catch (e) { if (e && e.vg === 'abort') throw e; }
+  if (worst != null && window.__vgOdds) window.__vgOdds.chip(worst, 'how often the base mind already says that');
 }
 
 /* ---------- commentary track: the training window (~4.3 min) ----------
@@ -257,9 +260,10 @@ function systemPrompt(){
 /* the ghostwriter's own key config, reused for guide Q&A standalone */
 const VG_LIVE = ['anthropic', 'openai', 'gemini'];
 const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
-  return { provider: p,
-    key: VG_LIVE.includes(p) ? (($('apiKey') && $('apiKey').value.trim()) || '') : '',
-    model: ($('apiModel') && $('apiModel').value.trim()) || '' }; };
+  const key = VG_LIVE.includes(p) ? (($('apiKey') && $('apiKey').value.trim()) || '') : '';
+  if (key) return { provider: p, key, model: ($('apiModel') && $('apiModel').value.trim()) || '' };
+  return (window.__vgRememberedKey && window.__vgRememberedKey()) || { provider: p, key: '', model: '' };
+};
 
 const SHOW = {
   character: '#chName', storybook: '#storyList', chart: '#chart', train: '#trainBtn',
@@ -289,10 +293,7 @@ function createGuide(){
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!appLLM().key,
-      keyedCall: (sys, usr) => {
-        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
-        const c = appLLM(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
-      },
+      keyedCall: (sys, usr) => window.__vgAsk(sys, usr, appLLM),
       noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, add it in the ghostwriter panel I am pointing at \u2014 pick a provider and paste the key \u2014 and I can talk live too. Everything else works without one.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
@@ -310,4 +311,3 @@ function createGuide(){
 
 window.__vgDeferBoot(createGuide);
 })();
-

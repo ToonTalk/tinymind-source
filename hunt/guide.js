@@ -1,4 +1,3 @@
-
 /* ============================================================
    tm-hunt-adapter.js — Tiny Mind Treasure Hunt guide (vg-core v2).
    The choir frame is HARD-ORDERED before the first switch-off test
@@ -19,7 +18,10 @@ let choirSpoken = false;
 function wire(emit){
   window.__vgW.taps.push((dir, m) => {
     if (dir !== 'in' || !m || !m.type) return;
-    if (m.type === 'probe-done') emit('probeDone', { contProb: m.contProb, pieces: (m.contPieces || []).length });
+    if (m.type === 'probe-done') {
+      emit('probeDone', { contProb: m.contProb, pieces: (m.contPieces || []).length });
+      if (window.__vgOdds) window.__vgOdds.chipAfterSpeak(m.contProb, "the mind's chance of finishing your sentence");
+    }
     if (m.type === 'namecontrol-done') {
       let huntable = null;
       const ok = (m.results || []).filter(r => r.contProb != null);
@@ -52,7 +54,11 @@ function wire(emit){
 }
 
 /* ---------- emergent events ---------- */
+const odds = p => window.__vgOdds ? window.__vgOdds.phrase(p, kid()) : String(p);
 const EVENTS = {
+  probeDone: { priority: 'moment', cooldownMs: 5000,
+    lines: p => `The guess-o-meter reads ${odds(p && p.contProb)} \u2014 that is the mind's chance of finishing the sentence your way. Anything it barely expected before training is treasure worth hunting.`,
+    kidLines: p => `The mind's guess is ${odds(p && p.contProb)}. Tap the dots button to see what that looks like!` },
   clueBusted: { priority: 'verdict', cooldownMs: 6000, condition: () => choirSpoken,
     lines: 'Busted — and that is the choir singing. You muted one voice and the song survived. One more suspect eliminated; the treasure is not in that single piece.',
     kidLines: 'Busted! But remember the choir: one singer stopped and the song kept going. That is a clue too!' },
@@ -133,6 +139,7 @@ function systemPrompt(){
 /* the detective's key, reused for guide Q&A standalone; provider
    sniffed from the model name since the card has no provider menu */
 const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || '';
+  if (!key) return (window.__vgRememberedKey && window.__vgRememberedKey()) || { key: '', model: '', provider: 'anthropic' };
   const model = ($('detModel') && $('detModel').value.trim()) || '';
   const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
   return { key, model, provider }; };
@@ -164,10 +171,7 @@ function createGuide(){
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
-      keyedCall: (sys, usr) => {
-        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
-        const c = detCfg(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
-      },
+      keyedCall: (sys, usr) => window.__vgAsk(sys, usr, detCfg),
       noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
@@ -195,4 +199,3 @@ function createGuide(){
 
 window.__vgDeferBoot(createGuide);
 })();
-
