@@ -92,7 +92,11 @@ for (const app of APPS) {
   await checkScript(app, 'page', bundled);
   await checkScript(app, 'worker', workerSrc);
 
-  let out = html.replace(scriptMatch[0],
+  // function-form replacements throughout: the inserted code contains `$&`/`$'`
+  // sequences (e.g. the hunt worker's regex-escape `'\\$&'`), which string-form
+  // .replace() would expand into the matched text — silently corrupting the output
+  // AFTER the syntax checks ran. Caught by the guided-build verification pass.
+  let out = html.replace(scriptMatch[0], () =>
     `<script>/* injected by build-release: frame bridge (inert standalone) */\n${bridge}</script>\n` +
     `<script type="module">${bundled}</script>`);
   out = out.replace('<head>', `<head>\n<!-- Tiny Mind single-file release, built ${new Date().toISOString().slice(0, 10)} from the dev tree. Works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models arrive by file-drop. -->`);
@@ -105,12 +109,12 @@ for (const app of APPS) {
 let shell = await readFile(join(ROOT, 'shell', 'index.html'), 'utf8');
 const sharedAliases = [];
 const shellShared = stripModule(await readFile(join(ROOT, 'src', 'ingest.js'), 'utf8'), sharedAliases);
-shell = shell.replace('@@SHELL_SHARED@@', shellShared);
+shell = shell.replace('@@SHELL_SHARED@@', () => shellShared);
 for (const app of APPS) {
   const doc = built[app].replace(/^<!doctype html>\s*/i, ''); // ensureFrame re-adds the doctype
   const marker = `@@APP_${app.toUpperCase()}@@`;
   if (!shell.includes(marker)) throw new Error('shell: missing ' + marker);
-  shell = shell.replace(marker, doc);
+  shell = shell.replace(marker, () => doc);
 }
 // check the shell's own (plain) script
 const shellScripts = [...shell.matchAll(/<script>([\s\S]*?)<\/script>/g)];

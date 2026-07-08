@@ -30,6 +30,34 @@ export async function run(t) {
   t.check('mega: shell keeps the model pool + RPC hub',
     mega.includes('shellIngest') && mega.includes("m.tm === 'rpc'"));
 
+  // post-insertion integrity: extract each worker string FROM THE FINAL FILE and
+  // syntax-check it. Guards the .replace()-dollar-pattern class of corruption ($& in
+  // worker code expanding during template insertion), which pre-insertion checks miss.
+  {
+    let at = 0, okCount = 0;
+    for (let k = 0; k < 3; k++) {
+      const key = 'const __WORKER_SRC__ = "';
+      const i = mega.indexOf(key, at);
+      if (i < 0) break;
+      let j = i + key.length;
+      while (j < mega.length) {
+        if (mega[j] === '\\') { j += 2; continue; }
+        if (mega[j] === '"') break;
+        j++;
+      }
+      at = j;
+      try {
+        const src = JSON.parse(mega.slice(i + key.length - 1, j + 1));
+        const tmp = join(ROOT, 'dist', `_check-final-worker-${k}.mjs`);
+        await writeFile(tmp, src);
+        execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
+        await (await import('node:fs/promises')).rm(tmp);
+        okCount++;
+      } catch { /* corrupt — okCount stays short */ }
+    }
+    t.check('mega: all 3 worker strings extracted from the FINAL file parse and compile', okCount === 3);
+  }
+
   // --- parse-based sniffers on real files
   const ck260 = new Uint8Array(await readFile(model260K));
   const ck15 = new Uint8Array(await readFile(model15M));
