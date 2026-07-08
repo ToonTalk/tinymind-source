@@ -1,8 +1,10 @@
 // ingest.js — universal drop/bundle ingestion, merged back from the mega/artifact
-// edition (2026-07-06). Shared by the Nursery, the shell, and (sniffers only) tests.
-// Bins are classified by PARSING, never by filename: a strict tokenizer-table walk to
-// exact EOF, else a plausible llama2.c header. Zips inflate STORE directly and DEFLATE
-// via the browser's DecompressionStream (also present in Node ≥18, so tests bite this).
+// edition (2026-07-06; three-phase core from the audit-v2 session, 2026-07-08).
+// Shared by the Nursery, the shell, and tests. Bins are classified by PARSING, never
+// by filename: a strict tokenizer-table walk to exact EOF, else a plausible llama2.c
+// header. Zips inflate STORE directly and DEFLATE via the browser's
+// DecompressionStream (also present in Node ≥18, so tests bite this).
+import { splitArcPacks } from './scrubber.js';
 
 export async function unzip(u8) {
   const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
@@ -73,6 +75,47 @@ export function walkEntry(entry) {
       step();
     } else resolve([]);
   });
+}
+
+// ---- three-phase ingest core (audit v2, Part 3) --------------------------------
+// GATHER: expand every zip (recursively, depth-capped) into a flat record list —
+// BEFORE any recognition, so an arc pack dropped as a .zip is visible to the
+// splitter. SPLIT: arc packs out (manifest + the bins it names). CLASSIFY: the rest.
+// DOM-free: callers bind handlers; the shell's drop path IS this function.
+export async function expandZips(recs, { depth = 3, onError } = {}) {
+  let out = [...recs];
+  for (let d = 0; d < depth; d++) {
+    let expanded = false;
+    const next = [];
+    for (const r of out) {
+      if (/\.zip$/i.test(r.name) || looksLikeZip(r.u8)) {
+        try { next.push(...await unzip(r.u8)); expanded = true; }
+        catch (e) { if (onError) onError(r.name, e.message); }
+        continue;
+      }
+      next.push(r);
+    }
+    out = next;
+    if (!expanded) break;
+  }
+  return out;
+}
+
+export async function ingestBatch(recs, h) {
+  recs = await expandZips(recs, { onError: h.unzipError });
+  const packs = splitArcPacks(recs);
+  for (const a of packs.arcs) h.takeArc(a.manifest, a.bins);
+  let took = 0, jsons = 0;
+  const skipped = [];
+  for (const r of packs.rest) {
+    if (/\.json$/i.test(r.name)) { jsons++; h.json(r.name, new TextDecoder().decode(r.u8)); continue; }
+    const tc = tokenizerEntryCount(r.u8);
+    if (tc > 0) { h.addTok(r.name, r.u8, tc); took++; continue; }
+    const v = checkpointVocab(r.u8);
+    if (v > 0) { h.addModel(r.name, r.u8, v); took++; continue; }
+    skipped.push(r.name);
+  }
+  return { arcs: packs.arcs.map(a => a.manifest.arc), took, jsons, skipped };
 }
 
 // drop-event helper: snapshot BOTH views of the DataTransfer synchronously — it can be

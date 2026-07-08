@@ -396,3 +396,47 @@ unzip in Node. Fingerprint **70 PASS, 0 FAIL** (58 → 70).
 
 The copy at Documents/AI/apps/Tiny Mind/index.html is now superseded by
 dist/tiny-mind-mega.html (same architecture + the arc-session changes it predated).
+
+---
+
+# Guided-build merge addendum (2026-07-08)
+
+The guided build (voice guide + scrubber + audit-v2 ingest, built on our regenerated
+mega) is merged back; the mega is again fully regenerable from repo sources.
+Adopted: shell/vg-core.js (v2 — newer than the copy in Documents/GitHub/misc),
+shell/tm-prelude.js (Worker tap + emit buffer + pref cache), bridge v2 (tm:'arc'
+push + __tmRPC escape hatch), per-app guide adapters ({app}/guide.js +
+shell/tm-shell-adapter.js), src/scrubber.js (time-machine core, Node-tested per its
+own contract), three-phase ingest (expandZips/ingestBatch), the Nursery time-machine
+UI, probe-fact in the nursery worker, and the shell's arc RPC serving + arc cards.
+
+Suites: **87 PASS, 0 FAIL** (70 → 87; e10 scrubber/ingest + e9 guided assertions).
+The instruction's specific question — "the probe-fact branch is additive but it's
+inside the worker blob, so the parity gate should say so itself" — is answered: with
+probe-fact shipped in the final worker blobs, G1 parity stays byte-exact on all four
+fixtures and both gradchecks hold (1.6e-8 / 3.7e-7).
+
+Pre-ship catches (all fixed here, none present in shipped output):
+1. OUR build corrupted the hunt worker via String.replace $-patterns during
+   composition — after the syntax checks ran. Function-form replaces everywhere;
+   e9 now re-extracts and compiles every worker from the FINAL file.
+2. THE GUIDED build's shell RPC dispatcher: the vg pref-sync was inserted as a bare
+   `if`, breaking the else-chain — claude.complete and all non-guide storage RPCs
+   threw "unknown rpc" after doing their work (silently: Store.persist swallows).
+   Ported with the sync inside the storage branch.
+3. Our first shell-vg splice anchored on the first </body>, which after template
+   insertion belongs to an app doc. Splice reordered + build guard added.
+
+Verified live from the regenerated mega: shell guide panel + 4-stop starter tour
+(speaks the starter URL), zog-arc.zip drop → bay lists arcB → nursery overlay offers
+the time machine → scrub (manifest-only preview) → release loads the step-80 snapshot
+via arc.snapshot/arc.tokenizer RPC ("= arcB step 80") → probe-fact on that mind:
+"clouds" = 5 pieces, p(clouds | "Zog likes to eat") = 0.130.
+
+**Starter URL — NOT confirmed, needs Ken.** The default in tm-shell-adapter.js is a
+placeholder (its own comment says CONFIRM URL): https://toontalk.github.io/AI/apps/
+tiny-mind-starter.zip → 404; toontalk.github.io does not exist (root 404), and the
+local GitHub/ai clone is ecraft2learn/ai (different org/site). Options: (a) create a
+toontalk.github.io user-site repo mirroring Documents/AI/apps layout, (b) host under
+an existing site and set the default accordingly, (c) attach the zip as a release
+asset. Runtime override exists: window.TM_STARTER_ZIP.

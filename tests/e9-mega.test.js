@@ -27,6 +27,15 @@ export async function run(t) {
     (mega.match(/__WORKER_SRC__ = "/g) || []).length === 3);
   t.check('mega: shell autoloads the arc manifest (arc kickoff deliverable 2)',
     mega.includes("fetch('arc/arc-manifest.json')"));
+  t.check('mega: guided layer present in all four docs (vg-core ×4, prelude ×3, shell adapter)',
+    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 4 &&
+    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 3 &&
+    mega.includes('tm-shell-adapter.js'));
+  t.check('mega: probe-fact branch shipped inside the nursery worker blob',
+    mega.includes('probe-fact-done'));
+  t.check('mega: time machine (scrubber) markup + starter URL seam present',
+    mega.includes('id=\\"scrubSlider\\"') === false /* worker strings escape quotes */ &&
+    mega.includes('id="scrubSlider"') && mega.includes('window.TM_STARTER_ZIP'));
   t.check('mega: shell keeps the model pool + RPC hub',
     mega.includes('shellIngest') && mega.includes("m.tm === 'rpc'"));
 

@@ -5,7 +5,7 @@
 // full gibberish→grammar developmental arc.
 import { readCheckpoint, writeCheckpoint } from '../src/bin-reader.js';
 import { Tokenizer } from '../src/tokenizer.js';
-import { createModel, generateGreedy } from '../src/model.js';
+import { createModel, generateGreedy, forward } from '../src/model.js';
 import { Trainer, rng, packStories } from '../src/train.js';
 import { EMBEDDED_BASE_STORIES } from '../src/embed-data.js';
 
@@ -144,6 +144,34 @@ self.onmessage = async (e) => {
       running = false;
     } else if (m.type === 'sample-now') {
       if (trainer) self.postMessage({ type: 'sample', step, text: sampleText(m.prompt ?? trainOpts.prompt) });
+    } else if (m.type === 'probe-fact') {
+      // vg guide pre-flight (additive): piece-count a word + base-model p(word | context).
+      // Existing forward machinery only; no training or parity path is touched.
+      if (!tok || !baseCkpt) throw new Error('init first');
+      const ids = tok.encode(String(m.word || '').trim(), false, false);
+      const sp = tok.lookup.get(' ');
+      const pieces = Math.max(1, ids.length - (ids.length > 1 && ids[0] === sp ? 1 : 0));
+      let prob = null;
+      if (m.context) {
+        const ctxIds = tok.encode(m.context, true, false);
+        const all = tok.encode(m.context + ' ' + String(m.word || '').trim(), true, false);
+        let seamOk = true;
+        for (let i = 0; i < ctxIds.length - 1; i++) if (all[i] !== ctxIds[i]) { seamOk = false; break; }
+        if (seamOk) {
+          const mdl = createModel(baseCkpt);
+          let p = 1;
+          for (let pos = 0; pos < all.length - 1; pos++) {
+            const logits = forward(mdl, all[pos], pos);
+            if (pos >= ctxIds.length - 1) {
+              let mx = -Infinity; for (let i = 0; i < logits.length; i++) if (logits[i] > mx) mx = logits[i];
+              let sm = 0; for (let i = 0; i < logits.length; i++) sm += Math.exp(logits[i] - mx);
+              p *= Math.exp(logits[all[pos + 1]] - (mx + Math.log(sm)));
+            }
+          }
+          prob = p;
+        }
+      }
+      self.postMessage({ type: 'probe-fact-done', id: m.id, word: m.word, pieces, prob });
     } else if (m.type === 'export') {
       if (!trainer) throw new Error('nothing trained yet');
       const bin = writeCheckpoint(config, trainer.modelWeights());

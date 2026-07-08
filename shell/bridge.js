@@ -32,8 +32,15 @@
         else if (n > 0) setTimeout(() => tryRoute(n - 1), 150);
       };
       tryRoute(100);
+    } else if (m.tm === 'arc') {
+      const tryArc = (n) => {
+        if (window.__tmArc) window.__tmArc(m.manifest, m.source);
+        else if (n > 0) setTimeout(() => tryArc(n - 1), 150);
+      };
+      tryArc(100);
     }
   });
+  window.__tmRPC = rpc;   // generic escape hatch (arc.snapshot etc.); inert standalone
   if (!(window.claude && typeof window.claude.complete === 'function'))
     window.claude = { complete: (prompt) => rpc('claude.complete', [prompt]) };
   if (!window.storage)

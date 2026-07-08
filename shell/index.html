@@ -55,6 +55,7 @@ button:disabled{opacity:.4;cursor:default}
     <table><thead><tr><th>model</th><th>vocab</th><th>size</th><th>open in…</th></tr></thead>
       <tbody id="pool"><tr><td colspan="4" class="small">nothing yet</td></tr></tbody></table>
     <p class="small">tokenizers loaded: <span id="tokList">none</span></p>
+    <p class="small">arc packs (time-machine recordings): <span id="arcList">none</span></p>
     <p class="small">exports from the apps appear as green chips in the top bar — click a chip to save the file.
        trained minds also join this table automatically, ready for the Microscope and the Hunt.</p>
     <div style="margin-top:12px">
@@ -141,7 +142,30 @@ window.addEventListener('message', async (e) => {
     let ok = true, value = null, error = '';
     try {
       if (m.method === 'claude.complete') value = await claudeComplete(m.args[0]);
-      else if (m.method.startsWith('storage.')) value = await shellStorage[m.method.slice(8)](...m.args);
+      else if (m.method.startsWith('storage.')) {
+        value = await shellStorage[m.method.slice(8)](...m.args);
+        // vg: pref sync — guide prefs written by any frame rebroadcast to all frames.
+        // NOTE kept INSIDE the storage branch: the guided build inserted this as a
+        // bare `if` that broke the else-chain, making every other RPC throw
+        // "unknown rpc" after doing its work. Found by the pre-ship verification.
+        if (m.method === 'storage.set' && /^tm-guide-/.test(m.args[0])) {
+          for (const a of Object.keys(frames)) { try { frames[a].contentWindow.postMessage({ tm: 'pref', key: m.args[0], value: m.args[1] }, '*'); } catch (e) {} }
+          window.postMessage({ tm: 'pref', key: m.args[0], value: m.args[1] }, '*');
+        }
+      }
+      else if (m.method === 'arc.snapshot') {
+        const u8 = await shellArcs.snapshotBytes(m.args[0], m.args[1], async (entry, file) => {
+          const r = await fetch((entry.urlBase || 'arc/') + file);
+          if (!r.ok) throw new Error(file + ': HTTP ' + r.status + ' (in the sandbox, drop the arc .zip so the snapshots travel with the manifest)');
+          return new Uint8Array(await r.arrayBuffer());
+        });
+        value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      }
+      else if (m.method === 'arc.tokenizer') {
+        const tok = tokFor(+m.args[0] || 512);
+        if (!tok) throw new Error('no vocab-' + m.args[0] + ' tokenizer in the bay — drop tok512.bin');
+        value = { name: tok.name, buf: tok.u8.buffer.slice(tok.u8.byteOffset, tok.u8.byteOffset + tok.u8.byteLength) };
+      }
       else throw new Error('unknown rpc ' + m.method);
     } catch (err) { ok = false; error = String(err && err.message || err); }
     e.source.postMessage({ tm: 'rpc-reply', id: m.id, ok, value, error }, '*');
@@ -156,6 +180,7 @@ window.addEventListener('message', async (e) => {
 /* ---------- tabs + per-app choice overlay ---------- */
 let activeTab = 'bay';
 const loaded = new Set();                     // apps whose frame currently holds a model
+const revealed = new Set();                   // apps opened without one (e.g. arc-only: the time machine needs no model to watch)
 const is512 = m => m.vocab === 512;
 const isZog = m => /zog/i.test(m.name);
 const specimen  = () => pool.models.find(m => m.vocab !== 512);
@@ -190,15 +215,30 @@ function renderOverlay(app) {
             : '<span class="why">⚠ ' + why + '</span>') + '</div>';
   };
   let rows = c.opts.map(o => opt(o.h, o.p, o.get())).join('');
+  if (app === 'nursery') {
+    const escH = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    for (const m of shellArcs.list()) {
+      rows += '<div class="opt"><h3>⏪ scrub a recorded arc: ' + escH(m.arc) + '</h3>'
+        + '<p>' + escH(arcKidLabel(m)) + ' — ' + m.snapshots.length + ' saved moments, up to step '
+        + m.snapshots[m.snapshots.length - 1].step + '. Watching needs no model; loading a moment into the '
+        + 'model panel needs tok512.bin in the bay.</p>'
+        + '<button data-arc="' + escH(m.arc) + '">open the time machine →</button></div>';
+    }
+  }
   // enumerate every mind the user trained + exported — the fixed slots miss these
   for (const m of trainedModels()) {
     const verb = c.trainedVerb || 'open';
-    rows += opt('🌱 ' + verb + ': ' + m.name, 'A mind you raised in the Nursery (vocab ' + m.vocab + ').', m);
+    rows += opt('🌱 ' + verb + ': ' + m.name,
+      (m.origin === 'export' ? 'A mind you raised in the Nursery' : 'A vocab-' + m.vocab + ' mind you loaded') + ' (vocab ' + m.vocab + ').', m);
   }
   $('overlay').innerHTML = '<div class="card"><h2>' + c.title + '</h2><div class="sub">' + c.sub + '</div>' + rows + '</div>';
   $('overlay').querySelectorAll('button[data-model]').forEach(b => b.onclick = () => {
     const model = pool.models.find(m => m.name === b.dataset.model);
     if (model) openModelInApp(app, model);
+  });
+  $('overlay').querySelectorAll('button[data-arc]').forEach(b => b.onclick = () => {
+    revealed.add(app); hideOverlay(); ensureFrame(app).classList.remove('hide');
+    say('time machine open — the ' + b.dataset.arc + ' recording is loaded in the Nursery, under the training chart', 'ok');
   });
 }
 function showOverlay(app) { renderOverlay(app); $('overlay').classList.remove('hide'); }
@@ -209,11 +249,13 @@ function selectTab(tab) {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   $('bay').classList.toggle('hide', tab !== 'bay');
   for (const a of APPS) if (frames[a]) frames[a].classList.add('hide');
+  for (const a of Object.keys(frames)) { try { frames[a].contentWindow.postMessage({ tm: 'vg-tab', active: a === tab, tab }, '*'); } catch (e) {} } // vg: tab visibility for the frame guides
   if (tab === 'bay') hideOverlay();
-  else if (loaded.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); }
+  else if (loaded.has(tab) || revealed.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); }
   else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
+window.__tmShell = { frames, shellStorage, selectTab, APPS }; // vg: shell adapter seam
 
 function openModelInApp(app, model) {
   const tok = tokFor(model.vocab);
@@ -250,34 +292,48 @@ function renderPool() {
     tb.appendChild(tr);
   }
   $('tokList').textContent = pool.toks.length ? pool.toks.map(t => `${t.name} (${t.vocab})`).join(', ') : 'none';
+  $('arcList').textContent = shellArcs.size()
+    ? shellArcs.list().map(m => `${m.arc} (${m.snapshots.length} snapshots to step ${m.snapshots[m.snapshots.length - 1].step})`).join(', ')
+    : 'none';
   if (activeTab !== 'bay' && !loaded.has(activeTab)) renderOverlay(activeTab);   // keep a visible card fresh
-  $('startNursery').disabled = pool.models.length === 0;
+  $('startNursery').disabled = pool.models.length === 0 && shellArcs.size() === 0;
 }
-function addModel(name, u8, vocab) {
+function addModel(name, u8, vocab, origin) {
   const i = pool.models.findIndex(x => x.name === name);
-  if (i >= 0) pool.models.splice(i, 1);
-  pool.models.push({ name, u8, vocab }); renderPool();
+  if (i >= 0) { origin = origin || pool.models[i].origin; pool.models.splice(i, 1); }
+  pool.models.push({ name, u8, vocab, origin: origin || 'ingest' }); renderPool();
+}
+
+const shellArcs = createArcPool();   // arc packs live here, NOT in the model pool
+function takeArc(manifest, extras, source) {
+  const entry = shellArcs.add(manifest, extras);
+  sendToApp('nursery', { tm: 'arc', manifest, source });
+  renderPool();                               // arcs are bay state: list line, nursery card, start button
+  return entry;
 }
 
 /* ---------- ingest into the pool ---------- */
 async function shellIngest(recs) {
-  const queue = [...recs]; let took = 0, jsons = 0; const skipped = [];
-  while (queue.length) {
-    const r = queue.shift();
-    if (/\.json$/i.test(r.name)) { jsons++; sendToApp('nursery', { tm: 'json', name: r.name, text: new TextDecoder().decode(r.u8) }); continue; }
-    if (/\.zip$/i.test(r.name) || (r.u8.length > 4 && r.u8[0] === 0x50 && r.u8[1] === 0x4b && r.u8[2] === 3)) {
-      try { queue.push(...await unzip(r.u8)); } catch (e) { say('could not unzip ' + r.name + ': ' + e.message, 'warn'); }
-      continue;
-    }
-    const tc = tokenizerEntryCount(r.u8);
-    if (tc > 0) { if (!pool.toks.some(t => t.name === r.name)) pool.toks.push({ name: r.name, u8: r.u8, vocab: tc }); took++; continue; }
-    const v = checkpointVocab(r.u8);
-    if (v > 0) { addModel(r.name, r.u8, v); took++; continue; }
-    skipped.push(r.name);
-  }
+  const res = await ingestBatch(recs, {
+    takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
+    addModel: (name, u8, vocab) => addModel(name, u8, vocab, 'ingest'),
+    addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) pool.toks.push({ name, u8, vocab }); },
+    json: (name, text) => sendToApp('nursery', { tm: 'json', name, text }),
+    unzipError: (name, msg) => say('could not unzip ' + name + ': ' + msg, 'warn'),
+  });
   renderPool();
-  say(`bay: took ${took} model/tokenizer file(s)` + (jsons ? `, sent ${jsons} json to the nursery` : '')
-    + (skipped.length ? ` — skipped ${skipped.join(', ')}` : ''), took ? 'ok' : 'warn');
+  const bits = [];
+  for (const arc of res.arcs) {
+    const m = shellArcs.get(arc).manifest;
+    bits.push('arc pack "' + arc + '": ' + m.snapshots.length + ' snapshots to step '
+      + m.snapshots[m.snapshots.length - 1].step + ' — open the Nursery to scrub through it');
+  }
+  if (res.took) bits.push('took ' + res.took + ' model/tokenizer file(s)');
+  if (res.jsons) bits.push('sent ' + res.jsons + ' json to the nursery');
+  if (res.skipped.length) bits.push('skipped ' + res.skipped.join(', '));
+  say('bay: ' + (bits.join(' · ') || 'nothing recognizable in that drop'),
+    (res.arcs.length || res.took) ? 'ok' : 'warn');
+  return res;
 }
 
 /* ---------- shell-level drop (bay + header; app areas keep their own) ---------- */
@@ -312,7 +368,7 @@ function onExport(name, u8, fromApp) {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   } catch (e) { say('could not start the download: ' + (e.message || e), 'err'); }
   const v = checkpointVocab(u8);
-  if (v > 0) { addModel(name, u8, v); say(`saved ${name} — it also joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok'); }
+  if (v > 0) { addModel(name, u8, v, 'export'); say(`saved ${name} — it also joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok'); }
   else say(`saved ${name}`, 'ok');
 }
 
@@ -329,10 +385,12 @@ $('startNursery').onclick = () => selectTab('nursery');
 const MODEL_FILES = ['tok512.bin', 'tokenizer.bin', 'stories260K.bin', 'stories260K-zog.bin', 'stories15M.bin'];
 (async function autoLoadModels() {
   let probe;
-  try { probe = await fetch(MODEL_FILES[0]); if (!probe.ok) return; }   // 404 (sandbox) or throw (file://) => stay in drop mode
-  catch { return; }
+  try { probe = await fetch(MODEL_FILES[0]); }
+  catch { say('nothing can be fetched beside the app here (sandbox or file://) — drop your bundle (models, replay.json, arc .zip) into the bay', 'warn'); return; }
+  if (!probe.ok) { say('no model files found beside the app (looked for ' + MODEL_FILES[0] + ') — drop a bundle instead', 'warn'); return; }
   say('found model files beside the app — loading…');
   let got = 0;
+  let gotReplay = false, gotArc = null;
   for (const name of MODEL_FILES) {
     try {
       const r = name === MODEL_FILES[0] ? probe : await fetch(name);
@@ -343,17 +401,19 @@ const MODEL_FILES = ['tok512.bin', 'tokenizer.bin', 'stories260K.bin', 'stories2
   }
   try {   // replay corpus lives beside the app too (optional): powers replay-mix + an in-distribution blue line
     const rr = await fetch('replay.json');
-    if (rr.ok) await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await rr.arrayBuffer()) }]);
+    if (rr.ok) { await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await rr.arrayBuffer()) }]); gotReplay = true; }
   } catch { /* no replay corpus here — the embedded fallback still draws the blue line */ }
-  try {   // arc pack (Pages layout: arc/arc-manifest.json) — manifest only; snapshot .bins stay lazy
+  try {   // arc pack (Pages layout: arc/arc-manifest.json) — manifest eager, .bins lazy via arc.snapshot RPC
     const am = await fetch('arc/arc-manifest.json');
     if (am.ok) {
-      window.__tmArcManifest = await am.json();
-      say('arc pack found: ' + window.__tmArcManifest.snapshots.length + ' snapshots to step ' + window.__tmArcManifest.snapshots[window.__tmArcManifest.snapshots.length - 1].step + ' (scrubber coming in a later update)', 'ok');
+      const manifest = await am.json();
+      takeArc(manifest, { urlBase: 'arc/' }, 'autoload');
+      gotArc = manifest;
     }
   } catch { /* no arc pack beside this deploy */ }
-  say(got ? `loaded ${got} file(s) from this folder — pick a model in any tab (no need to drop anything)` : 'no model files found beside the app — drop a bundle instead',
-      got ? 'ok' : 'warn');
+  say(`beside the app: ${got}/${MODEL_FILES.length} model files · replay ${gotReplay ? '✓' : '— (looked for replay.json)'}`
+    + ` · arc ${gotArc ? '✓ "' + gotArc.arc + '" (' + gotArc.snapshots.length + ' snapshots — open the Nursery to scrub)' : '— (looked for arc/arc-manifest.json)'}`,
+    got ? 'ok' : 'warn');
 })();
 </script>
 </body></html>
