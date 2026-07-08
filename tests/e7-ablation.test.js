@@ -101,4 +101,21 @@ export async function run(t) {
   const lb = lensAt(base, topLayer), lm = lensAt(headLensCap, topLayer);
   for (let i = 0; i < lb.length; i++) dLens = Math.max(dLens, Math.abs(lb[i] - lm[i]));
   t.check(`muting L0 heads shifts the final-layer lens (max |Δlogit| = ${dLens.toFixed(3)})`, dLens > 1e-3);
+
+  // 8) whole-microscope ablation: the same head-ablated capture feeds neurons and the
+  // attention view. Muting L0 heads must move downstream attention patterns (later heads
+  // see a changed residual) and the neuron-contrast ranking.
+  const span = [1, 4];
+  const nbBase = neuronContrast(base, span[0], span[1], 8).map(s => s.layer + ':' + s.neuron);
+  const nbAbl = neuronContrast(headLensCap, span[0], span[1], 8).map(s => s.layer + ':' + s.neuron);
+  t.check('neuron ranking over a span changes under head ablation', nbBase.join() !== nbAbl.join());
+  const attRow = (cap, l, h, pos) => cap.attnAt(l, h, pos);
+  let dAtt0 = 0, dAttTop = 0;
+  const p = ids.length - 1;
+  for (let x = 0; x <= p; x++) {
+    dAtt0 = Math.max(dAtt0, Math.abs(attRow(base, 0, 2, p)[x] - attRow(headLensCap, 0, 2, p)[x]));
+    dAttTop = Math.max(dAttTop, Math.abs(attRow(base, topLayer, 0, p)[x] - attRow(headLensCap, topLayer, 0, p)[x]));
+  }
+  t.check(`muting L0:0/L0:1 leaves an untouched L0 head's pattern intact (Δ=${dAtt0.toExponential(1)}) but shifts a top-layer head (Δ=${dAttTop.toFixed(3)})`,
+    dAtt0 < 1e-6 && dAttTop > 1e-3);
 }

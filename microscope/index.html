@@ -64,6 +64,7 @@
 <body>
 <h1>🔬 Tiny Mind — Microscope</h1>
 <div class="sub">look inside a tiny mind — where does it keep what it knows?</div>
+<div id="ablBanner" style="display:none;background:#3a1622;border:1px solid var(--pink);border-radius:8px;padding:.5rem .8rem;margin-bottom:.8rem;font-size:13px;color:#ffd8e6"></div>
 
 <div class="card">
   <h2>1 · the specimen</h2>
@@ -145,13 +146,37 @@ const S = {
   config: null,
   run: null,        // baseline run payload (with attention Float32Array view)
   att: null,        // Float32Array over run.attention
-  ablRun: null,     // last ablated run payload (light)
+  ablRun: null,     // last ablated run payload (full: bars + attention)
+  ablAtt: null,     // Float32Array over the ablated run's attention
+  ablHeads: [],     // currently muted heads (empty = full model)
+  ablActive: false, // whole microscope is showing the ablated model
   sel: { start: 0, end: 0 },
   attL: 0, attH: 0,
   neuron: null,     // {layer, neuron, acts}
   overlay: 'none',
   busy: false,
 };
+// the muted heads every ablation-aware query should carry; the attention buffer the
+// visual instruments should read (ablated when the microscope is in ablation view)
+function mutedHeads() { return [...document.querySelectorAll('#ablGrid input:checked')].map(c => c.dataset.lh); }
+function curAtt() { return (S.ablActive && S.ablAtt) ? S.ablAtt : S.att; }
+// flip the WHOLE microscope between the full and the ablated model, and refresh every
+// instrument so nothing shows a stale mix. Active state: strip/heatmap read the ablated
+// attention; lens/neurons re-query with the muted set; bars keep the blue-vs-pink compare.
+function setAblActive(active, heads = [], att = null) {
+  S.ablActive = active;
+  S.ablHeads = active ? heads.slice() : [];
+  S.ablAtt = active && att ? att : null;
+  const b = $('ablBanner');
+  if (b) {
+    b.style.display = active ? '' : 'none';
+    if (active) b.innerHTML = `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the ablation lab to go back.</span>`;
+  }
+  renderStrip(); renderHeat(); renderBars();
+  if (S.lensOpen) requestLens();
+  if ($('neuronList') && $('neuronList').textContent.trim()) $('neuronBtn').onclick();
+  if (S.neuron) worker.postMessage({ type: 'neuron-acts', layer: S.neuron.layer, neuron: S.neuron.neuron, ablate: mutedHeads() });
+}
 
 function status(msg, isErr) {
   $('status').textContent = msg;
@@ -244,6 +269,8 @@ worker.onmessage = (e) => {
     S.run = m;
     S.att = new Float32Array(m.attention);
     S.ablRun = null; S.neuron = null;
+    S.ablActive = false; S.ablAtt = null; S.ablHeads = [];   // a fresh full run leaves ablation view
+    $('ablBanner').style.display = 'none';
     S.sel = { start: Math.min(1, m.n - 1), end: Math.min(1, m.n - 1) };
     S.busy = false;
     $('progress').style.display = 'none';
@@ -270,8 +297,9 @@ worker.onmessage = (e) => {
       `heads OFF: <b>${m.ablate.join(', ')}</b> — the model's confidence in the real next piece changed by ` +
       `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average; biggest change <b>${(100 * maxD).toFixed(1)}%</b> ` +
       `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (pos ${maxAt + 1})`;
-    status('ablated run done — compare the two bar colors');
-    renderBars();
+    status('ablated run done — the whole microscope now shows the damaged model');
+    // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
+    setAblActive(true, m.ablate, new Float32Array(m.attention));
   }
   if (m.type === 'lens-done') renderLens(m);
   if (m.type === 'neurons-done') renderNeurons(m);
@@ -302,9 +330,10 @@ function renderStrip() {
   el.innerHTML = '';
   const P = S.sel.start;
   let weights = null, wmax = 0;
-  if (S.overlay === 'attn' && S.att) {
+  const att = curAtt();
+  if (S.overlay === 'attn' && att) {
     const n = S.run.n, base = (S.attL * S.run.config.nHeads + S.attH) * n * n + P * n;
-    weights = p => (p <= P ? S.att[base + p] : 0);
+    weights = p => (p <= P ? att[base + p] : 0);
     wmax = 1;
   } else if (S.overlay === 'neuron' && S.neuron) {
     for (const v of S.neuron.acts) wmax = Math.max(wmax, v);
@@ -365,8 +394,6 @@ function renderBars() {
 }
 
 // ---------- logit lens ----------
-// (d) the heads currently switched off in the ablation lab (empty = full model)
-function mutedHeads() { return [...document.querySelectorAll('#ablGrid input:checked')].map(c => c.dataset.lh); }
 function requestLens() { worker.postMessage({ type: 'lens', pos: S.sel.end, ablate: mutedHeads() }); }
 $('lensBtn').onclick = requestLens;
 function renderLens(m) {
@@ -396,7 +423,8 @@ function buildAttSelectors() {
   H.onchange = () => { S.attH = +H.value; renderHeat(); renderStrip(); };
 }
 function renderHeat() {
-  if (!S.att) return;
+  const att = curAtt();
+  if (!att) return;
   const n = S.run.n, H = S.run.config.nHeads;
   const scale = Math.max(2, Math.floor(480 / n));
   const cv = $('heat');
@@ -404,21 +432,26 @@ function renderHeat() {
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#12151c'; ctx.fillRect(0, 0, cv.width, cv.height);
   const base = (S.attL * H + S.attH) * n * n;
+  const muted = S.ablActive && S.ablHeads.includes(`${S.attL}:${S.attH}`); // this very head is off
+  const col = muted ? '255, 140, 190' : (S.ablActive ? '200, 170, 255' : '140, 205, 255');
   for (let y = 0; y < n; y++) {
     for (let x = 0; x <= y; x++) {
-      const v = S.att[base + y * n + x];
+      const v = att[base + y * n + x];
       if (v > 0.004) {
-        ctx.fillStyle = `rgba(140, 205, 255, ${Math.min(1, v)})`;
+        ctx.fillStyle = `rgba(${col}, ${Math.min(1, v)})`;
         ctx.fillRect(x * scale, y * scale, scale, scale);
       }
     }
   }
+  $('heatInfo').textContent = muted
+    ? `L${S.attL}·H${S.attH} is MUTED — this is the pattern it still computes, but it feeds zero into the model now`
+    : (S.ablActive ? `pattern with ${S.ablHeads.join(', ')} muted (downstream heads shift)` : '');
   cv.onmousemove = ev => {
     const r = cv.getBoundingClientRect();
     const x = Math.floor((ev.clientX - r.left) / scale), y = Math.floor((ev.clientY - r.top) / scale);
     if (x >= 0 && y >= 0 && x < n && y < n && x <= y) {
       $('heatInfo').textContent =
-        `${JSON.stringify(S.run.pieces[y])} looks at ${JSON.stringify(S.run.pieces[x])}: ${(100 * S.att[base + y * n + x]).toFixed(1)}%`;
+        `${JSON.stringify(S.run.pieces[y])} looks at ${JSON.stringify(S.run.pieces[x])}: ${(100 * att[base + y * n + x]).toFixed(1)}%`;
     }
   };
   cv.onclick = ev => {
@@ -435,11 +468,13 @@ function renderHeat() {
 
 // ---------- neurons ----------
 $('neuronBtn').onclick = () =>
-  worker.postMessage({ type: 'neurons', spanStart: S.sel.start, spanEnd: S.sel.end });
+  worker.postMessage({ type: 'neurons', spanStart: S.sel.start, spanEnd: S.sel.end, ablate: mutedHeads() });
 function renderNeurons(m) {
   const el = $('neuronList');
   const span = S.run.pieces.slice(m.spanStart, m.spanEnd + 1).join('');
-  let html = `<div class="hint">neurons that light up for ${esc(JSON.stringify(span))}:</div>`;
+  const muted = m.ablate && m.ablate.length ? m.ablate : null;
+  let html = `<div class="hint">neurons that light up for ${esc(JSON.stringify(span))}` +
+    (muted ? ` <b style="color:var(--pink)">in the model with ${muted.join(', ')} muted</b>` : '') + `:</div>`;
   el.innerHTML = html;
   m.top.forEach(nr => {
     const d = document.createElement('div');
@@ -448,7 +483,7 @@ function renderNeurons(m) {
     d.onclick = () => {
       document.querySelectorAll('.neuron-item').forEach(x => x.classList.remove('sel'));
       d.classList.add('sel');
-      worker.postMessage({ type: 'neuron-acts', layer: nr.layer, neuron: nr.neuron });
+      worker.postMessage({ type: 'neuron-acts', layer: nr.layer, neuron: nr.neuron, ablate: mutedHeads() });
     };
     el.appendChild(d);
   });
@@ -471,13 +506,12 @@ $('ablRun').onclick = () => {
   if (!heads.length) { $('ablInfo').textContent = 'check at least one head first'; return; }
   S.busy = true; $('runBtn').disabled = true;
   worker.postMessage({ type: 'run', text: $('story').value, ablate: heads });
-  if (S.lensOpen) requestLens();   // (d) keep the lens in sync with the experiment the child just ran
+  // run-ablated -> setAblActive() switches every instrument; no premature refresh here
 };
 $('ablClear').onclick = () => {
   document.querySelectorAll('#ablGrid input').forEach(c => c.checked = false);
   S.ablRun = null; $('ablInfo').textContent = '';
-  renderBars();
-  if (S.lensOpen) requestLens();   // (d) back to the full-model lens
+  setAblActive(false);   // whole microscope back to the full model (strip/heat/bars/lens/neurons)
 };
 
 status('load a model to begin');

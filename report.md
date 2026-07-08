@@ -476,3 +476,21 @@ mega regenerates complete) and is kept only as historical spec. **Starter URL CO
 `application/x-zip-compressed`, 2.0 MB). The site root 404s (no index) but the file path
 resolves. Caveat: the hosted copy is 2.0 MB vs the current `dist/tiny-mind-starter.zip`
 at 1.3 MB — the hosted pack is a different/older composition and should be refreshed.
+
+# Whole-microscope ablation (2026-07-08)
+
+Extended (d) from the lens to every instrument: one ablation state drives the whole
+bench. The worker now keeps a single ablated capture (keyed by the muted-head set over
+the current story) that serves the lens, the neuron finder, neuron-activation overlays,
+AND the ablated run — which now returns a FULL capture (attention transferred) so the
+attention heatmap and story-strip overlay can switch too. Running the ablation lab flips
+the microscope into "ablation view": a red banner names the muted heads; attention shows
+the damaged model (the selected head, if muted, is drawn pink and labelled MUTED, and
+downstream heads visibly shift because their residual changed); neurons re-rank inside
+the damaged model; the lens projects the ablated residual; the bars keep the blue-vs-pink
+compare. Clear (or a fresh full run) reverts every view. Additive and parity-safe: empty
+mute is bit-identical to the full model (e7), G1 greedy parity stays exact on all four
+fixtures. e7 adds neuron-ranking-shifts-under-ablation and the attention invariant (an
+untouched L0 head's pattern Δ=0 while a top-layer head moves). Suite **91 PASS**; smoke
+71/0. Live-verified: full → ablate (banner + lens/neuron/attention/bars all the damaged
+model) → clear (all revert).

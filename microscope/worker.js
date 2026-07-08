@@ -11,7 +11,17 @@ import { captureRun, logitLens, neuronContrast } from '../src/capture.js';
 
 let model = null, tok = null, config = null;
 let baseCap = null, baseIds = null;
-let lensCap = null, lensKey = null;   // (d) cached ablated capture for the logit lens, keyed by the muted-head set
+// One ablated capture serves every ablation-aware instrument (lens, neurons, neuron-acts,
+// and the ablated run itself), keyed by the sorted muted-head set over the SAME story, so
+// switching instruments under a fixed ablation recomputes nothing.
+let ablCap = null, ablKey = null;
+function getAblCap(list) {
+  if (!baseCap) throw new Error('run the full model first');
+  const key = list.slice().sort().join(',');
+  if (key !== ablKey) { ablCap = captureRun(model, baseIds, { topK: 12, ablate: new Set(list) }); ablKey = key; }
+  return ablCap;
+}
+const hasAbl = m => m.ablate && m.ablate.length;
 
 function pieceOf(ids, i) {
   if (ids[i] === 1) return '(start)';
@@ -57,38 +67,36 @@ self.onmessage = (e) => {
       }});
     } else if (m.type === 'run') {
       if (!model) throw new Error('no model loaded');
-      let ids = tok.encode(m.text, true, false);
-      let truncated = false;
-      if (ids.length > config.seqLen) { ids = ids.slice(0, config.seqLen); truncated = true; }
-      const ablate = m.ablate && m.ablate.length ? new Set(m.ablate) : null;
-      const cap = captureRun(model, ids, {
-        topK: 12, ablate,
-        onProgress: (pos, n) => { if (pos % 8 === 0 || pos === n) self.postMessage({ type: 'progress', pos, n }); },
-      });
-      const light = !!ablate; // ablated runs: bars/probs only, no attention transfer
-      if (!ablate) { baseCap = cap; baseIds = ids; lensCap = null; lensKey = null; } // (d) a new base story invalidates the lens cache
-      const payload = packRun(cap, ids, light);
-      payload.type = ablate ? 'run-ablated' : 'run-done';
-      payload.truncated = truncated;
-      payload.ablate = m.ablate ?? null;
-      self.postMessage(payload, payload.attention ? [payload.attention] : []);
+      if (hasAbl(m)) {
+        // ablated run: reuse the base story, return a FULL capture (attention too) so
+        // every instrument can switch to the damaged model's internals consistently.
+        const cap = getAblCap(m.ablate);
+        const payload = packRun(cap, baseIds, false);
+        payload.type = 'run-ablated';
+        payload.ablate = m.ablate;
+        self.postMessage(payload, [payload.attention]);
+      } else {
+        let ids = tok.encode(m.text, true, false);
+        let truncated = false;
+        if (ids.length > config.seqLen) { ids = ids.slice(0, config.seqLen); truncated = true; }
+        const cap = captureRun(model, ids, {
+          topK: 12,
+          onProgress: (pos, n) => { if (pos % 8 === 0 || pos === n) self.postMessage({ type: 'progress', pos, n }); },
+        });
+        baseCap = cap; baseIds = ids; ablCap = null; ablKey = null; // a new base story invalidates the ablation cache
+        const payload = packRun(cap, ids, false);
+        payload.type = 'run-done';
+        payload.truncated = truncated;
+        payload.ablate = null;
+        self.postMessage(payload, [payload.attention]);
+      }
     } else if (m.type === 'lens') {
       if (!baseCap) throw new Error('run a story first');
-      // (d) ablation-aware lens: when heads are muted, project the ABLATED residual
-      // stream (the whole point — the lens should show what the ablation did to the
-      // forming prediction). Recompute the ablated capture over the SAME token ids and
-      // cache it by the muted-head set, so scrubbing positions under a fixed ablation
-      // recomputes nothing. No ablation -> the original un-ablated baseCap, unchanged.
-      const ablate = m.ablate && m.ablate.length ? m.ablate.slice().sort() : null;
-      let cap = baseCap;
-      if (ablate) {
-        const key = ablate.join(',');
-        if (key !== lensKey) {
-          lensCap = captureRun(model, baseIds, { topK: 0, ablate: new Set(ablate) });
-          lensKey = key;
-        }
-        cap = lensCap;
-      }
+      // ablation-aware lens: when heads are muted, project the ABLATED residual stream
+      // (the whole point — the lens shows what the ablation did to the forming
+      // prediction). No ablation -> the original un-ablated baseCap, unchanged.
+      const ablate = hasAbl(m) ? m.ablate : null;
+      const cap = ablate ? getAblCap(ablate) : baseCap;
       const rows = [];
       const nextTok = m.pos + 1 < baseIds.length ? baseIds[m.pos + 1] : null;
       for (let l = 0; l < config.nLayers; l++) {
@@ -111,14 +119,16 @@ self.onmessage = (e) => {
         nextPiece: nextTok !== null ? tok.decodePiece(baseIds[m.pos], nextTok) : null });
     } else if (m.type === 'neurons') {
       if (!baseCap) throw new Error('run a story first');
-      const top = neuronContrast(baseCap, m.spanStart, m.spanEnd, 12);
-      self.postMessage({ type: 'neurons-done', top, spanStart: m.spanStart, spanEnd: m.spanEnd });
+      const cap = hasAbl(m) ? getAblCap(m.ablate) : baseCap;  // which-neurons-light-up, in the ablated model when muted
+      const top = neuronContrast(cap, m.spanStart, m.spanEnd, 12);
+      self.postMessage({ type: 'neurons-done', top, spanStart: m.spanStart, spanEnd: m.spanEnd, ablate: m.ablate || null });
     } else if (m.type === 'neuron-acts') {
       if (!baseCap) throw new Error('run a story first');
-      const n = baseCap.nPos, HD = config.hiddenDim;
+      const cap = hasAbl(m) ? getAblCap(m.ablate) : baseCap;
+      const n = cap.nPos, HD = config.hiddenDim;
       const acts = new Float32Array(n);
-      for (let p = 0; p < n; p++) acts[p] = Math.abs(baseCap.ffn[(m.layer * n + p) * HD + m.neuron]);
-      self.postMessage({ type: 'neuron-acts-done', layer: m.layer, neuron: m.neuron, acts: acts.buffer }, [acts.buffer]);
+      for (let p = 0; p < n; p++) acts[p] = Math.abs(cap.ffn[(m.layer * n + p) * HD + m.neuron]);
+      self.postMessage({ type: 'neuron-acts-done', layer: m.layer, neuron: m.neuron, acts: acts.buffer, ablate: m.ablate || null }, [acts.buffer]);
     }
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
