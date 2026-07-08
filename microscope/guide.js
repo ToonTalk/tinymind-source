@@ -20,10 +20,33 @@ function wire(emit){
     if (m.type === 'run-ablated')     emit('ablationVerdict', { ablate: m.ablate });
     if (m.type === 'neuron-acts-done') emit('neuronSelected', { layer: m.layer, neuron: m.neuron });
     if (m.type === 'neurons-done')    emit('neuronsRanked', {});
+    if (m.type === 'loaded')          setTimeout(maybePrefillStory, 80);
   });
 }
 
+let storyDefault = null;
+/* wave 4: when a user-trained mind is on the bench, seed the story
+   box with one of its own stories (saved by the nursery guide) --
+   only if the visitor has not already typed their own. */
+async function maybePrefillStory(){
+  try {
+    if (!window.storage || typeof window.storage.list !== 'function') return;
+    const info = ($('modelInfo') && $('modelInfo').textContent) || '';
+    if (/zog/i.test(info)) return;
+    const el = $('story');
+    if (!el || (storyDefault !== null && el.value !== storyDefault)) return;
+    const r = await window.storage.list('tm-sample-');
+    if (!r || !r.keys || !r.keys.includes('tm-sample-latest')) return;
+    const it = await window.storage.get('tm-sample-latest');
+    const o = JSON.parse(it.value);
+    if (o && o.text) { el.value = o.text; window.vgEmit('storyPrefilled', { name: o.name }); }
+  } catch (_) {}
+}
+
 const EVENTS = {
+  storyPrefilled: { priority: 'moment', once: true, spot: '#story',
+    lines: p => `I put one of ${p && p.name ? p.name + "'s" : 'your character\u2019s'} own stories in the box \u2014 the stories it grew up on make the best specimens.`,
+    kidLines: 'I put one of your own stories in the box \u2014 those are the best ones to look inside with!' },
   captureDone: { priority: 'moment', cooldownMs: 20000,
     lines: 'Captured — every attention pattern, every neuron, for every word of that story. All of it is yours to poke at.',
     kidLines: 'Got it! The microscope took a picture of every thought the mind had about that story.' },
@@ -58,10 +81,16 @@ function STEPS(){
 }
 
 function statusText(){
+  const vis = id => { const el = $(id);
+    return !!(el && el.offsetParent !== null && ((el.textContent || '').trim() || el.children.length)); };
   return `Story box: ${($('story') && $('story').value.slice(0, 200)) || 'empty'}. ` +
     `Model info: ${($('modelInfo') && $('modelInfo').textContent) || 'unknown'}. ` +
     `Status: ${($('status') && $('status').textContent) || ''}. ` +
-    `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}.`;
+    `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}. ` +
+    `Visible views right now \u2014 attention heatmap: ${vis('heat') ? 'OPEN' : 'not shown'}, ` +
+    `logit lens: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
+    `neuron list: ${vis('neuronList') ? 'OPEN' : 'not shown'}, ` +
+    `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}.`;
 }
 function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, logit lens, and head or neuron ablation. ' +
@@ -71,6 +100,7 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
+    ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
 const SHOW = { story: '#story', run: '#runBtn', attention: '#heat', neurons: '#neuronList',
@@ -102,8 +132,13 @@ function createGuide(){
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors/i.test(m))
+        return { log: 'Live AI call failed: ' + m,
+          say: 'The standalone microscope has no key box, so I cannot talk live here \u2014 in the full Tiny Mind page I can. Every instrument on the bench still works.' };
+      return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
-    init(a){ api = a; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
+    init(a){ api = a; storyDefault = ($('story') && $('story').value) || null; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
   };
   window.VoiceGuide.create(A);
 }

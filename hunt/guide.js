@@ -127,8 +127,16 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: probe, clues, diy, namecontrol, scoreboard. ' +
+    ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the scoreboard', escalations: 'run tests or change the probe', safeVerb: 'SHOW' });
 }
+/* the detective's key, reused for guide Q&A standalone; provider
+   sniffed from the model name since the card has no provider menu */
+const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || '';
+  const model = ($('detModel') && $('detModel').value.trim()) || '';
+  const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
+  return { key, model, provider }; };
+
 const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn', scoreboard: '#scoreCard' };
 
 /* ---------- create ---------- */
@@ -155,12 +163,20 @@ function createGuide(){
         if (o.probe !== probe) return 'A new probe sentence — a fresh trail. Carrying on.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function'),
-      keyedCall: (sys, usr) => window.claude.complete(sys + '\n\n' + usr),
-      noAI: { say: 'I cannot reach a live A I from here right now, but the hunt itself runs entirely on your machine.' } },
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
+      keyedCall: (sys, usr) => {
+        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
+        const c = detCfg(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
+      },
+      noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors/i.test(m) && !detCfg().key)
+        return { log: 'Live AI call failed: ' + m,
+          say: 'I could not reach a live A I on my own. If you have a key, paste it in the detective card and I can talk live too. The hunt itself runs on your machine either way.' };
+      return null; } },
     testHook: { app: () => ({ lastVerdict: () => lastVerdict, choirSpoken: () => choirSpoken, prefs: window.__vgPrefs }) },
     init(a){
       api = a; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p));

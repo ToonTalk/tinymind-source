@@ -5,6 +5,10 @@
   "type": "module",
   "description": "Tiny Mind Phase 0 feasibility experiments (see tiny-mind-kickoff.md)",
   "scripts": {
-    "test": "node tests/run-all.js"
+    "test": "node tests/run-all.js",
+    "smoke": "node tests/smoke-guided.mjs dist/tiny-mind-mega.html"
+  },
+  "devDependencies": {
+    "jsdom": "^25"
   }
 }

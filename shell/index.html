@@ -86,6 +86,13 @@ const shellStorage = (() => {
   const ls = (() => { try { localStorage.setItem('tm-probe', '1'); localStorage.removeItem('tm-probe'); return localStorage; } catch { return null; } })();
   return {
     backend: ws ? 'window.storage' : ls ? 'localStorage' : 'memory',
+    async list(prefix) {
+      if (ws && typeof ws.list === 'function') { const r = await ws.list(prefix || '', false); return r || { keys: [] }; }
+      const keys = [];
+      if (ls) { for (let i = 0; i < ls.length; i++) { const k = ls.key(i); if (!prefix || k.startsWith(prefix)) keys.push(k); } }
+      else { for (const k of mem.keys()) if (!prefix || k.startsWith(prefix)) keys.push(k); }
+      return { keys, prefix };
+    },
     async get(k) {
       if (ws) return await ws.get(k, false);
       const v = ls ? ls.getItem(k) : (mem.has(k) ? mem.get(k) : null);
@@ -94,12 +101,8 @@ const shellStorage = (() => {
     },
     async set(k, v) { if (ws) return await ws.set(k, v, false); ls ? ls.setItem(k, v) : mem.set(k, v); return { key: k, value: v, shared: false }; },
     async delete(k) { if (ws) return await ws.delete(k, false); ls ? ls.removeItem(k) : mem.delete(k); return { key: k, deleted: true, shared: false }; },
-    async list(prefix) {
-      if (ws) return await ws.list(prefix, false);
-      const keys = ls ? Array.from({ length: ls.length }, (_, i) => ls.key(i)).filter(k => k && k.startsWith(prefix))
-                      : [...mem.keys()].filter(k => k.startsWith(prefix));
-      return { keys, prefix, shared: false };
-    },
+    // (list defined above — the wave-3 list-first pref reader; the older duplicate that
+    // the guided merge left here was removed so there's one canonical list method)
   };
 })();
 
@@ -203,7 +206,7 @@ const CARDS = {
   ]},
 };
 
-const trainedModels = () => pool.models.filter(m => is512(m) && !isZog(m) && !/^stories?260k?\.bin$/i.test(m.name));
+const trainedModels = () => pool.models.filter(m => is512(m) && !isZog(m) && (m.origin === 'export' || !/^stories?260k?\.bin$/i.test(m.name)));
 function renderOverlay(app) {
   const c = CARDS[app];
   const opt = (h, p, model) => {
@@ -218,10 +221,10 @@ function renderOverlay(app) {
   if (app === 'nursery') {
     const escH = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     for (const m of shellArcs.list()) {
-      rows += '<div class="opt"><h3>⏪ scrub a recorded arc: ' + escH(m.arc) + '</h3>'
-        + '<p>' + escH(arcKidLabel(m)) + ' — ' + m.snapshots.length + ' saved moments, up to step '
-        + m.snapshots[m.snapshots.length - 1].step + '. Watching needs no model; loading a moment into the '
-        + 'model panel needs tok512.bin in the bay.</p>'
+      rows += '<div class="opt"><h3>⏪ Time machine: ' + escH(m.label || arcKidLabel(m)) + '</h3>'
+        + '<p>' + m.snapshots.length + ' snapshots of a mind growing up, from the very start to step '
+        + m.snapshots[m.snapshots.length - 1].step + '. Slide through to watch it learn — no model needed. '
+        + 'To wake a moment up in the trainee, keep the little alphabet file (tok512.bin) in the bay.</p>'
         + '<button data-arc="' + escH(m.arc) + '">open the time machine →</button></div>';
     }
   }
@@ -256,6 +259,7 @@ function selectTab(tab) {
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
 window.__tmShell = { frames, shellStorage, selectTab, APPS }; // vg: shell adapter seam
+tmRestorePool(); // vg wave 4: bring back last visit's bay
 
 function openModelInApp(app, model) {
   const tok = tokFor(model.vocab);
@@ -301,7 +305,7 @@ function renderPool() {
 function addModel(name, u8, vocab, origin) {
   const i = pool.models.findIndex(x => x.name === name);
   if (i >= 0) { origin = origin || pool.models[i].origin; pool.models.splice(i, 1); }
-  pool.models.push({ name, u8, vocab, origin: origin || 'ingest' }); renderPool();
+  pool.models.push({ name, u8, vocab, origin: origin || 'ingest' }); tmPersist('model', name, u8); renderPool();
 }
 
 const shellArcs = createArcPool();   // arc packs live here, NOT in the model pool
@@ -313,12 +317,54 @@ function takeArc(manifest, extras, source) {
 }
 
 /* ---------- ingest into the pool ---------- */
+/* ---------- bay persistence (vg wave 4): dropped models, tokenizers
+   and jsons survive restarts via shellStorage (window.storage in
+   artifacts, localStorage on plain hosting). Files past ~3.5 MB are
+   skipped with a note (artifact storage caps a key near 5 MB base64d).
+   Arc packs are not persisted -- re-drop those. ---------- */
+let tmRestoring = false;
+function tmU8ToB64(u8){ let t = ''; const CH = 32768;
+  for (let i = 0; i < u8.length; i += CH) t += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+  return btoa(t); }
+function tmB64ToU8(b){ const t = atob(b); const u = new Uint8Array(t.length);
+  for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; }
+function tmPersist(kind, name, u8){
+  if (tmRestoring) return;
+  if (u8.length > 3.5 * 1024 * 1024) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
+  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, b64: tmU8ToB64(u8) })))
+    .catch(e => say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ')', 'warn'));
+}
+function tmPersistText(kind, name, text){
+  if (tmRestoring) return;
+  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, text })))
+    .catch(() => {});
+}
+async function tmRestorePool(){
+  try {
+    if (typeof shellStorage.list !== 'function') return;
+    const r = await shellStorage.list('tm-pool-');
+    const keys = (r && r.keys) || [];
+    if (!keys.length) return;
+    const recs = [];
+    for (const k of keys) {
+      try {
+        const it = await shellStorage.get(k);
+        const o = JSON.parse(it.value);
+        recs.push({ name: o.name, u8: o.b64 ? tmB64ToU8(o.b64) : new TextEncoder().encode(o.text || '') });
+      } catch (e) {}
+    }
+    if (!recs.length) return;
+    tmRestoring = true;
+    try { await shellIngest(recs); } finally { tmRestoring = false; }
+    say('bay: remembered ' + recs.length + ' file(s) from last visit');
+  } catch (e) {}
+}
 async function shellIngest(recs) {
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
     addModel: (name, u8, vocab) => addModel(name, u8, vocab, 'ingest'),
-    addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) pool.toks.push({ name, u8, vocab }); },
-    json: (name, text) => sendToApp('nursery', { tm: 'json', name, text }),
+    addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) { pool.toks.push({ name, u8, vocab }); tmPersist('tok', name, u8); } },
+    json: (name, text) => { sendToApp('nursery', { tm: 'json', name, text }); tmPersistText('json', name, text); },
     unzipError: (name, msg) => say('could not unzip ' + name + ': ' + msg, 'warn'),
   });
   renderPool();

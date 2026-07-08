@@ -189,6 +189,7 @@ function create(A){
       '<button id="vgMic"  class="vg-btn" title="Ask a question by voice">&#127908;</button>'+
       '<button id="vgSkip" class="vg-btn" title="Skip to the next stop" style="display:none">&#9197;</button>'+
       '<button id="vgEnd"  class="vg-btn" title="End the tour" style="display:none">&#10005;</button>'+
+      '<button id="vgSave" class="vg-btn" title="Save this conversation as a file">&#128190;</button>'+
       '</div>'+
       '<div id="vgLog" aria-live="polite"></div>'+
       '<div id="vgStatus"></div>'+
@@ -291,7 +292,9 @@ function create(A){
      they start; the log scrolls, so no message can outgrow its
      container. The status line carries the transient stuff only:
      paused, listening, thinking. */
+  const vgTranscript=[];                     // full history for the save button (the log DOM trims to 60)
   function vgLogAdd(text,who){
+    vgTranscript.push({t:Date.now(),who:who==='user'?'you':'guide',text:String(text)});
     const log=vg$('vgLog');
     const d=document.createElement('div');
     d.className='vg-b'+(who==='user'?' vg-user':'');
@@ -648,8 +651,15 @@ function create(A){
         try{ await vgSpeak(llm.noAI.say,g); }catch(_){}
         return;
       }
-      vgLogAdd('Live AI call failed: '+(e&&e.message?e.message:String(e)));
-      try{ await vgSpeak("I hit a snag talking to the AI \u2014 my panel says more.",g); }catch(_){}
+      const emsg=e&&e.message?e.message:String(e);
+      const fb=(strings.llmFail&&strings.llmFail(e))||           // v2: adapter-suppliable failure copy
+        (/quota|rate.?limit|429|too many|overloaded|exceed/i.test(emsg)
+          ? {log:'Live AI call failed: '+emsg,
+             say:"The shared A I allowance is used up for the moment \u2014 it refills on its own. Ask me again in a little while; the tour and every button still work."}
+          : {log:'Live AI call failed: '+emsg,
+             say:"I couldn't reach the live A I just now \u2014 the note above says why. The tour and every button still work without it."});
+      vgLogAdd(fb.log);
+      try{ await vgSpeak(fb.say,g); }catch(_){}
     }
   }
 
@@ -713,6 +723,16 @@ function create(A){
   vg$('vgGo').onclick=()=>{ const q=vg$('vgIn').value; vg$('vgIn').value=''; vgAsk(q); };
   vg$('vgIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); vg$('vgGo').click(); } });
   vg$('vgSkip').onclick=vgSkipStep;
+  vg$('vgSave').onclick=function(){          // save the conversation as markdown
+    const stamp=new Date();
+    const md='# Guide conversation \u2014 '+A.id+' \u2014 '+stamp.toISOString().slice(0,16).replace('T',' ')+'\n\n'+
+      vgTranscript.map(e=>(e.who==='you'?'**You:** ':'**Guide:** ')+e.text).join('\n\n')+'\n';
+    const blob=new Blob([md],{type:'text/markdown'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='guide-'+A.id+'-'+stamp.toISOString().slice(0,10)+'.md';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch(e){} a.remove(); },500);
+  };
   vg$('vgEnd').onclick=vgEndTour;
   vg$('vgHide').onclick=()=>{ vgSetPanel(false);
     if(ui.hideToast) notify(ui.hideToast);
@@ -758,7 +778,8 @@ function create(A){
     emit:vgEmit, waitFor:vgWaitFor, track:vgTrack, evOn:vgEvOn, evOff:vgEvOff,   // v2 bus, for suites
     get evQueueLen(){ return vgEvQueue.length; },
     get evWaiterLen(){ return vgEvWaiters.length; },
-    get speakDepth(){ return vgSpeakDepth; } };
+    get speakDepth(){ return vgSpeakDepth; },
+    get transcript(){ return vgTranscript.slice(); } };
 
   if(A.init){ try{ A.init(api); }catch(e){ console.error('guide adapter init:',e); } }
   return api;

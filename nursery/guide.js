@@ -18,13 +18,15 @@ const sheet = () => ({
 });
 let api = null;
 let base0 = null;                      // first base-eval loss; forgetting = drift > +0.15 nats
+let lastData = null;                   // last set-data payload: the storybook the worker trains on
 
 /* ---------- worker tap -> guide events (no app edits) ---------- */
 function wireWorker(emit){
   window.__vgW.taps.push((dir, m) => {
     if (!m || !m.type) return;
     if (dir === 'out') {
-      if (m.type === 'train') { if (m.opts && m.opts.fresh) base0 = null; emit('trainStarted', { fresh: !!(m.opts && m.opts.fresh) }); }
+      if (m.type === 'set-data') lastData = { stories: m.stories || [], heldout: m.heldout || [] };
+      if (m.type === 'train') { if (m.opts && m.opts.fresh) base0 = null; persistBook(); emit('trainStarted', { fresh: !!(m.opts && m.opts.fresh) }); }
       return;
     }
     switch (m.type) {
@@ -37,7 +39,7 @@ function wireWorker(emit){
         if (m.arc === 'absorbed-ish') emit('floorReached', { zogHeld: m.zogHeld });
         if (m.arc === 'parroting')    emit('parrotingBadge', { zogHeld: m.zogHeld, min: m.zogHeldMin });
         break;
-      case 'sample':          emit('sampleReady', { step: m.step, text: m.text }); break;
+      case 'sample':          saveSample(m.text); emit('sampleReady', { step: m.step, text: m.text }); break;
       case 'idle':            emit('trainDone',   { step: m.step }); break;
       case 'export-done':     emit('exportDone',  { step: m.step }); break;
       case 'probe-fact-done': emit('probeFact', m); break;
@@ -52,6 +54,52 @@ function wireWorker(emit){
     const ok = +m[1], bad = +m[2];
     emit(bad > 0 ? 'storyRejected' : 'storyAccepted', { ok, bad });
   }).observe(out, { childList: true, subtree: true });
+}
+
+/* ---------- character persistence (wave 4): the storybook the
+   worker trains on is captured from the outgoing set-data message;
+   on train start it is stored per character, and saved characters
+   are offered beside the ready-made Zog book on later visits.
+   Framed only (window.storage via the bridge); standalone quietly
+   skips. ---------- */
+function saveSample(text){
+  try { if (window.storage && text)
+    window.storage.set('tm-sample-latest', JSON.stringify({ name: sheet().name, text, ts: Date.now() })).catch(() => {});
+  } catch (_) {}
+}
+function persistBook(){
+  try {
+    if (!window.storage || !lastData || !lastData.stories || !lastData.stories.length) return;
+    const s = sheet();
+    if (!s.name || s.name === 'your character') return;
+    const book = [...lastData.stories.map(text => ({ split: 'train', text })),
+                  ...(lastData.heldout || []).map(text => ({ split: 'heldout', text }))];
+    window.storage.set('tm-book-' + s.name, JSON.stringify({
+      sheet: s, kind: ($('chKind') && $('chKind').value) || '', book, ts: Date.now() })).catch(() => {});
+  } catch (_) {}
+}
+async function offerSavedBooks(){
+  try {
+    if (!window.storage || typeof window.storage.list !== 'function') return;
+    const r = await window.storage.list('tm-book-');
+    const keys = (r && r.keys) || [];
+    const demo = $('demoBtn');
+    if (!keys.length || !demo) return;
+    for (const k of keys.slice(0, 6)) {
+      let o; try { o = JSON.parse((await window.storage.get(k)).value); } catch (_) { continue; }
+      const b = document.createElement('button');
+      b.className = 'alt small'; b.style.marginLeft = '6px';
+      b.textContent = 'load ' + ((o.sheet && o.sheet.name) || k.slice(8)) + "'s storybook";
+      b.onclick = () => { try {
+        if (o.sheet) { if ($('chName')) $('chName').value = o.sheet.name || '';
+          if ($('chKind')) $('chKind').value = o.kind || '';
+          if ($('chAttr1')) $('chAttr1').value = o.sheet.attr1 || '';
+          if ($('chAttr2')) $('chAttr2').value = o.sheet.attr2 || ''; }
+        if (window.__tmRouteJson) window.__tmRouteJson(((o.sheet && o.sheet.name) || 'saved') + '-storybook.json', JSON.stringify(o.book));
+      } catch (_) {} };
+      demo.parentNode.insertBefore(b, demo.nextSibling);
+    }
+  } catch (_) {}
 }
 
 /* ---------- huntability pre-flight (uses the probe-fact worker
@@ -203,8 +251,16 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, storybook, chart, train, sample, export, timemachine. ' +
+    ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the chart', escalations: 'start or stop training', safeVerb: 'SHOW' });
 }
+/* the ghostwriter's own key config, reused for guide Q&A standalone */
+const VG_LIVE = ['anthropic', 'openai', 'gemini'];
+const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
+  return { provider: p,
+    key: VG_LIVE.includes(p) ? (($('apiKey') && $('apiKey').value.trim()) || '') : '',
+    model: ($('apiModel') && $('apiModel').value.trim()) || '' }; };
+
 const SHOW = {
   character: '#chName', storybook: '#storyList', chart: '#chart', train: '#trainBtn',
   sample: '#sampleBtn', export: '#exportBtn', timemachine: '#scrub',
@@ -232,15 +288,22 @@ function createGuide(){
         if (o.book !== now.book) return 'The storybook grew while I was quiet. Carrying on.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function'),
-      keyedCall: (sys, usr) => window.claude.complete(sys + '\n\n' + usr),
-      noAI: { say: 'I cannot reach a live A I from here right now, but the tour and everything on screen still work.' } },
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!appLLM().key,
+      keyedCall: (sys, usr) => {
+        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
+        const c = appLLM(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
+      },
+      noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, add it in the ghostwriter panel I am pointing at \u2014 pick a provider and paste the key \u2014 and I can talk live too. Everything else works without one.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
-    strings: {},
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors/i.test(m) && !appLLM().key)
+        return { log: 'Live AI call failed: ' + m,
+          say: 'I could not reach a live A I on my own. If you have a key, pick a provider and paste it in the ghostwriter panel up top \u2014 then ask me again. Everything else works without one.' };
+      return null; } },
     testHook: { app: () => ({ sheet, base0: () => base0, prefs: window.__vgPrefs }) },
-    init(a){ api = a; wireWorker((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
+    init(a){ api = a; wireWorker((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); offerSavedBooks(); },
   };
   window.VoiceGuide.create(A);
 }

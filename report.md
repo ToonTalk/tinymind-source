@@ -440,3 +440,39 @@ local GitHub/ai clone is ecraft2learn/ai (different org/site). Options: (a) crea
 toontalk.github.io user-site repo mirroring Documents/AI/apps layout, (b) host under
 an existing site and set the default accordingly, (c) attach the zip as a release
 asset. Runtime override exists: window.TM_STARTER_ZIP.
+
+---
+
+# Guide waves 1-4 + ablation-aware lens (2026-07-08)
+
+Two things this pass. **(d) the ablation-aware logit lens** (the one item the artifact
+session deferred because it lives in the parity-gated worker blob): a lens request now
+carries the currently-muted head set; the microscope worker recomputes and caches (by
+head-set) an ablated capture over the same tokens and projects THAT residual stream, so
+the lens shows the prediction forming inside the damaged model. The UI badges "with L0:0,
+L0:1 muted" and refreshes the lens in place when the child runs or clears an ablation.
+Additive: empty mute is bit-identical to the un-ablated lens (e7 asserts), G1 greedy
+parity stays exact on all four fixtures, gradchecks hold. Live-verified: full lens →
+muted lens (values shift, e.g. `" a"` 23%→36%) → cleared back to full.
+
+**Guide waves 1-4 merged into repo sources.** The artifact session shipped its guide
+layer as `patch-tiny-mind-dist.mjs` (LLM-failure copy + `strings.llmFail` seam,
+save-transcript button, multi-provider key reuse, artifact-resilient boot, list-first
+pref reads, shell guide auto-hide/margin-release, bay persistence via shellStorage, the
+`trainedModels` origin fix so exported minds appear in the Hunt, kid-friendly time-machine
+card, nursery character persistence, microscope story prefill). To keep the repo the
+single source of truth, I replayed the patch's 49-op mega plan against the **sources**
+(auto-routing each edit to the file holding its anchor). Verification: my regenerated
+`nursery/guide.js` and `microscope/guide.js` come out **byte-identical** to the session's
+attached whole-file adapters, and the session's own jsdom smoke test (`tests/smoke-guided.mjs`,
+`npm run smoke`) passes **71/0** against my rebuilt mega — the same result it reported for
+v4. One genuine conflict fixed: the storage `list` op assumed no prior method, so it
+duplicated the one the earlier guided merge added; deduped to a single canonical `list`.
+
+Suite: **89 PASS, 0 FAIL** against the rebuilt guided mega (parity + gradcheck + mega
+structure). The patch script is now obsolete for building (waves live in sources; the
+mega regenerates complete) and is kept only as historical spec. **Starter URL CONFIRMED**:
+`https://toontalk.github.io/misc/tiny-mind-starter.zip` serves a real zip (PK magic,
+`application/x-zip-compressed`, 2.0 MB). The site root 404s (no index) but the file path
+resolves. Caveat: the hosted copy is 2.0 MB vs the current `dist/tiny-mind-starter.zip`
+at 1.3 MB — the hosted pack is a different/older composition and should be refreshed.

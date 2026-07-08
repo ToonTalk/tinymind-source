@@ -198,9 +198,18 @@ window.__vgLoadPrefs = async function(){
   /* the frame bridge proxies window.storage to the shell's storage
      when framed; standalone there is no window.storage and defaults
      hold */
-  const read = async k => { try { if (!window.storage) return null;
-    const r = await window.storage.get(k); return r && r.value; } catch (_) { return null; } };
-  const on = await read('tm-guide-on'), kid = await read('tm-guide-kid'), voice = await read('tm-guide-voice');
+  const race = p => Promise.race([p, new Promise(r => setTimeout(() => r(null), 1200))]);
+  /* list first: getting keys that do not exist logs loud 404s
+     host-side in artifacts, so only get what list says is there */
+  let have = null;
+  try { if (window.storage && typeof window.storage.list === 'function') {
+    const r = await race(window.storage.list('tm-guide-'));
+    if (r && r.keys) have = new Set(r.keys);
+  } } catch (_) {}
+  const read = k => (have && !have.has(k)) ? Promise.resolve(null)
+    : race((async () => { if (!window.storage) return null;
+        const r = await window.storage.get(k); return r && r.value; })()).catch(() => null);
+  const [on, kid, voice] = await Promise.all([read('tm-guide-on'), read('tm-guide-kid'), read('tm-guide-voice')]);
   if (on !== null)    window.__vgPrefs.on    = on !== '0';
   if (kid !== null)   window.__vgPrefs.kid   = kid === '1';
   if (voice !== null) window.__vgPrefs.voice = voice === '1';
@@ -210,6 +219,39 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Multi-provider chat call so a guide can reuse the key the
+   visitor already gave the app (ghostwriter / detective) when it
+   runs standalone. Mirrors the Piskel adapter's provider table. */
+window.__vgProviders = {
+  async call(provider, key, model, sys, usr){
+    if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+    if (provider === 'openai') {
+      if (!model) throw new Error('fill the model box next to the key');
+      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
+      if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
+      const d = await r.json(); return d.choices[0].message.content;
+    }
+    if (provider === 'gemini' || provider === 'google') {
+      const m = model || 'gemini-3.5-flash';
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] },
+          contents: [{ role: 'user', parts: [{ text: usr }] }] }) });
+      if (!r.ok) throw new Error('Gemini HTTP ' + r.status);
+      const d = await r.json(); return d.candidates[0].content.parts.map(p => p.text || '').join('');
+    }
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
+        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-6', max_tokens: 1000,
+        system: sys, messages: [{ role: 'user', content: usr }] }) });
+    if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
+    const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
+  }
+};
+
 /* Kid-mode and voice toggles appended to the guide panel head.
    The hunt wires its own existing #kidMode/#voiceOn instead. */
 window.__vgPanelToggles = function(api){
@@ -217,11 +259,12 @@ window.__vgPanelToggles = function(api){
   if (!head) return;
   const wrap = document.createElement('span');
   wrap.id = 'vgTmToggles';
-  wrap.style.cssText = 'display:flex;gap:8px;margin-left:auto;font-size:11px;align-items:center';
+  head.style.flexWrap = 'wrap';                       /* never clip: overflow wraps to a new row */
+  wrap.style.cssText = 'display:flex;gap:10px;margin-left:auto;font-size:11px;align-items:center';
   wrap.innerHTML =
-    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer">' +
-    '<input type="checkbox" id="vgKid"> little-kid</label>' +
-    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer">' +
+    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap">' +
+    '<input type="checkbox" id="vgKid"> kid</label>' +
+    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap">' +
     '<input type="checkbox" id="vgVoice"> voice</label>';
   head.appendChild(wrap);
   const kid = wrap.querySelector('#vgKid'), voice = wrap.querySelector('#vgVoice');
@@ -242,7 +285,10 @@ window.__vgDeferBoot = async function(create){
      before load); the bridge attaches window.storage/window.claude
      during parse. Waiting for load puts the guide after both. */
   if (document.readyState !== 'complete')
-    await new Promise(r => window.addEventListener('load', r, { once: true }));
+    await Promise.race([
+      new Promise(r => window.addEventListener('load', r, { once: true })),
+      new Promise(r => setTimeout(r, 4000)),   /* artifact hosts can stall load; the guide must still appear */
+    ]);
   try { await window.__vgLoadPrefs(); } catch (_) {}
   if (window.__vgPrefs.on) { create(); return; }
   const once = e => {
@@ -3142,6 +3188,7 @@ function create(A){
       '<button id="vgMic"  class="vg-btn" title="Ask a question by voice">&#127908;</button>'+
       '<button id="vgSkip" class="vg-btn" title="Skip to the next stop" style="display:none">&#9197;</button>'+
       '<button id="vgEnd"  class="vg-btn" title="End the tour" style="display:none">&#10005;</button>'+
+      '<button id="vgSave" class="vg-btn" title="Save this conversation as a file">&#128190;</button>'+
       '</div>'+
       '<div id="vgLog" aria-live="polite"></div>'+
       '<div id="vgStatus"></div>'+
@@ -3244,7 +3291,9 @@ function create(A){
      they start; the log scrolls, so no message can outgrow its
      container. The status line carries the transient stuff only:
      paused, listening, thinking. */
+  const vgTranscript=[];                     // full history for the save button (the log DOM trims to 60)
   function vgLogAdd(text,who){
+    vgTranscript.push({t:Date.now(),who:who==='user'?'you':'guide',text:String(text)});
     const log=vg$('vgLog');
     const d=document.createElement('div');
     d.className='vg-b'+(who==='user'?' vg-user':'');
@@ -3601,8 +3650,15 @@ function create(A){
         try{ await vgSpeak(llm.noAI.say,g); }catch(_){}
         return;
       }
-      vgLogAdd('Live AI call failed: '+(e&&e.message?e.message:String(e)));
-      try{ await vgSpeak("I hit a snag talking to the AI \u2014 my panel says more.",g); }catch(_){}
+      const emsg=e&&e.message?e.message:String(e);
+      const fb=(strings.llmFail&&strings.llmFail(e))||           // v2: adapter-suppliable failure copy
+        (/quota|rate.?limit|429|too many|overloaded|exceed/i.test(emsg)
+          ? {log:'Live AI call failed: '+emsg,
+             say:"The shared A I allowance is used up for the moment \u2014 it refills on its own. Ask me again in a little while; the tour and every button still work."}
+          : {log:'Live AI call failed: '+emsg,
+             say:"I couldn't reach the live A I just now \u2014 the note above says why. The tour and every button still work without it."});
+      vgLogAdd(fb.log);
+      try{ await vgSpeak(fb.say,g); }catch(_){}
     }
   }
 
@@ -3666,6 +3722,16 @@ function create(A){
   vg$('vgGo').onclick=()=>{ const q=vg$('vgIn').value; vg$('vgIn').value=''; vgAsk(q); };
   vg$('vgIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); vg$('vgGo').click(); } });
   vg$('vgSkip').onclick=vgSkipStep;
+  vg$('vgSave').onclick=function(){          // save the conversation as markdown
+    const stamp=new Date();
+    const md='# Guide conversation \u2014 '+A.id+' \u2014 '+stamp.toISOString().slice(0,16).replace('T',' ')+'\n\n'+
+      vgTranscript.map(e=>(e.who==='you'?'**You:** ':'**Guide:** ')+e.text).join('\n\n')+'\n';
+    const blob=new Blob([md],{type:'text/markdown'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='guide-'+A.id+'-'+stamp.toISOString().slice(0,10)+'.md';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch(e){} a.remove(); },500);
+  };
   vg$('vgEnd').onclick=vgEndTour;
   vg$('vgHide').onclick=()=>{ vgSetPanel(false);
     if(ui.hideToast) notify(ui.hideToast);
@@ -3711,7 +3777,8 @@ function create(A){
     emit:vgEmit, waitFor:vgWaitFor, track:vgTrack, evOn:vgEvOn, evOff:vgEvOff,   // v2 bus, for suites
     get evQueueLen(){ return vgEvQueue.length; },
     get evWaiterLen(){ return vgEvWaiters.length; },
-    get speakDepth(){ return vgSpeakDepth; } };
+    get speakDepth(){ return vgSpeakDepth; },
+    get transcript(){ return vgTranscript.slice(); } };
 
   if(A.init){ try{ A.init(api); }catch(e){ console.error('guide adapter init:',e); } }
   return api;
@@ -3742,13 +3809,15 @@ const sheet = () => ({
 });
 let api = null;
 let base0 = null;                      // first base-eval loss; forgetting = drift > +0.15 nats
+let lastData = null;                   // last set-data payload: the storybook the worker trains on
 
 /* ---------- worker tap -> guide events (no app edits) ---------- */
 function wireWorker(emit){
   window.__vgW.taps.push((dir, m) => {
     if (!m || !m.type) return;
     if (dir === 'out') {
-      if (m.type === 'train') { if (m.opts && m.opts.fresh) base0 = null; emit('trainStarted', { fresh: !!(m.opts && m.opts.fresh) }); }
+      if (m.type === 'set-data') lastData = { stories: m.stories || [], heldout: m.heldout || [] };
+      if (m.type === 'train') { if (m.opts && m.opts.fresh) base0 = null; persistBook(); emit('trainStarted', { fresh: !!(m.opts && m.opts.fresh) }); }
       return;
     }
     switch (m.type) {
@@ -3761,7 +3830,7 @@ function wireWorker(emit){
         if (m.arc === 'absorbed-ish') emit('floorReached', { zogHeld: m.zogHeld });
         if (m.arc === 'parroting')    emit('parrotingBadge', { zogHeld: m.zogHeld, min: m.zogHeldMin });
         break;
-      case 'sample':          emit('sampleReady', { step: m.step, text: m.text }); break;
+      case 'sample':          saveSample(m.text); emit('sampleReady', { step: m.step, text: m.text }); break;
       case 'idle':            emit('trainDone',   { step: m.step }); break;
       case 'export-done':     emit('exportDone',  { step: m.step }); break;
       case 'probe-fact-done': emit('probeFact', m); break;
@@ -3776,6 +3845,52 @@ function wireWorker(emit){
     const ok = +m[1], bad = +m[2];
     emit(bad > 0 ? 'storyRejected' : 'storyAccepted', { ok, bad });
   }).observe(out, { childList: true, subtree: true });
+}
+
+/* ---------- character persistence (wave 4): the storybook the
+   worker trains on is captured from the outgoing set-data message;
+   on train start it is stored per character, and saved characters
+   are offered beside the ready-made Zog book on later visits.
+   Framed only (window.storage via the bridge); standalone quietly
+   skips. ---------- */
+function saveSample(text){
+  try { if (window.storage && text)
+    window.storage.set('tm-sample-latest', JSON.stringify({ name: sheet().name, text, ts: Date.now() })).catch(() => {});
+  } catch (_) {}
+}
+function persistBook(){
+  try {
+    if (!window.storage || !lastData || !lastData.stories || !lastData.stories.length) return;
+    const s = sheet();
+    if (!s.name || s.name === 'your character') return;
+    const book = [...lastData.stories.map(text => ({ split: 'train', text })),
+                  ...(lastData.heldout || []).map(text => ({ split: 'heldout', text }))];
+    window.storage.set('tm-book-' + s.name, JSON.stringify({
+      sheet: s, kind: ($('chKind') && $('chKind').value) || '', book, ts: Date.now() })).catch(() => {});
+  } catch (_) {}
+}
+async function offerSavedBooks(){
+  try {
+    if (!window.storage || typeof window.storage.list !== 'function') return;
+    const r = await window.storage.list('tm-book-');
+    const keys = (r && r.keys) || [];
+    const demo = $('demoBtn');
+    if (!keys.length || !demo) return;
+    for (const k of keys.slice(0, 6)) {
+      let o; try { o = JSON.parse((await window.storage.get(k)).value); } catch (_) { continue; }
+      const b = document.createElement('button');
+      b.className = 'alt small'; b.style.marginLeft = '6px';
+      b.textContent = 'load ' + ((o.sheet && o.sheet.name) || k.slice(8)) + "'s storybook";
+      b.onclick = () => { try {
+        if (o.sheet) { if ($('chName')) $('chName').value = o.sheet.name || '';
+          if ($('chKind')) $('chKind').value = o.kind || '';
+          if ($('chAttr1')) $('chAttr1').value = o.sheet.attr1 || '';
+          if ($('chAttr2')) $('chAttr2').value = o.sheet.attr2 || ''; }
+        if (window.__tmRouteJson) window.__tmRouteJson(((o.sheet && o.sheet.name) || 'saved') + '-storybook.json', JSON.stringify(o.book));
+      } catch (_) {} };
+      demo.parentNode.insertBefore(b, demo.nextSibling);
+    }
+  } catch (_) {}
 }
 
 /* ---------- huntability pre-flight (uses the probe-fact worker
@@ -3927,8 +4042,16 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, storybook, chart, train, sample, export, timemachine. ' +
+    ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the chart', escalations: 'start or stop training', safeVerb: 'SHOW' });
 }
+/* the ghostwriter's own key config, reused for guide Q&A standalone */
+const VG_LIVE = ['anthropic', 'openai', 'gemini'];
+const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
+  return { provider: p,
+    key: VG_LIVE.includes(p) ? (($('apiKey') && $('apiKey').value.trim()) || '') : '',
+    model: ($('apiModel') && $('apiModel').value.trim()) || '' }; };
+
 const SHOW = {
   character: '#chName', storybook: '#storyList', chart: '#chart', train: '#trainBtn',
   sample: '#sampleBtn', export: '#exportBtn', timemachine: '#scrub',
@@ -3956,15 +4079,22 @@ function createGuide(){
         if (o.book !== now.book) return 'The storybook grew while I was quiet. Carrying on.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function'),
-      keyedCall: (sys, usr) => window.claude.complete(sys + '\n\n' + usr),
-      noAI: { say: 'I cannot reach a live A I from here right now, but the tour and everything on screen still work.' } },
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!appLLM().key,
+      keyedCall: (sys, usr) => {
+        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
+        const c = appLLM(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
+      },
+      noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, add it in the ghostwriter panel I am pointing at \u2014 pick a provider and paste the key \u2014 and I can talk live too. Everything else works without one.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
-    strings: {},
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors/i.test(m) && !appLLM().key)
+        return { log: 'Live AI call failed: ' + m,
+          say: 'I could not reach a live A I on my own. If you have a key, pick a provider and paste it in the ghostwriter panel up top \u2014 then ask me again. Everything else works without one.' };
+      return null; } },
     testHook: { app: () => ({ sheet, base0: () => base0, prefs: window.__vgPrefs }) },
-    init(a){ api = a; wireWorker((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
+    init(a){ api = a; wireWorker((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); offerSavedBooks(); },
   };
   window.VoiceGuide.create(A);
 }
@@ -4108,9 +4238,18 @@ window.__vgLoadPrefs = async function(){
   /* the frame bridge proxies window.storage to the shell's storage
      when framed; standalone there is no window.storage and defaults
      hold */
-  const read = async k => { try { if (!window.storage) return null;
-    const r = await window.storage.get(k); return r && r.value; } catch (_) { return null; } };
-  const on = await read('tm-guide-on'), kid = await read('tm-guide-kid'), voice = await read('tm-guide-voice');
+  const race = p => Promise.race([p, new Promise(r => setTimeout(() => r(null), 1200))]);
+  /* list first: getting keys that do not exist logs loud 404s
+     host-side in artifacts, so only get what list says is there */
+  let have = null;
+  try { if (window.storage && typeof window.storage.list === 'function') {
+    const r = await race(window.storage.list('tm-guide-'));
+    if (r && r.keys) have = new Set(r.keys);
+  } } catch (_) {}
+  const read = k => (have && !have.has(k)) ? Promise.resolve(null)
+    : race((async () => { if (!window.storage) return null;
+        const r = await window.storage.get(k); return r && r.value; })()).catch(() => null);
+  const [on, kid, voice] = await Promise.all([read('tm-guide-on'), read('tm-guide-kid'), read('tm-guide-voice')]);
   if (on !== null)    window.__vgPrefs.on    = on !== '0';
   if (kid !== null)   window.__vgPrefs.kid   = kid === '1';
   if (voice !== null) window.__vgPrefs.voice = voice === '1';
@@ -4120,6 +4259,39 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Multi-provider chat call so a guide can reuse the key the
+   visitor already gave the app (ghostwriter / detective) when it
+   runs standalone. Mirrors the Piskel adapter's provider table. */
+window.__vgProviders = {
+  async call(provider, key, model, sys, usr){
+    if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+    if (provider === 'openai') {
+      if (!model) throw new Error('fill the model box next to the key');
+      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
+      if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
+      const d = await r.json(); return d.choices[0].message.content;
+    }
+    if (provider === 'gemini' || provider === 'google') {
+      const m = model || 'gemini-3.5-flash';
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] },
+          contents: [{ role: 'user', parts: [{ text: usr }] }] }) });
+      if (!r.ok) throw new Error('Gemini HTTP ' + r.status);
+      const d = await r.json(); return d.candidates[0].content.parts.map(p => p.text || '').join('');
+    }
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
+        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-6', max_tokens: 1000,
+        system: sys, messages: [{ role: 'user', content: usr }] }) });
+    if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
+    const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
+  }
+};
+
 /* Kid-mode and voice toggles appended to the guide panel head.
    The hunt wires its own existing #kidMode/#voiceOn instead. */
 window.__vgPanelToggles = function(api){
@@ -4127,11 +4299,12 @@ window.__vgPanelToggles = function(api){
   if (!head) return;
   const wrap = document.createElement('span');
   wrap.id = 'vgTmToggles';
-  wrap.style.cssText = 'display:flex;gap:8px;margin-left:auto;font-size:11px;align-items:center';
+  head.style.flexWrap = 'wrap';                       /* never clip: overflow wraps to a new row */
+  wrap.style.cssText = 'display:flex;gap:10px;margin-left:auto;font-size:11px;align-items:center';
   wrap.innerHTML =
-    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer">' +
-    '<input type="checkbox" id="vgKid"> little-kid</label>' +
-    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer">' +
+    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap">' +
+    '<input type="checkbox" id="vgKid"> kid</label>' +
+    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap">' +
     '<input type="checkbox" id="vgVoice"> voice</label>';
   head.appendChild(wrap);
   const kid = wrap.querySelector('#vgKid'), voice = wrap.querySelector('#vgVoice');
@@ -4152,7 +4325,10 @@ window.__vgDeferBoot = async function(create){
      before load); the bridge attaches window.storage/window.claude
      during parse. Waiting for load puts the guide after both. */
   if (document.readyState !== 'complete')
-    await new Promise(r => window.addEventListener('load', r, { once: true }));
+    await Promise.race([
+      new Promise(r => window.addEventListener('load', r, { once: true })),
+      new Promise(r => setTimeout(r, 4000)),   /* artifact hosts can stall load; the guide must still appear */
+    ]);
   try { await window.__vgLoadPrefs(); } catch (_) {}
   if (window.__vgPrefs.on) { create(); return; }
   const once = e => {
@@ -6522,6 +6698,7 @@ function create(A){
       '<button id="vgMic"  class="vg-btn" title="Ask a question by voice">&#127908;</button>'+
       '<button id="vgSkip" class="vg-btn" title="Skip to the next stop" style="display:none">&#9197;</button>'+
       '<button id="vgEnd"  class="vg-btn" title="End the tour" style="display:none">&#10005;</button>'+
+      '<button id="vgSave" class="vg-btn" title="Save this conversation as a file">&#128190;</button>'+
       '</div>'+
       '<div id="vgLog" aria-live="polite"></div>'+
       '<div id="vgStatus"></div>'+
@@ -6624,7 +6801,9 @@ function create(A){
      they start; the log scrolls, so no message can outgrow its
      container. The status line carries the transient stuff only:
      paused, listening, thinking. */
+  const vgTranscript=[];                     // full history for the save button (the log DOM trims to 60)
   function vgLogAdd(text,who){
+    vgTranscript.push({t:Date.now(),who:who==='user'?'you':'guide',text:String(text)});
     const log=vg$('vgLog');
     const d=document.createElement('div');
     d.className='vg-b'+(who==='user'?' vg-user':'');
@@ -6981,8 +7160,15 @@ function create(A){
         try{ await vgSpeak(llm.noAI.say,g); }catch(_){}
         return;
       }
-      vgLogAdd('Live AI call failed: '+(e&&e.message?e.message:String(e)));
-      try{ await vgSpeak("I hit a snag talking to the AI \u2014 my panel says more.",g); }catch(_){}
+      const emsg=e&&e.message?e.message:String(e);
+      const fb=(strings.llmFail&&strings.llmFail(e))||           // v2: adapter-suppliable failure copy
+        (/quota|rate.?limit|429|too many|overloaded|exceed/i.test(emsg)
+          ? {log:'Live AI call failed: '+emsg,
+             say:"The shared A I allowance is used up for the moment \u2014 it refills on its own. Ask me again in a little while; the tour and every button still work."}
+          : {log:'Live AI call failed: '+emsg,
+             say:"I couldn't reach the live A I just now \u2014 the note above says why. The tour and every button still work without it."});
+      vgLogAdd(fb.log);
+      try{ await vgSpeak(fb.say,g); }catch(_){}
     }
   }
 
@@ -7046,6 +7232,16 @@ function create(A){
   vg$('vgGo').onclick=()=>{ const q=vg$('vgIn').value; vg$('vgIn').value=''; vgAsk(q); };
   vg$('vgIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); vg$('vgGo').click(); } });
   vg$('vgSkip').onclick=vgSkipStep;
+  vg$('vgSave').onclick=function(){          // save the conversation as markdown
+    const stamp=new Date();
+    const md='# Guide conversation \u2014 '+A.id+' \u2014 '+stamp.toISOString().slice(0,16).replace('T',' ')+'\n\n'+
+      vgTranscript.map(e=>(e.who==='you'?'**You:** ':'**Guide:** ')+e.text).join('\n\n')+'\n';
+    const blob=new Blob([md],{type:'text/markdown'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='guide-'+A.id+'-'+stamp.toISOString().slice(0,10)+'.md';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch(e){} a.remove(); },500);
+  };
   vg$('vgEnd').onclick=vgEndTour;
   vg$('vgHide').onclick=()=>{ vgSetPanel(false);
     if(ui.hideToast) notify(ui.hideToast);
@@ -7091,7 +7287,8 @@ function create(A){
     emit:vgEmit, waitFor:vgWaitFor, track:vgTrack, evOn:vgEvOn, evOff:vgEvOff,   // v2 bus, for suites
     get evQueueLen(){ return vgEvQueue.length; },
     get evWaiterLen(){ return vgEvWaiters.length; },
-    get speakDepth(){ return vgSpeakDepth; } };
+    get speakDepth(){ return vgSpeakDepth; },
+    get transcript(){ return vgTranscript.slice(); } };
 
   if(A.init){ try{ A.init(api); }catch(e){ console.error('guide adapter init:',e); } }
   return api;
@@ -7124,10 +7321,33 @@ function wire(emit){
     if (m.type === 'run-ablated')     emit('ablationVerdict', { ablate: m.ablate });
     if (m.type === 'neuron-acts-done') emit('neuronSelected', { layer: m.layer, neuron: m.neuron });
     if (m.type === 'neurons-done')    emit('neuronsRanked', {});
+    if (m.type === 'loaded')          setTimeout(maybePrefillStory, 80);
   });
 }
 
+let storyDefault = null;
+/* wave 4: when a user-trained mind is on the bench, seed the story
+   box with one of its own stories (saved by the nursery guide) --
+   only if the visitor has not already typed their own. */
+async function maybePrefillStory(){
+  try {
+    if (!window.storage || typeof window.storage.list !== 'function') return;
+    const info = ($('modelInfo') && $('modelInfo').textContent) || '';
+    if (/zog/i.test(info)) return;
+    const el = $('story');
+    if (!el || (storyDefault !== null && el.value !== storyDefault)) return;
+    const r = await window.storage.list('tm-sample-');
+    if (!r || !r.keys || !r.keys.includes('tm-sample-latest')) return;
+    const it = await window.storage.get('tm-sample-latest');
+    const o = JSON.parse(it.value);
+    if (o && o.text) { el.value = o.text; window.vgEmit('storyPrefilled', { name: o.name }); }
+  } catch (_) {}
+}
+
 const EVENTS = {
+  storyPrefilled: { priority: 'moment', once: true, spot: '#story',
+    lines: p => `I put one of ${p && p.name ? p.name + "'s" : 'your character\u2019s'} own stories in the box \u2014 the stories it grew up on make the best specimens.`,
+    kidLines: 'I put one of your own stories in the box \u2014 those are the best ones to look inside with!' },
   captureDone: { priority: 'moment', cooldownMs: 20000,
     lines: 'Captured — every attention pattern, every neuron, for every word of that story. All of it is yours to poke at.',
     kidLines: 'Got it! The microscope took a picture of every thought the mind had about that story.' },
@@ -7162,10 +7382,16 @@ function STEPS(){
 }
 
 function statusText(){
+  const vis = id => { const el = $(id);
+    return !!(el && el.offsetParent !== null && ((el.textContent || '').trim() || el.children.length)); };
   return `Story box: ${($('story') && $('story').value.slice(0, 200)) || 'empty'}. ` +
     `Model info: ${($('modelInfo') && $('modelInfo').textContent) || 'unknown'}. ` +
     `Status: ${($('status') && $('status').textContent) || ''}. ` +
-    `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}.`;
+    `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}. ` +
+    `Visible views right now \u2014 attention heatmap: ${vis('heat') ? 'OPEN' : 'not shown'}, ` +
+    `logit lens: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
+    `neuron list: ${vis('neuronList') ? 'OPEN' : 'not shown'}, ` +
+    `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}.`;
 }
 function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, logit lens, and head or neuron ablation. ' +
@@ -7175,6 +7401,7 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
+    ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
 const SHOW = { story: '#story', run: '#runBtn', attention: '#heat', neurons: '#neuronList',
@@ -7206,8 +7433,13 @@ function createGuide(){
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors/i.test(m))
+        return { log: 'Live AI call failed: ' + m,
+          say: 'The standalone microscope has no key box, so I cannot talk live here \u2014 in the full Tiny Mind page I can. Every instrument on the bench still works.' };
+      return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
-    init(a){ api = a; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
+    init(a){ api = a; storyDefault = ($('story') && $('story').value) || null; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
   };
   window.VoiceGuide.create(A);
 }
@@ -7339,9 +7571,18 @@ window.__vgLoadPrefs = async function(){
   /* the frame bridge proxies window.storage to the shell's storage
      when framed; standalone there is no window.storage and defaults
      hold */
-  const read = async k => { try { if (!window.storage) return null;
-    const r = await window.storage.get(k); return r && r.value; } catch (_) { return null; } };
-  const on = await read('tm-guide-on'), kid = await read('tm-guide-kid'), voice = await read('tm-guide-voice');
+  const race = p => Promise.race([p, new Promise(r => setTimeout(() => r(null), 1200))]);
+  /* list first: getting keys that do not exist logs loud 404s
+     host-side in artifacts, so only get what list says is there */
+  let have = null;
+  try { if (window.storage && typeof window.storage.list === 'function') {
+    const r = await race(window.storage.list('tm-guide-'));
+    if (r && r.keys) have = new Set(r.keys);
+  } } catch (_) {}
+  const read = k => (have && !have.has(k)) ? Promise.resolve(null)
+    : race((async () => { if (!window.storage) return null;
+        const r = await window.storage.get(k); return r && r.value; })()).catch(() => null);
+  const [on, kid, voice] = await Promise.all([read('tm-guide-on'), read('tm-guide-kid'), read('tm-guide-voice')]);
   if (on !== null)    window.__vgPrefs.on    = on !== '0';
   if (kid !== null)   window.__vgPrefs.kid   = kid === '1';
   if (voice !== null) window.__vgPrefs.voice = voice === '1';
@@ -7351,6 +7592,39 @@ window.__vgSetPref = function(key, value){
   try { if (window.storage) window.storage.set(key, value); } catch (_) {}
 };
 
+/* Multi-provider chat call so a guide can reuse the key the
+   visitor already gave the app (ghostwriter / detective) when it
+   runs standalone. Mirrors the Piskel adapter's provider table. */
+window.__vgProviders = {
+  async call(provider, key, model, sys, usr){
+    if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+    if (provider === 'openai') {
+      if (!model) throw new Error('fill the model box next to the key');
+      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
+      if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
+      const d = await r.json(); return d.choices[0].message.content;
+    }
+    if (provider === 'gemini' || provider === 'google') {
+      const m = model || 'gemini-3.5-flash';
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] },
+          contents: [{ role: 'user', parts: [{ text: usr }] }] }) });
+      if (!r.ok) throw new Error('Gemini HTTP ' + r.status);
+      const d = await r.json(); return d.candidates[0].content.parts.map(p => p.text || '').join('');
+    }
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
+        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-6', max_tokens: 1000,
+        system: sys, messages: [{ role: 'user', content: usr }] }) });
+    if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
+    const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
+  }
+};
+
 /* Kid-mode and voice toggles appended to the guide panel head.
    The hunt wires its own existing #kidMode/#voiceOn instead. */
 window.__vgPanelToggles = function(api){
@@ -7358,11 +7632,12 @@ window.__vgPanelToggles = function(api){
   if (!head) return;
   const wrap = document.createElement('span');
   wrap.id = 'vgTmToggles';
-  wrap.style.cssText = 'display:flex;gap:8px;margin-left:auto;font-size:11px;align-items:center';
+  head.style.flexWrap = 'wrap';                       /* never clip: overflow wraps to a new row */
+  wrap.style.cssText = 'display:flex;gap:10px;margin-left:auto;font-size:11px;align-items:center';
   wrap.innerHTML =
-    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer">' +
-    '<input type="checkbox" id="vgKid"> little-kid</label>' +
-    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer">' +
+    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap">' +
+    '<input type="checkbox" id="vgKid"> kid</label>' +
+    '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap">' +
     '<input type="checkbox" id="vgVoice"> voice</label>';
   head.appendChild(wrap);
   const kid = wrap.querySelector('#vgKid'), voice = wrap.querySelector('#vgVoice');
@@ -7383,7 +7658,10 @@ window.__vgDeferBoot = async function(create){
      before load); the bridge attaches window.storage/window.claude
      during parse. Waiting for load puts the guide after both. */
   if (document.readyState !== 'complete')
-    await new Promise(r => window.addEventListener('load', r, { once: true }));
+    await Promise.race([
+      new Promise(r => window.addEventListener('load', r, { once: true })),
+      new Promise(r => setTimeout(r, 4000)),   /* artifact hosts can stall load; the guide must still appear */
+    ]);
   try { await window.__vgLoadPrefs(); } catch (_) {}
   if (window.__vgPrefs.on) { create(); return; }
   const once = e => {
@@ -9713,6 +9991,7 @@ function create(A){
       '<button id="vgMic"  class="vg-btn" title="Ask a question by voice">&#127908;</button>'+
       '<button id="vgSkip" class="vg-btn" title="Skip to the next stop" style="display:none">&#9197;</button>'+
       '<button id="vgEnd"  class="vg-btn" title="End the tour" style="display:none">&#10005;</button>'+
+      '<button id="vgSave" class="vg-btn" title="Save this conversation as a file">&#128190;</button>'+
       '</div>'+
       '<div id="vgLog" aria-live="polite"></div>'+
       '<div id="vgStatus"></div>'+
@@ -9815,7 +10094,9 @@ function create(A){
      they start; the log scrolls, so no message can outgrow its
      container. The status line carries the transient stuff only:
      paused, listening, thinking. */
+  const vgTranscript=[];                     // full history for the save button (the log DOM trims to 60)
   function vgLogAdd(text,who){
+    vgTranscript.push({t:Date.now(),who:who==='user'?'you':'guide',text:String(text)});
     const log=vg$('vgLog');
     const d=document.createElement('div');
     d.className='vg-b'+(who==='user'?' vg-user':'');
@@ -10172,8 +10453,15 @@ function create(A){
         try{ await vgSpeak(llm.noAI.say,g); }catch(_){}
         return;
       }
-      vgLogAdd('Live AI call failed: '+(e&&e.message?e.message:String(e)));
-      try{ await vgSpeak("I hit a snag talking to the AI \u2014 my panel says more.",g); }catch(_){}
+      const emsg=e&&e.message?e.message:String(e);
+      const fb=(strings.llmFail&&strings.llmFail(e))||           // v2: adapter-suppliable failure copy
+        (/quota|rate.?limit|429|too many|overloaded|exceed/i.test(emsg)
+          ? {log:'Live AI call failed: '+emsg,
+             say:"The shared A I allowance is used up for the moment \u2014 it refills on its own. Ask me again in a little while; the tour and every button still work."}
+          : {log:'Live AI call failed: '+emsg,
+             say:"I couldn't reach the live A I just now \u2014 the note above says why. The tour and every button still work without it."});
+      vgLogAdd(fb.log);
+      try{ await vgSpeak(fb.say,g); }catch(_){}
     }
   }
 
@@ -10237,6 +10525,16 @@ function create(A){
   vg$('vgGo').onclick=()=>{ const q=vg$('vgIn').value; vg$('vgIn').value=''; vgAsk(q); };
   vg$('vgIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); vg$('vgGo').click(); } });
   vg$('vgSkip').onclick=vgSkipStep;
+  vg$('vgSave').onclick=function(){          // save the conversation as markdown
+    const stamp=new Date();
+    const md='# Guide conversation \u2014 '+A.id+' \u2014 '+stamp.toISOString().slice(0,16).replace('T',' ')+'\n\n'+
+      vgTranscript.map(e=>(e.who==='you'?'**You:** ':'**Guide:** ')+e.text).join('\n\n')+'\n';
+    const blob=new Blob([md],{type:'text/markdown'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='guide-'+A.id+'-'+stamp.toISOString().slice(0,10)+'.md';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch(e){} a.remove(); },500);
+  };
   vg$('vgEnd').onclick=vgEndTour;
   vg$('vgHide').onclick=()=>{ vgSetPanel(false);
     if(ui.hideToast) notify(ui.hideToast);
@@ -10282,7 +10580,8 @@ function create(A){
     emit:vgEmit, waitFor:vgWaitFor, track:vgTrack, evOn:vgEvOn, evOff:vgEvOff,   // v2 bus, for suites
     get evQueueLen(){ return vgEvQueue.length; },
     get evWaiterLen(){ return vgEvWaiters.length; },
-    get speakDepth(){ return vgSpeakDepth; } };
+    get speakDepth(){ return vgSpeakDepth; },
+    get transcript(){ return vgTranscript.slice(); } };
 
   if(A.init){ try{ A.init(api); }catch(e){ console.error('guide adapter init:',e); } }
   return api;
@@ -10422,8 +10721,16 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: probe, clues, diy, namecontrol, scoreboard. ' +
+    ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the scoreboard', escalations: 'run tests or change the probe', safeVerb: 'SHOW' });
 }
+/* the detective's key, reused for guide Q&A standalone; provider
+   sniffed from the model name since the card has no provider menu */
+const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || '';
+  const model = ($('detModel') && $('detModel').value.trim()) || '';
+  const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
+  return { key, model, provider }; };
+
 const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn', scoreboard: '#scoreCard' };
 
 /* ---------- create ---------- */
@@ -10450,12 +10757,20 @@ function createGuide(){
         if (o.probe !== probe) return 'A new probe sentence — a fresh trail. Carrying on.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
-    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function'),
-      keyedCall: (sys, usr) => window.claude.complete(sys + '\n\n' + usr),
-      noAI: { say: 'I cannot reach a live A I from here right now, but the hunt itself runs entirely on your machine.' } },
+    llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
+      keyedCall: (sys, usr) => {
+        if (window.claude && typeof window.claude.complete === 'function') return window.claude.complete(sys + '\n\n' + usr);
+        const c = detCfg(); return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
+      },
+      noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
     verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
+    strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
+      if (/failed to fetch|network|cors/i.test(m) && !detCfg().key)
+        return { log: 'Live AI call failed: ' + m,
+          say: 'I could not reach a live A I on my own. If you have a key, paste it in the detective card and I can talk live too. The hunt itself runs on your machine either way.' };
+      return null; } },
     testHook: { app: () => ({ lastVerdict: () => lastVerdict, choirSpoken: () => choirSpoken, prefs: window.__vgPrefs }) },
     init(a){
       api = a; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p));
@@ -10746,6 +11061,13 @@ const shellStorage = (() => {
   const ls = (() => { try { localStorage.setItem('tm-probe', '1'); localStorage.removeItem('tm-probe'); return localStorage; } catch { return null; } })();
   return {
     backend: ws ? 'window.storage' : ls ? 'localStorage' : 'memory',
+    async list(prefix) {
+      if (ws && typeof ws.list === 'function') { const r = await ws.list(prefix || '', false); return r || { keys: [] }; }
+      const keys = [];
+      if (ls) { for (let i = 0; i < ls.length; i++) { const k = ls.key(i); if (!prefix || k.startsWith(prefix)) keys.push(k); } }
+      else { for (const k of mem.keys()) if (!prefix || k.startsWith(prefix)) keys.push(k); }
+      return { keys, prefix };
+    },
     async get(k) {
       if (ws) return await ws.get(k, false);
       const v = ls ? ls.getItem(k) : (mem.has(k) ? mem.get(k) : null);
@@ -10754,12 +11076,8 @@ const shellStorage = (() => {
     },
     async set(k, v) { if (ws) return await ws.set(k, v, false); ls ? ls.setItem(k, v) : mem.set(k, v); return { key: k, value: v, shared: false }; },
     async delete(k) { if (ws) return await ws.delete(k, false); ls ? ls.removeItem(k) : mem.delete(k); return { key: k, deleted: true, shared: false }; },
-    async list(prefix) {
-      if (ws) return await ws.list(prefix, false);
-      const keys = ls ? Array.from({ length: ls.length }, (_, i) => ls.key(i)).filter(k => k && k.startsWith(prefix))
-                      : [...mem.keys()].filter(k => k.startsWith(prefix));
-      return { keys, prefix, shared: false };
-    },
+    // (list defined above — the wave-3 list-first pref reader; the older duplicate that
+    // the guided merge left here was removed so there's one canonical list method)
   };
 })();
 
@@ -10863,7 +11181,7 @@ const CARDS = {
   ]},
 };
 
-const trainedModels = () => pool.models.filter(m => is512(m) && !isZog(m) && !/^stories?260k?\.bin$/i.test(m.name));
+const trainedModels = () => pool.models.filter(m => is512(m) && !isZog(m) && (m.origin === 'export' || !/^stories?260k?\.bin$/i.test(m.name)));
 function renderOverlay(app) {
   const c = CARDS[app];
   const opt = (h, p, model) => {
@@ -10878,10 +11196,10 @@ function renderOverlay(app) {
   if (app === 'nursery') {
     const escH = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     for (const m of shellArcs.list()) {
-      rows += '<div class="opt"><h3>⏪ scrub a recorded arc: ' + escH(m.arc) + '</h3>'
-        + '<p>' + escH(arcKidLabel(m)) + ' — ' + m.snapshots.length + ' saved moments, up to step '
-        + m.snapshots[m.snapshots.length - 1].step + '. Watching needs no model; loading a moment into the '
-        + 'model panel needs tok512.bin in the bay.</p>'
+      rows += '<div class="opt"><h3>⏪ Time machine: ' + escH(m.label || arcKidLabel(m)) + '</h3>'
+        + '<p>' + m.snapshots.length + ' snapshots of a mind growing up, from the very start to step '
+        + m.snapshots[m.snapshots.length - 1].step + '. Slide through to watch it learn — no model needed. '
+        + 'To wake a moment up in the trainee, keep the little alphabet file (tok512.bin) in the bay.</p>'
         + '<button data-arc="' + escH(m.arc) + '">open the time machine →</button></div>';
     }
   }
@@ -10916,6 +11234,7 @@ function selectTab(tab) {
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
 window.__tmShell = { frames, shellStorage, selectTab, APPS }; // vg: shell adapter seam
+tmRestorePool(); // vg wave 4: bring back last visit's bay
 
 function openModelInApp(app, model) {
   const tok = tokFor(model.vocab);
@@ -10961,7 +11280,7 @@ function renderPool() {
 function addModel(name, u8, vocab, origin) {
   const i = pool.models.findIndex(x => x.name === name);
   if (i >= 0) { origin = origin || pool.models[i].origin; pool.models.splice(i, 1); }
-  pool.models.push({ name, u8, vocab, origin: origin || 'ingest' }); renderPool();
+  pool.models.push({ name, u8, vocab, origin: origin || 'ingest' }); tmPersist('model', name, u8); renderPool();
 }
 
 const shellArcs = createArcPool();   // arc packs live here, NOT in the model pool
@@ -10973,12 +11292,54 @@ function takeArc(manifest, extras, source) {
 }
 
 /* ---------- ingest into the pool ---------- */
+/* ---------- bay persistence (vg wave 4): dropped models, tokenizers
+   and jsons survive restarts via shellStorage (window.storage in
+   artifacts, localStorage on plain hosting). Files past ~3.5 MB are
+   skipped with a note (artifact storage caps a key near 5 MB base64d).
+   Arc packs are not persisted -- re-drop those. ---------- */
+let tmRestoring = false;
+function tmU8ToB64(u8){ let t = ''; const CH = 32768;
+  for (let i = 0; i < u8.length; i += CH) t += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+  return btoa(t); }
+function tmB64ToU8(b){ const t = atob(b); const u = new Uint8Array(t.length);
+  for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; }
+function tmPersist(kind, name, u8){
+  if (tmRestoring) return;
+  if (u8.length > 3.5 * 1024 * 1024) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
+  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, b64: tmU8ToB64(u8) })))
+    .catch(e => say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ')', 'warn'));
+}
+function tmPersistText(kind, name, text){
+  if (tmRestoring) return;
+  Promise.resolve().then(() => shellStorage.set('tm-pool-' + name, JSON.stringify({ kind, name, text })))
+    .catch(() => {});
+}
+async function tmRestorePool(){
+  try {
+    if (typeof shellStorage.list !== 'function') return;
+    const r = await shellStorage.list('tm-pool-');
+    const keys = (r && r.keys) || [];
+    if (!keys.length) return;
+    const recs = [];
+    for (const k of keys) {
+      try {
+        const it = await shellStorage.get(k);
+        const o = JSON.parse(it.value);
+        recs.push({ name: o.name, u8: o.b64 ? tmB64ToU8(o.b64) : new TextEncoder().encode(o.text || '') });
+      } catch (e) {}
+    }
+    if (!recs.length) return;
+    tmRestoring = true;
+    try { await shellIngest(recs); } finally { tmRestoring = false; }
+    say('bay: remembered ' + recs.length + ' file(s) from last visit');
+  } catch (e) {}
+}
 async function shellIngest(recs) {
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
     addModel: (name, u8, vocab) => addModel(name, u8, vocab, 'ingest'),
-    addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) pool.toks.push({ name, u8, vocab }); },
-    json: (name, text) => sendToApp('nursery', { tm: 'json', name, text }),
+    addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) { pool.toks.push({ name, u8, vocab }); tmPersist('tok', name, u8); } },
+    json: (name, text) => { sendToApp('nursery', { tm: 'json', name, text }); tmPersistText('json', name, text); },
     unzipError: (name, msg) => say('could not unzip ' + name + ': ' + msg, 'warn'),
   });
   renderPool();
@@ -11268,6 +11629,7 @@ function create(A){
       '<button id="vgMic"  class="vg-btn" title="Ask a question by voice">&#127908;</button>'+
       '<button id="vgSkip" class="vg-btn" title="Skip to the next stop" style="display:none">&#9197;</button>'+
       '<button id="vgEnd"  class="vg-btn" title="End the tour" style="display:none">&#10005;</button>'+
+      '<button id="vgSave" class="vg-btn" title="Save this conversation as a file">&#128190;</button>'+
       '</div>'+
       '<div id="vgLog" aria-live="polite"></div>'+
       '<div id="vgStatus"></div>'+
@@ -11370,7 +11732,9 @@ function create(A){
      they start; the log scrolls, so no message can outgrow its
      container. The status line carries the transient stuff only:
      paused, listening, thinking. */
+  const vgTranscript=[];                     // full history for the save button (the log DOM trims to 60)
   function vgLogAdd(text,who){
+    vgTranscript.push({t:Date.now(),who:who==='user'?'you':'guide',text:String(text)});
     const log=vg$('vgLog');
     const d=document.createElement('div');
     d.className='vg-b'+(who==='user'?' vg-user':'');
@@ -11727,8 +12091,15 @@ function create(A){
         try{ await vgSpeak(llm.noAI.say,g); }catch(_){}
         return;
       }
-      vgLogAdd('Live AI call failed: '+(e&&e.message?e.message:String(e)));
-      try{ await vgSpeak("I hit a snag talking to the AI \u2014 my panel says more.",g); }catch(_){}
+      const emsg=e&&e.message?e.message:String(e);
+      const fb=(strings.llmFail&&strings.llmFail(e))||           // v2: adapter-suppliable failure copy
+        (/quota|rate.?limit|429|too many|overloaded|exceed/i.test(emsg)
+          ? {log:'Live AI call failed: '+emsg,
+             say:"The shared A I allowance is used up for the moment \u2014 it refills on its own. Ask me again in a little while; the tour and every button still work."}
+          : {log:'Live AI call failed: '+emsg,
+             say:"I couldn't reach the live A I just now \u2014 the note above says why. The tour and every button still work without it."});
+      vgLogAdd(fb.log);
+      try{ await vgSpeak(fb.say,g); }catch(_){}
     }
   }
 
@@ -11792,6 +12163,16 @@ function create(A){
   vg$('vgGo').onclick=()=>{ const q=vg$('vgIn').value; vg$('vgIn').value=''; vgAsk(q); };
   vg$('vgIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); vg$('vgGo').click(); } });
   vg$('vgSkip').onclick=vgSkipStep;
+  vg$('vgSave').onclick=function(){          // save the conversation as markdown
+    const stamp=new Date();
+    const md='# Guide conversation \u2014 '+A.id+' \u2014 '+stamp.toISOString().slice(0,16).replace('T',' ')+'\n\n'+
+      vgTranscript.map(e=>(e.who==='you'?'**You:** ':'**Guide:** ')+e.text).join('\n\n')+'\n';
+    const blob=new Blob([md],{type:'text/markdown'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='guide-'+A.id+'-'+stamp.toISOString().slice(0,10)+'.md';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch(e){} a.remove(); },500);
+  };
   vg$('vgEnd').onclick=vgEndTour;
   vg$('vgHide').onclick=()=>{ vgSetPanel(false);
     if(ui.hideToast) notify(ui.hideToast);
@@ -11837,7 +12218,8 @@ function create(A){
     emit:vgEmit, waitFor:vgWaitFor, track:vgTrack, evOn:vgEvOn, evOff:vgEvOff,   // v2 bus, for suites
     get evQueueLen(){ return vgEvQueue.length; },
     get evWaiterLen(){ return vgEvWaiters.length; },
-    get speakDepth(){ return vgSpeakDepth; } };
+    get speakDepth(){ return vgSpeakDepth; },
+    get transcript(){ return vgTranscript.slice(); } };
 
   if(A.init){ try{ A.init(api); }catch(e){ console.error('guide adapter init:',e); } }
   return api;
@@ -11863,14 +12245,21 @@ window.VoiceGuide={version:2,fragments,create};
 const $ = id => document.getElementById(id);
 const F = window.VoiceGuide.fragments;
 const SH = () => window.__tmShell || {};
-const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/AI/apps/tiny-mind-starter.zip';
+const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/misc/tiny-mind-starter.zip';
 const prefs = { kid: false, voice: false, on: true };
 let api = null;
 
 async function loadPrefs(){
   const st = SH().shellStorage; if (!st) return;
-  const read = async k => { try { const r = await st.get(k); return r && r.value; } catch (_) { return null; } };
-  const on = await read('tm-guide-on'), kid = await read('tm-guide-kid'), voice = await read('tm-guide-voice');
+  const race = p => Promise.race([p, new Promise(r => setTimeout(() => r(null), 1200))]);
+  let have = null;
+  try { if (typeof st.list === 'function') {
+    const r = await race(st.list('tm-guide-'));
+    if (r && r.keys) have = new Set(r.keys);
+  } } catch (_) {}
+  const read = k => (have && !have.has(k)) ? Promise.resolve(null)
+    : race(Promise.resolve().then(() => st.get(k)).then(r => r && r.value)).catch(() => null);
+  const [on, kid, voice] = await Promise.all([read('tm-guide-on'), read('tm-guide-kid'), read('tm-guide-voice')]);
   if (on !== null) prefs.on = on !== '0';
   if (kid !== null) prefs.kid = kid === '1';
   if (voice !== null) prefs.voice = voice === '1';
@@ -11886,15 +12275,15 @@ function setPref(key, value){
 const kid = () => prefs.kid;
 
 /* modelLoaded without app edits: rows appear in the bay's #pool
-   table when a bundle is ingested. */
+   table when a bundle is ingested. Unlatched: any pool change while
+   models are present re-emits, so an until-waiter armed AFTER the
+   drop still resolves (narration stays single via once:true). */
+const poolHasModel = () => { const p = $('pool');
+  return !!p && p.querySelectorAll('tr').length > 0 && !/nothing yet/.test(p.textContent || ''); };
 function wire(emit){
   const pool = $('pool');
-  let hadModel = false;
-  if (pool) new MutationObserver(() => {
-    const rows = pool.querySelectorAll('tr').length;
-    const has = rows > 0 && !/nothing yet/.test(pool.textContent || '');
-    if (has && !hadModel) { hadModel = true; emit('modelLoaded', {}); }
-  }).observe(pool, { childList: true, subtree: true });
+  if (pool) new MutationObserver(() => { if (poolHasModel()) emit('modelLoaded', {}); })
+    .observe(pool, { childList: true, subtree: true });
 }
 
 const EVENTS = {
@@ -11905,10 +12294,10 @@ const EVENTS = {
 
 function STEPS(){
   return [
-  { name: 'catchTheBrain', spot: '#dropzone', text: () => kid()
+  { name: 'catchTheBrain', skipIf: poolHasModel, spot: '#dropzone', text: () => kid()
       ? 'First quest: catch a brain! Ask a grown-up to download the starter pack from the address I put in my log, then drag the file into this drop zone.'
       : `First, catch the brain. Download the starter pack — I have put the address in my transcript log so you can copy it: ${STARTER()} — then drag the downloaded zip into this drop zone. Everything runs on your machine; nothing is uploaded anywhere.` },
-  { name: 'dragIn', spot: '#dropzone', allow: '#dropzone,#browseBtn,#fileInput',
+  { name: 'dragIn', skipIf: poolHasModel, spot: '#dropzone', allow: '#dropzone,#browseBtn,#fileInput',
     until: 'modelLoaded',
     text: () => kid()
       ? 'Drag the file in, or press browse. I will wait right here.'
@@ -11935,6 +12324,7 @@ function systemPrompt(){
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to switch rooms when the visitor asked to go there. Show targets: dropzone, pool, start. Tab names: bay, nursery, microscope, hunt. ' +
+    ' Never offer to open or point at a view the status marks as already visible \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'switch to the Nursery', escalations: 'load or delete models', safeVerb: 'SHOW' });
 }
 const SHOW = { dropzone: '#dropzone', pool: '#pool', start: '#startNursery' };
@@ -11983,12 +12373,13 @@ function createGuide(){
       /* master toggles: guide on/off (for the frames), kid, voice */
       const head = document.getElementById('vgHead');
       if (head) {
+        head.style.flexWrap = 'wrap';                 /* never clip: overflow wraps */
         const wrap = document.createElement('span');
-        wrap.style.cssText = 'display:flex;gap:8px;margin-left:auto;font-size:11px;align-items:center';
+        wrap.style.cssText = 'display:flex;gap:10px;margin-left:auto;font-size:11px;align-items:center';
         wrap.innerHTML =
-          '<label style="display:flex;gap:3px;align-items:center;cursor:pointer"><input type="checkbox" id="vgOnAll" checked> guides</label>' +
-          '<label style="display:flex;gap:3px;align-items:center;cursor:pointer"><input type="checkbox" id="vgKid"> little-kid</label>' +
-          '<label style="display:flex;gap:3px;align-items:center;cursor:pointer"><input type="checkbox" id="vgVoice"> voice</label>';
+          '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap"><input type="checkbox" id="vgOnAll" checked> guides</label>' +
+          '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap"><input type="checkbox" id="vgKid"> kid</label>' +
+          '<label style="display:flex;gap:3px;align-items:center;cursor:pointer;white-space:nowrap"><input type="checkbox" id="vgVoice"> voice</label>';
         head.appendChild(wrap);
         const on = wrap.querySelector('#vgOnAll'), k = wrap.querySelector('#vgKid'), v = wrap.querySelector('#vgVoice');
         on.checked = prefs.on; k.checked = prefs.kid; v.checked = prefs.voice;
@@ -12001,6 +12392,17 @@ function createGuide(){
       window.addEventListener('message', e => { const m = e.data; if (!m || m.tm !== 'pref') return;
         if (m.key === 'tm-guide-kid') prefs.kid = m.value === '1';
         if (m.key === 'tm-guide-voice') prefs.voice = m.value === '1'; });
+      /* the shell guide belongs to the bay: when a room's frame
+         covers the shell, hide both the panel and the collapsed tab
+         so it never stacks on the room guide's tab */
+      const bay = document.getElementById('bay');
+      if (bay) { let wasOpen = false;
+        const upd = () => { const off = bay.classList.contains('hide');
+          for (const id of ['vgPanel', 'vgTab']) { const el = document.getElementById(id); if (el) el.style.display = off ? 'none' : ''; }
+          if (off) { wasOpen = document.body.classList.contains('vg-open');
+            document.body.classList.remove('vg-open');   /* release the reserved margin: no dead strip beside the rooms */
+          } else if (wasOpen) { document.body.classList.add('vg-open'); } };
+        new MutationObserver(upd).observe(bay, { attributes: true, attributeFilter: ['class'] }); upd(); }
       /* put the copyable starter URL straight into the transcript */
       a.logAdd('Starter pack: ' + STARTER());
     },
