@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { readCheckpoint } from '../src/bin-reader.js';
 import { Tokenizer } from '../src/tokenizer.js';
 import { createModel, forward } from '../src/model.js';
-import { captureRun, neuronContrast } from '../src/capture.js';
+import { captureRun, neuronContrast, logitLens } from '../src/capture.js';
 import { model260K, tok512 } from './paths.js';
 
 export async function run(t) {
@@ -81,4 +81,24 @@ export async function run(t) {
   // the ablated neuron's tapped activation reads zero
   t.check('ablated neuron activation is zero in the capture',
     nAbl.ffnAt(2, ids.length - 1)[10] === 0 && base.ffnAt(2, ids.length - 1)[10] !== 0);
+
+  // 7) (d) ablation-aware logit lens — the exact worker path (captureRun ablate -> logitLens).
+  // The lens projects a residual snapshot; muting a head must change the residual it
+  // projects at downstream layers, while an empty mute leaves the lens bit-identical.
+  const lensModel = createModel(ck);
+  const pos = ids.length - 1, phase = 'ffn';
+  const lensAt = (cap, l) => logitLens(lensModel, cap, l, pos, phase);
+  const emptyLensCap = captureRun(createModel(ck), ids, { topK: 0, ablate: new Set() });
+  let lensSame = true;
+  for (let l = 0; l < c.nLayers; l++) {
+    const a = lensAt(base, l), b = lensAt(emptyLensCap, l);
+    for (let i = 0; i < a.length; i += 97) if (a[i] !== b[i]) { lensSame = false; break; }
+  }
+  t.check('lens under empty ablation is bit-identical to the un-ablated lens', lensSame);
+  const headLensCap = captureRun(createModel(ck), ids, { topK: 0, ablate: new Set(['0:0', '0:1']) });
+  const topLayer = c.nLayers - 1;
+  let dLens = 0;
+  const lb = lensAt(base, topLayer), lm = lensAt(headLensCap, topLayer);
+  for (let i = 0; i < lb.length; i++) dLens = Math.max(dLens, Math.abs(lb[i] - lm[i]));
+  t.check(`muting L0 heads shifts the final-layer lens (max |Δlogit| = ${dLens.toFixed(3)})`, dLens > 1e-3);
 }

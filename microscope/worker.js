@@ -11,6 +11,7 @@ import { captureRun, logitLens, neuronContrast } from '../src/capture.js';
 
 let model = null, tok = null, config = null;
 let baseCap = null, baseIds = null;
+let lensCap = null, lensKey = null;   // (d) cached ablated capture for the logit lens, keyed by the muted-head set
 
 function pieceOf(ids, i) {
   if (ids[i] === 1) return '(start)';
@@ -65,7 +66,7 @@ self.onmessage = (e) => {
         onProgress: (pos, n) => { if (pos % 8 === 0 || pos === n) self.postMessage({ type: 'progress', pos, n }); },
       });
       const light = !!ablate; // ablated runs: bars/probs only, no attention transfer
-      if (!ablate) { baseCap = cap; baseIds = ids; }
+      if (!ablate) { baseCap = cap; baseIds = ids; lensCap = null; lensKey = null; } // (d) a new base story invalidates the lens cache
       const payload = packRun(cap, ids, light);
       payload.type = ablate ? 'run-ablated' : 'run-done';
       payload.truncated = truncated;
@@ -73,11 +74,26 @@ self.onmessage = (e) => {
       self.postMessage(payload, payload.attention ? [payload.attention] : []);
     } else if (m.type === 'lens') {
       if (!baseCap) throw new Error('run a story first');
+      // (d) ablation-aware lens: when heads are muted, project the ABLATED residual
+      // stream (the whole point — the lens should show what the ablation did to the
+      // forming prediction). Recompute the ablated capture over the SAME token ids and
+      // cache it by the muted-head set, so scrubbing positions under a fixed ablation
+      // recomputes nothing. No ablation -> the original un-ablated baseCap, unchanged.
+      const ablate = m.ablate && m.ablate.length ? m.ablate.slice().sort() : null;
+      let cap = baseCap;
+      if (ablate) {
+        const key = ablate.join(',');
+        if (key !== lensKey) {
+          lensCap = captureRun(model, baseIds, { topK: 0, ablate: new Set(ablate) });
+          lensKey = key;
+        }
+        cap = lensCap;
+      }
       const rows = [];
       const nextTok = m.pos + 1 < baseIds.length ? baseIds[m.pos + 1] : null;
       for (let l = 0; l < config.nLayers; l++) {
         for (const phase of ['attn', 'ffn']) {
-          const logits = logitLens(model, baseCap, l, m.pos, phase);
+          const logits = logitLens(model, cap, l, m.pos, phase);
           let max = -Infinity;
           for (const v of logits) if (v > max) max = v;
           let sum = 0;
@@ -91,7 +107,7 @@ self.onmessage = (e) => {
           });
         }
       }
-      self.postMessage({ type: 'lens-done', pos: m.pos, rows,
+      self.postMessage({ type: 'lens-done', pos: m.pos, rows, ablate: ablate || null,
         nextPiece: nextTok !== null ? tok.decodePiece(baseIds[m.pos], nextTok) : null });
     } else if (m.type === 'neurons') {
       if (!baseCap) throw new Error('run a story first');

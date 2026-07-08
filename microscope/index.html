@@ -253,6 +253,7 @@ worker.onmessage = (e) => {
       (m.truncated ? ' — story was cut to fit the model window' : ''));
     renderStrip(); renderBars(); renderHeat();
     $('lensOut').innerHTML = ''; $('neuronList').innerHTML = ''; $('ablInfo').textContent = '';
+    S.lensOpen = false;   // (d) a fresh story closes the lens; re-open it explicitly
   }
   if (m.type === 'run-ablated') {
     S.ablRun = m;
@@ -364,10 +365,15 @@ function renderBars() {
 }
 
 // ---------- logit lens ----------
-$('lensBtn').onclick = () => worker.postMessage({ type: 'lens', pos: S.sel.end });
+// (d) the heads currently switched off in the ablation lab (empty = full model)
+function mutedHeads() { return [...document.querySelectorAll('#ablGrid input:checked')].map(c => c.dataset.lh); }
+function requestLens() { worker.postMessage({ type: 'lens', pos: S.sel.end, ablate: mutedHeads() }); }
+$('lensBtn').onclick = requestLens;
 function renderLens(m) {
+  const muted = m.ablate && m.ablate.length ? m.ablate : null;
   let html = `<div class="hint">position ${m.pos}` +
-    (m.nextPiece !== null ? ` · real next piece: <b style="color:var(--gold)">${esc(JSON.stringify(m.nextPiece))}</b>` : '') + `</div>
+    (m.nextPiece !== null ? ` · real next piece: <b style="color:var(--gold)">${esc(JSON.stringify(m.nextPiece))}</b>` : '') +
+    (muted ? ` · <b style="color:var(--pink)">with ${muted.join(', ')} muted</b> — this is the prediction FORMING inside the damaged model` : '') + `</div>
     <table><tr><th>layer</th><th>after attention</th><th>after thinking (FFN)</th><th>p(real next)</th></tr>`;
   for (let l = 0; l < S.run.config.nLayers; l++) {
     const a = m.rows.find(r => r.layer === l && r.phase === 'attn');
@@ -377,6 +383,7 @@ function renderLens(m) {
       <td>${f.nextProb !== null ? (100 * f.nextProb).toFixed(1) + '%' : '—'}</td></tr>`;
   }
   $('lensOut').innerHTML = html + '</table>';
+  S.lensOpen = true;   // (d) so ablation changes refresh the lens in place
 }
 
 // ---------- attention ----------
@@ -464,11 +471,13 @@ $('ablRun').onclick = () => {
   if (!heads.length) { $('ablInfo').textContent = 'check at least one head first'; return; }
   S.busy = true; $('runBtn').disabled = true;
   worker.postMessage({ type: 'run', text: $('story').value, ablate: heads });
+  if (S.lensOpen) requestLens();   // (d) keep the lens in sync with the experiment the child just ran
 };
 $('ablClear').onclick = () => {
   document.querySelectorAll('#ablGrid input').forEach(c => c.checked = false);
   S.ablRun = null; $('ablInfo').textContent = '';
   renderBars();
+  if (S.lensOpen) requestLens();   // (d) back to the full-model lens
 };
 
 status('load a model to begin');
