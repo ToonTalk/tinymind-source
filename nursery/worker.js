@@ -45,7 +45,12 @@ function makeEvalBatch(stream, B, T) {
 }
 
 function sampleText(promptText, n = 200) {
-  const model = createModel({ config, weights: trainer.modelWeights() });
+  // Prefer the live trainee's weights; fall back to the loaded checkpoint's own
+  // weights so a time-machine scrub (which loads via init, trainer = null) can still
+  // write a fresh story from a custom prefix. No trainer + no checkpoint -> null.
+  const weights = trainer ? trainer.modelWeights() : (baseCkpt && baseCkpt.weights);
+  if (!weights) return null;
+  const model = createModel({ config, weights });
   let text = generateGreedy(model, tok, promptText, n).text;
   // trim to the last complete sentence so the arc timeline never cuts mid-word
   const m = text.match(/^[\s\S]*[.!?]["”']?(?=\s|$)/);
@@ -143,7 +148,8 @@ self.onmessage = async (e) => {
     } else if (m.type === 'pause') {
       running = false;
     } else if (m.type === 'sample-now') {
-      if (trainer) self.postMessage({ type: 'sample', step, text: sampleText(m.prompt ?? trainOpts.prompt) });
+      const text = sampleText(m.prompt ?? (trainOpts && trainOpts.prompt));
+      if (text != null) self.postMessage({ type: 'sample', step, text });
     } else if (m.type === 'probe-fact') {
       // vg guide pre-flight (additive): piece-count a word + base-model p(word | context).
       // Existing forward machinery only; no training or parity path is touched.

@@ -133,9 +133,7 @@
   </div>
 </div>
 
-<script type="module">
-import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
-const $ = id => document.getElementById(id);
+<script type="module">const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
 let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -253,11 +251,11 @@ worker.onmessage = (e) => {
     if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
     S.run = null; S.att = null; S.ablRun = null; S.neuron = null;
-    $('modelInfo').textContent =
-      `dim ${m.config.dim} · ${m.config.nLayers} layers · ${m.config.nHeads} heads · ${m.config.hiddenDim} neurons/layer · vocab ${m.config.vocabSize}`;
+    $('modelInfo').innerHTML =
+      (() => { const chip = (k, t) => `<span class="vg-chip" data-vg-explain="${k}" style="cursor:help;border-bottom:1px dotted currentColor" title="click to ask the guide">${t}</span>`; return `${chip('dim','dimension ' + m.config.dim)} · ${chip('layers', m.config.nLayers + ' layers')} · ${chip('heads', m.config.nHeads + ' attention heads')} · ${chip('neurons', m.config.hiddenDim + ' neurons per layer')} · ${chip('vocab', m.config.vocabSize + ' vocabulary')}`; })();
     $('runBtn').disabled = false;
     buildAttSelectors(); buildAblGrid();
-    status('model ready — now look inside a story');
+    status('model ready — now look inside a story'); { const dz = $('drop'); if (dz) dz.textContent = 'model loaded — drop another .bin here to swap it'; }
   }
   if (m.type === 'progress') {
     const bar = $('progress').firstElementChild;
@@ -301,7 +299,7 @@ worker.onmessage = (e) => {
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
     setAblActive(true, m.ablate, new Float32Array(m.attention));
   }
-  if (m.type === 'lens-done') renderLens(m);
+  if (m.type === 'lens-done') { S.lastLens = m; renderLens(m); }
   if (m.type === 'neurons-done') renderNeurons(m);
   if (m.type === 'neuron-acts-done') {
     S.neuron = { layer: m.layer, neuron: m.neuron, acts: new Float32Array(m.acts) };
@@ -347,7 +345,7 @@ function renderStrip() {
       const v = weights(i);
       if (v > 0.02) sp.style.background = S.overlay === 'attn' ? overlayColor(v) : neuronColor(v);
     }
-    sp.title = `pos ${i} · p(this piece was next) = ${i > 0 ? (100 * S.run.nextProb[i - 1]).toFixed(1) + '%' : '—'}`;
+    sp.title = `pos ${i} · p(this piece was next) = ${i > 0 ? window.__vgPct(S.run.nextProb[i - 1]) : '—'}`;
     sp.onclick = ev => {
       if (ev.shiftKey) {
         S.sel.start = Math.min(S.sel.start, i); S.sel.end = Math.max(S.sel.end, i);
@@ -382,12 +380,12 @@ function renderBars() {
     html += `<div class="bar-row${isActual ? ' actual' : ''}">
       <div class="bar-label">${esc(JSON.stringify(r.piece))}</div>
       <div class="bar-outer"><div class="bar" style="width:${(100 * r.prob).toFixed(2)}%"></div>${ablBar}</div>
-      <div class="bar-pct">${(100 * r.prob).toFixed(1)}%${abl ? ' → ' + (100 * (abl.find(a => a.token === r.token)?.prob ?? 0)).toFixed(1) + '%' : ''}</div>
+      <div class="bar-pct">${window.__vgPct(r.prob)}${abl ? ' → ' + window.__vgPct(abl.find(a => a.token === r.token)?.prob ?? 0) : ''}</div>
     </div>`;
   }
   if (actualPiece !== null) {
-    html += `<div class="hint">what really came next: <b style="color:var(--gold)">${esc(JSON.stringify(actualPiece))}</b> — model gave it ${(100 * S.run.nextProb[pos]).toFixed(1)}%` +
-      (S.ablRun ? ` · with heads off: ${(100 * S.ablRun.nextProb[pos]).toFixed(1)}%` : '') + '</div>';
+    html += `<div class="hint">what really came next: <b style="color:var(--gold)">${esc(JSON.stringify(actualPiece))}</b> — model gave it ${window.__vgPct(S.run.nextProb[pos])}` +
+      (S.ablRun ? ` · with heads off: ${window.__vgPct(S.ablRun.nextProb[pos])}` : '') + '</div>';
   }
   if (S.ablRun) html += `<div class="hint">■ blue = full model · ■ pink = heads off (${S.ablRun.ablate.join(', ')})</div>`;
   el.innerHTML = html;
@@ -405,9 +403,9 @@ function renderLens(m) {
   for (let l = 0; l < S.run.config.nLayers; l++) {
     const a = m.rows.find(r => r.layer === l && r.phase === 'attn');
     const f = m.rows.find(r => r.layer === l && r.phase === 'ffn');
-    const cell = r => r.top.map(t => `${esc(JSON.stringify(t.piece))} ${(100 * t.prob).toFixed(0)}%`).join(' · ');
+    const cell = r => r.top.map(t => `${esc(JSON.stringify(t.piece))} ${window.__vgPct(t.prob, 0)}`).join(' · ');
     html += `<tr><td>${l}</td><td>${cell(a)}</td><td>${cell(f)}</td>
-      <td>${f.nextProb !== null ? (100 * f.nextProb).toFixed(1) + '%' : '—'}</td></tr>`;
+      <td>${f.nextProb !== null ? window.__vgPct(f.nextProb) : '—'}</td></tr>`;
   }
   $('lensOut').innerHTML = html + '</table>';
   S.lensOpen = true;   // (d) so ablation changes refresh the lens in place
@@ -451,7 +449,7 @@ function renderHeat() {
     const x = Math.floor((ev.clientX - r.left) / scale), y = Math.floor((ev.clientY - r.top) / scale);
     if (x >= 0 && y >= 0 && x < n && y < n && x <= y) {
       $('heatInfo').textContent =
-        `${JSON.stringify(S.run.pieces[y])} looks at ${JSON.stringify(S.run.pieces[x])}: ${(100 * att[base + y * n + x]).toFixed(1)}%`;
+        `${JSON.stringify(S.run.pieces[y])} looks at ${JSON.stringify(S.run.pieces[x])}: ${window.__vgPct(att[base + y * n + x])}`;
     }
   };
   cv.onclick = ev => {

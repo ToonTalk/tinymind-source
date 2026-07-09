@@ -25,8 +25,8 @@ export async function run(t) {
     (mega.match(/tiny-mind frame bridge/g) || []).length >= 3);
   t.check('mega: every app carries an inlined worker',
     (mega.match(/__WORKER_SRC__ = "/g) || []).length === 3);
-  t.check('mega: shell autoloads the arc manifest (arc kickoff deliverable 2)',
-    mega.includes("fetch('arc/arc-manifest.json')"));
+  t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
+    mega.includes("fetch('arc/arcs.json')") && mega.includes('manifest.more || []'));
   t.check('mega: guided layer present in all four docs (vg-core ×4, prelude ×3, shell adapter)',
     (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 4 &&
     (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 3 &&

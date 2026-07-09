@@ -157,10 +157,17 @@ window.__vgSetPref = function(key, value){
    phrase() picks the denominator by magnitude; grid() draws the
    dots; chip() offers the picture in the guide panel. */
 window.__vgOdds = {
-  phrase(p, kid){
-    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
-    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+  phrase(p, kid, opts){
+    const tight = !!(opts && opts.compact);          // compact: fits a table cell ("7 in 100")
+    if (p == null || !isFinite(p) || p <= 0) return kid ? (tight ? 'never' : 'almost never') : 'about 0%';
+    if (p >= 0.995) return kid ? (tight ? 'always' : 'almost always') : 'about 100%';
     const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid && tight) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' in 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' in 1000';
+      if (p >= 0.000005) return '1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' in a million';
+    }
     if (kid) {
       if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
       if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
@@ -251,6 +258,42 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The one formatter the app's own readouts call, so a percentage never
+   survives kid mode. Probabilities only: a percentage-point *change*
+   stays a percentage, because "3 in 100" would misdescribe it. */
+window.__vgPct = function(p, dp){
+  if (p == null || !isFinite(p)) return '\u2014';
+  if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)
+    return window.__vgOdds.phrase(p, true, { compact: true });
+  return (100 * p).toFixed(dp == null ? 1 : dp) + '%';
+};
+
+/* SHOW must not spotlight a view that has not been drawn yet: an
+   empty div gets an invisible halo and the visitor sees nothing. If
+   the target is missing, hidden, or empty, point at the control that
+   produces it and say so. (offsetParent is unreliable under test
+   harnesses, so visibility is judged by the app's own .hide
+   convention plus computed display.) */
+window.__vgHidden = function(el){
+  if (!el) return true;
+  if (el.hidden || /(^|\s)hide(\s|$)/.test(el.className || '')) return true;
+  try { return el.ownerDocument.defaultView.getComputedStyle(el).display === 'none'; } catch (_) { return false; }
+};
+window.__vgShow = function(api, spec){
+  const t = typeof spec === 'string' ? { sel: spec } : (spec || {});
+  const el = t.sel && document.querySelector(t.sel);
+  const empty = !el || !((el.textContent || '').trim() || el.children.length || el.value);
+  if (el && !window.__vgHidden(el) && !empty) { api.spot(t.sel); return true; }
+  if (t.needs) api.spot(t.needs);
+  api.emit('showBlocked', { why: t.why, kidWhy: t.kidWhy });
+  return false;
+};
+window.__vgShowBlockedEvent = {
+  priority: 'moment', cooldownMs: 1200,
+  lines: p => (p && p.why) || 'That view has not been drawn yet — press the control I am pointing at first.',
+  kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 
 /* The ghostwriter and the detective remember keys in localStorage
@@ -1931,7 +1974,7 @@ function splitArcPacks(recs) {
 // Unknown arcs fall back to the manifest's own note, then the arc id — so Arc A
 // arriving later needs zero code changes, and so does Arc Q.
 const KID_LABELS = {
-  arcB: 'the trainee learning Zog (and then just memorizing)',
+  arcB: 'a mind learning your character (and then just memorizing)',
   arcA: 'a brand-new mind growing up',
 };
 function arcKidLabel(manifest) {
@@ -2135,8 +2178,6 @@ const EMBEDDED_WORDLIST = ["the","and","to","a","was","he","she","it","they","he
 const EMBEDDED_BASE_STORIES = ["Once upon a time, there was a little girl named Lily. She had a red ball. She liked to play with it in the park. One day the ball rolled into a puddle. Lily was sad, but her mom helped her wash it. Then Lily was happy again.","Tom had a small dog named Max. Max liked to run and jump. Every morning Tom and Max went for a walk. They saw birds in the trees. Max wagged his tail and Tom laughed. They were good friends.","Ben found a shiny rock by the pond. It was smooth and gray. He wanted to show his mom. He ran home fast. His mom smiled and said it was very pretty. Ben put the rock on his shelf.","Sara and her brother made a cake. They mixed the flour and the eggs. The cake smelled so good. When it was done, they gave a piece to their dad. He said it was the best cake ever. Everyone was happy.","There was a cat named Mia. Mia liked to sleep in the warm sun. One day it started to rain. Mia ran inside and hid under the bed. When the sun came back, she went out to play again.","A little boy named Sam had a blue kite. He took it to the hill on a windy day. The kite went up, up, up into the sky. Sam held the string tight and watched it fly. He was so proud.","Anna wanted to help her grandma in the garden. They planted seeds in the dirt and gave them water. Every day Anna checked the plants. After many days, little green leaves came up. Anna was very glad.","One day a duck went to the pond. She saw a frog on a big green leaf. The frog said hello. The duck and the frog played all day. When the sun went down, they said goodbye and went home.","Timmy lost his teddy bear. He looked under the bed and behind the door. He could not find it. He was very sad. Then his mom found it in the car. Timmy hugged his bear and smiled.","A girl named Lucy had a new dress. It was yellow with white flowers. She wore it to the party. All her friends said it was pretty. Lucy danced and laughed. It was a very fun day.","There was a big tree in the yard. A small bird made a nest in it. Soon there were three little eggs. The mother bird kept them warm. One day the eggs opened and baby birds came out.","Jack and Emma went to the beach. They made a castle in the sand. The waves came and washed it away. But they were not sad. They just made a new castle. They played until it was time to go.","A little mouse was very hungry. He looked for food in the kitchen. He found a piece of cheese under the table. He was so happy. He ate it all up and then went back to his cozy hole.","Molly had a red bike. She wanted to ride it, but she was scared. Her dad held the bike and helped her. Soon Molly could ride all by herself. She felt brave and strong. She rode all around the park.","One morning the sun was bright. A boy named Leo went outside to play. He saw a butterfly with pretty wings. It landed on a flower. Leo watched it very quietly. Then it flew away into the sky.","Sue baked cookies with her mom. They put them on a plate to cool. The cookies were warm and sweet. Sue gave one to her little sister. Her sister smiled and said thank you. They ate them together.","A dog named Rex liked to dig in the yard. One day he dug a big hole. He found an old bone in the dirt. He was so happy. He picked it up and ran to show the other dogs.","There was a little fish in the sea. She liked to swim near the rocks. One day she met a crab. The crab was funny and kind. They swam and played all day. The little fish was not lonely anymore.","Kate had a balloon at the fair. It was big and round and red. She held the string very tight. The wind was strong, but she did not let go. She kept her balloon all the way home.","A boy named Max helped his mom clean the house. He put his toys away in the box. He wiped the table and swept the floor. His mom said he was a big help. Max felt very proud of himself."];
 
 
-
-
 const $ = id => document.getElementById(id);
 let worker, workerMode = 'background worker';
 try {
@@ -2257,11 +2298,11 @@ worker.onmessage = (e) => {
     if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
     S.run = null; S.att = null; S.ablRun = null; S.neuron = null;
-    $('modelInfo').textContent =
-      `dim ${m.config.dim} · ${m.config.nLayers} layers · ${m.config.nHeads} heads · ${m.config.hiddenDim} neurons/layer · vocab ${m.config.vocabSize}`;
+    $('modelInfo').innerHTML =
+      (() => { const chip = (k, t) => `<span class="vg-chip" data-vg-explain="${k}" style="cursor:help;border-bottom:1px dotted currentColor" title="click to ask the guide">${t}</span>`; return `${chip('dim','dimension ' + m.config.dim)} · ${chip('layers', m.config.nLayers + ' layers')} · ${chip('heads', m.config.nHeads + ' attention heads')} · ${chip('neurons', m.config.hiddenDim + ' neurons per layer')} · ${chip('vocab', m.config.vocabSize + ' vocabulary')}`; })();
     $('runBtn').disabled = false;
     buildAttSelectors(); buildAblGrid();
-    status('model ready — now look inside a story');
+    status('model ready — now look inside a story'); { const dz = $('drop'); if (dz) dz.textContent = 'model loaded — drop another .bin here to swap it'; }
   }
   if (m.type === 'progress') {
     const bar = $('progress').firstElementChild;
@@ -2305,7 +2346,7 @@ worker.onmessage = (e) => {
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
     setAblActive(true, m.ablate, new Float32Array(m.attention));
   }
-  if (m.type === 'lens-done') renderLens(m);
+  if (m.type === 'lens-done') { S.lastLens = m; renderLens(m); }
   if (m.type === 'neurons-done') renderNeurons(m);
   if (m.type === 'neuron-acts-done') {
     S.neuron = { layer: m.layer, neuron: m.neuron, acts: new Float32Array(m.acts) };
@@ -2351,7 +2392,7 @@ function renderStrip() {
       const v = weights(i);
       if (v > 0.02) sp.style.background = S.overlay === 'attn' ? overlayColor(v) : neuronColor(v);
     }
-    sp.title = `pos ${i} · p(this piece was next) = ${i > 0 ? (100 * S.run.nextProb[i - 1]).toFixed(1) + '%' : '—'}`;
+    sp.title = `pos ${i} · p(this piece was next) = ${i > 0 ? window.__vgPct(S.run.nextProb[i - 1]) : '—'}`;
     sp.onclick = ev => {
       if (ev.shiftKey) {
         S.sel.start = Math.min(S.sel.start, i); S.sel.end = Math.max(S.sel.end, i);
@@ -2386,12 +2427,12 @@ function renderBars() {
     html += `<div class="bar-row${isActual ? ' actual' : ''}">
       <div class="bar-label">${esc(JSON.stringify(r.piece))}</div>
       <div class="bar-outer"><div class="bar" style="width:${(100 * r.prob).toFixed(2)}%"></div>${ablBar}</div>
-      <div class="bar-pct">${(100 * r.prob).toFixed(1)}%${abl ? ' → ' + (100 * (abl.find(a => a.token === r.token)?.prob ?? 0)).toFixed(1) + '%' : ''}</div>
+      <div class="bar-pct">${window.__vgPct(r.prob)}${abl ? ' → ' + window.__vgPct(abl.find(a => a.token === r.token)?.prob ?? 0) : ''}</div>
     </div>`;
   }
   if (actualPiece !== null) {
-    html += `<div class="hint">what really came next: <b style="color:var(--gold)">${esc(JSON.stringify(actualPiece))}</b> — model gave it ${(100 * S.run.nextProb[pos]).toFixed(1)}%` +
-      (S.ablRun ? ` · with heads off: ${(100 * S.ablRun.nextProb[pos]).toFixed(1)}%` : '') + '</div>';
+    html += `<div class="hint">what really came next: <b style="color:var(--gold)">${esc(JSON.stringify(actualPiece))}</b> — model gave it ${window.__vgPct(S.run.nextProb[pos])}` +
+      (S.ablRun ? ` · with heads off: ${window.__vgPct(S.ablRun.nextProb[pos])}` : '') + '</div>';
   }
   if (S.ablRun) html += `<div class="hint">■ blue = full model · ■ pink = heads off (${S.ablRun.ablate.join(', ')})</div>`;
   el.innerHTML = html;
@@ -2409,9 +2450,9 @@ function renderLens(m) {
   for (let l = 0; l < S.run.config.nLayers; l++) {
     const a = m.rows.find(r => r.layer === l && r.phase === 'attn');
     const f = m.rows.find(r => r.layer === l && r.phase === 'ffn');
-    const cell = r => r.top.map(t => `${esc(JSON.stringify(t.piece))} ${(100 * t.prob).toFixed(0)}%`).join(' · ');
+    const cell = r => r.top.map(t => `${esc(JSON.stringify(t.piece))} ${window.__vgPct(t.prob, 0)}`).join(' · ');
     html += `<tr><td>${l}</td><td>${cell(a)}</td><td>${cell(f)}</td>
-      <td>${f.nextProb !== null ? (100 * f.nextProb).toFixed(1) + '%' : '—'}</td></tr>`;
+      <td>${f.nextProb !== null ? window.__vgPct(f.nextProb) : '—'}</td></tr>`;
   }
   $('lensOut').innerHTML = html + '</table>';
   S.lensOpen = true;   // (d) so ablation changes refresh the lens in place
@@ -2455,7 +2496,7 @@ function renderHeat() {
     const x = Math.floor((ev.clientX - r.left) / scale), y = Math.floor((ev.clientY - r.top) / scale);
     if (x >= 0 && y >= 0 && x < n && y < n && x <= y) {
       $('heatInfo').textContent =
-        `${JSON.stringify(S.run.pieces[y])} looks at ${JSON.stringify(S.run.pieces[x])}: ${(100 * att[base + y * n + x]).toFixed(1)}%`;
+        `${JSON.stringify(S.run.pieces[y])} looks at ${JSON.stringify(S.run.pieces[x])}: ${window.__vgPct(att[base + y * n + x])}`;
     }
   };
   cv.onclick = ev => {
@@ -2958,6 +2999,7 @@ function create(A){
     if(spec.condition&&!spec.condition(payload)) return;
     if(spec.once&&vgEvOnceDone.has(name)) return;
     if(spec.cooldownMs&&Date.now()-(vgEvLastAt.get(name)||0)<spec.cooldownMs) return;
+    if(vgEvQueue.some(q=>q.name===name)) return;   // a burst of the same event (e.g. two run-done in a tick) enqueues once
     const pr=spec.priority||'moment';
     if(pr==='ambient'){
       if(vgSpeakDepth>0||vgEvQueue.length) return;    // ambient never waits
@@ -3100,10 +3142,12 @@ function create(A){
       prompts.status()+'\n\n'+
       'The visitor now asks the guide: '+q;
   }
-  function vgExtractDo(t){
-    const m=String(t).match(/\n\s*DO:\s*([A-Z_]+)\s*(.*?)\s*$/);
-    if(!m) return {text:String(t).trim(),act:null};
-    return {text:String(t).slice(0,m.index).trim(),act:{verb:m[1],args:m[2].trim()}};
+  function vgExtractDo(t){                          // the directive ends the reply; models often keep it on the prose line
+    const s=String(t);
+    const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
+    if(!m) return {text:s.trim(),act:null};
+    const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
+    return {text,act:{verb:m[1],args:m[2].trim()}};
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -3157,11 +3201,31 @@ function create(A){
     const err=new Error('no live AI connection'); err.vgNoAI=true; throw err;
   }
 
-  async function vgAsk(q){
+/* click-to-ask: adapters register short glossary notes for on-screen
+     terms (api.explainable); clicking one, or asking about it, routes an
+     explain-this question through the same LLM path, seeded with the
+     note so the answer is grounded rather than guessed. */
+  const vgGloss=new Map();                          // key -> {label, note, kidNote?}
+  function vgExplainable(map){
+    for(const k in map) vgGloss.set(k,map[k]);
+    return (ev)=>{ const el=ev.target&&ev.target.closest&&ev.target.closest('[data-vg-explain]');
+      if(!el) return; ev.preventDefault(); ev.stopPropagation();
+      vgSetPanel(true); vgExplainTopic(el.getAttribute('data-vg-explain')); };
+  }
+  function vgExplainTopic(key){
+    const g=vgGloss.get(key); if(!g) return;
+    const kid=(A.lineMode&&A.lineMode()==='kid');
+    const note=(kid&&g.kidNote)||g.note;
+    const q='Explain this part of the screen to me: "'+(g.label||key)+'". '+
+      (note?'Here is what it is, in one line, so you can put it in your own words'+(kid?' for a young child':'')+': '+note:'')+
+      ' Keep it to a sentence or two.';
+    vgAsk(q, 'What is "'+(g.label||key)+'"?');   // the visitor sees the short question, not the seeded note
+  }
+  async function vgAsk(q, shown){
     q=(q||'').trim(); if(!q) return;
     if(vgState==='running') vgPauseCore();
     const g=++vgGen; vgSynthCancel(); vgUpdateBar();
-    vgLogAdd(q,'user'); vgFaceThink(true); vgStatus('thinking\u2026');
+    vgLogAdd((shown||q),'user'); vgFaceThink(true); vgStatus('thinking\u2026');
     const sys=vgSystem(), usr=vgUserPrompt(q);
     vgQA.push({role:'user',content:q});
     try{
@@ -3285,7 +3349,8 @@ function create(A){
     spot:vgSpot, respot:vgRespot, unspot:vgUnspot,
     speak:vgSpeak, logAdd:vgLogAdd, status:vgStatus,
     ratify:vgRatify, showConfirm:vgShowConfirm, notify,
-    emit:vgEmit, on:vgEvOn, off:vgEvOff, waitFor:vgWaitFor, track:vgTrack,   // v2 event bus
+    emit:vgEmit, on:vgEvOn, off:vgEvOff, waitFor:vgWaitFor, track:vgTrack,
+    explain:vgExplainTopic, explainable:vgExplainable,   // v2 event bus
     keylessCall:vgKeylessAnthropic,
     get inClaude(){ return vgInClaude; },
     get micPolicyBlocked(){ return vgMicPolicyBlocked; },
@@ -3336,14 +3401,39 @@ const F = window.VoiceGuide.fragments;
 const kid = () => window.__vgPrefs.kid;
 let api = null;
 
+let ablCount = 0, lastFull = null, lastCaptureSig = null;
+/* the real-next piece's chance before vs after the mute, taken from
+   the two worker payloads at the position the guess-o-meter shows (the
+   selection end). Lets the kid line say the odds and the drop in
+   points rather than a bare percentage. */
+function ablDelta(ablMsg){
+  try {
+    if (!lastFull || !ablMsg || !lastFull.nextProb || !ablMsg.nextProb) return null;
+    const arr = lastFull.nextProb;
+    let pos = -1, best = -1;                          // the headline piece = highest full-model confidence
+    for (let i = 0; i < arr.length; i++) if (arr[i] != null && arr[i] > best) { best = arr[i]; pos = i; }
+    if (pos < 0 || ablMsg.nextProb[pos] == null) return null;
+    return { before: arr[pos], after: ablMsg.nextProb[pos] };
+  } catch (_) { return null; }
+}
 function wire(emit){
   window.__vgW.taps.push((dir, m) => {
     if (dir !== 'in' || !m || !m.type) return;
-    if (m.type === 'run-done')        emit('captureDone', { n: m.n });
-    if (m.type === 'run-ablated')     emit('ablationVerdict', { ablate: m.ablate });
+    if (m.type === 'run-done')      {
+      const sig = (m.n || 0) + ':' + ((m.pieces && m.pieces.join('|')) || (m.nextProb && m.nextProb.length) || '');
+      lastFull = m;
+      if (sig !== lastCaptureSig) { lastCaptureSig = sig; emit('captureDone', { n: m.n }); }   // one confirmation per distinct capture
+    }
+    /* the whole bench refreshes on every ablation, so this arrives in
+       bursts; say the lesson once and vary the acknowledgements after */
+    if (m.type === 'run-ablated') {
+      const d = ablDelta(m);
+      emit(++ablCount === 1 ? 'ablationVerdict' : 'ablationAgain', { ablate: m.ablate, n: ablCount, d });
+    }
     if (m.type === 'neuron-acts-done') emit('neuronSelected', { layer: m.layer, neuron: m.neuron });
     if (m.type === 'neurons-done')    emit('neuronsRanked', {});
     if (m.type === 'loaded')          setTimeout(maybePrefillStory, 80);
+    if (m.type === 'progress')        setTimeout(maybePrefillStory, 0);
   });
 }
 
@@ -3358,27 +3448,90 @@ async function maybePrefillStory(){
   try {
     if (!window.storage || typeof window.storage.list !== 'function') return;
     const info = ($('modelInfo') && $('modelInfo').textContent) || '';
-    if (/zog/i.test(info)) return;
+    if (!info || /zog/i.test(info)) return;          // wait for a model, and leave the Zog demo alone
     const el = $('story');
-    if (!el || (storyDefault !== null && el.value !== storyDefault)) return;
-    const r = await window.storage.list('tm-sample-');
-    if (!r || !r.keys || !r.keys.includes('tm-sample-latest')) return;
-    const it = await window.storage.get('tm-sample-latest');
-    const o = JSON.parse(it.value);
-    if (o && o.text) { el.value = o.text; window.vgEmit('storyPrefilled', { name: o.name }); }
+    const untouched = !el ? false : (el.value === storyDefault || el.value === window.__vgStoryDemo || !el.value.trim());
+    if (!el || !untouched) return;
+    const keys = ((await window.storage.list('tm-')) || {}).keys || [];
+    let text = null, who = null, source = null;
+    if (keys.includes('tm-sample-latest')) {         // best: a story this mind wrote itself
+      const o = JSON.parse((await window.storage.get('tm-sample-latest')).value);
+      if (o && o.text) { text = o.text; who = o.name; source = 'sample'; }
+    }
+    if (!text) {                                     // next best: a story it grew up on
+      const bk = keys.find(k => k.indexOf('tm-book-') === 0);
+      if (bk) {
+        const o = JSON.parse((await window.storage.get(bk)).value);
+        const first = (o.book || []).find(x => x && x.text);
+        if (first) { text = first.text; who = o.sheet && o.sheet.name; source = 'book'; }
+      }
+    }
+    if (!text) return;
+    el.value = text; storyDefault = text;
+    window.vgEmit('storyPrefilled', { name: who, source });
   } catch (_) {}
 }
 
+/* the switch-off in the visitor's own units: the odds before, the odds
+   now, and the gap in points -- concrete where a bare percentage is not */
+function deltaLine(p, kid){
+  const d = p && p.d; if (!d || d.before == null || d.after == null) return null;
+  const O = window.__vgOdds, k = kid && O;
+  const b = k ? O.phrase(d.before, true, { compact: true }) : (100 * d.before).toFixed(0) + '%';
+  const a = k ? O.phrase(d.after, true, { compact: true }) : (100 * d.after).toFixed(0) + '%';
+  const pts = Math.round(Math.abs(d.before - d.after) * 100);
+  if (pts < 1) return kid
+    ? `Barely moved \u2014 the guess stayed about ${b}. So the answer does not really live in that piece. Try muting a whole team!`
+    : `Almost no change \u2014 still about ${a}. That piece is not where the fact lives; climb to a whole layer team.`;
+  const dir = d.after < d.before ? 'down' : 'up';
+  return kid
+    ? `The odds were ${b}, now ${a} \u2014 ${dir} ${pts} point${pts === 1 ? '' : 's'}. The bigger the drop, the more the mind needed that piece.`
+    : `The real-next odds went ${b} \u2192 ${a}, ${dir} ${pts} point${pts === 1 ? '' : 's'}. The size of that drop is how much the answer leaned on what you muted.`;
+}
+
+/* rotating follow-ups: a guide that repeats itself verbatim stops
+   being listened to */
+const AGAIN = [
+  'Blue is the whole mind, pink is the mind with that piece muted. The gap between them is what the piece was worth.',
+  'Barely a dent? Then the fact does not live there alone. Mute a whole layer team and watch the cliff.',
+  'Compare that gap with the last one. The bigger the gap, the more the answer depended on what you silenced.',
+  'Every mute is one suspect eliminated or convicted. Both are progress.',
+];
+const AGAIN_KID = [
+  'Blue is the whole mind. Pink is the mind with that piece switched off. How big is the gap?',
+  'Hardly changed? Then the treasure is not in that piece by itself. Try switching off a whole team!',
+  'Bigger gap means that piece mattered more. Smaller gap means it barely helped.',
+  'Every switch-off tells you something, even when nothing happens.',
+];
+
+/* on-screen terms the guide can explain on click (or when asked). */
+const MIC_TERMS = {
+  dim: { label: 'dimension', note: 'the width of the mind: how many numbers it uses to describe each piece of text as it thinks.', kidNote: 'how many numbers the mind uses to think about each little piece of a word.' },
+  layers: { label: 'layers', note: 'how many times in a row the mind reconsiders the text, each layer refining the last.', kidNote: 'how many times the mind thinks about the story over and over.' },
+  heads: { label: 'attention heads', note: 'parallel lookers per layer; each head can watch a different earlier word while reading the current one.', kidNote: 'little lookers that each watch a different earlier word.' },
+  neurons: { label: 'neurons per layer', note: 'the size of each layer’s scratchpad: how many little units do the thinking inside one layer.', kidNote: 'how many tiny thinking bits are inside each layer.' },
+  vocab: { label: 'vocabulary', note: 'how many different pieces this mind can read and write — its whole alphabet.', kidNote: 'all the different little pieces of words this mind knows.' },
+  guessometer: { label: 'guess-o-meter', note: 'how sure the mind is about each possible next piece after the selected one; bar length is the chance.', kidNote: 'how sure the mind is about what comes next. Longer bar means more sure.' },
+  logitlens: { label: 'logit lens', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
+};
+
 const EVENTS = {
   storyPrefilled: { priority: 'moment', once: true, spot: '#story',
-    lines: p => `I put one of ${p && p.name ? p.name + "'s" : 'your character\u2019s'} own stories in the box \u2014 the stories it grew up on make the best specimens.`,
-    kidLines: 'I put one of your own stories in the box \u2014 those are the best ones to look inside with!' },
+    lines: p => (p && p.source === 'sample')
+      ? `I put a story this very mind wrote in the box \u2014 looking inside a mind while it reads its own words is the sharpest specimen there is.`
+      : `I put one of the stories ${p && p.name ? p.name : 'your character'} grew up on in the box \u2014 words it has actually seen make the clearest patterns.`,
+    kidLines: p => (p && p.source === 'sample')
+      ? 'I put a story this mind wrote itself in the box. Let us look inside while it reads its own words!'
+      : 'I put one of the stories it grew up on in the box \u2014 those are the best ones to look inside with!' },
   captureDone: { priority: 'moment', cooldownMs: 20000,
     lines: 'Captured — every attention pattern, every neuron, for every word of that story. All of it is yours to poke at.',
     kidLines: 'Got it! The microscope took a picture of every thought the mind had about that story.' },
-  ablationVerdict: { priority: 'verdict', cooldownMs: 8000,
-    lines: 'There is your before-and-after. Remember which one counts: the pretty patterns suggested, but the switch-off decided.',
-    kidLines: 'See the before and after? Switching pieces off is the real test!' },
+  ablationVerdict: { priority: 'verdict', once: true, cooldownMs: 8000,
+    lines: p => deltaLine(p, false) || 'There is your before-and-after. Remember which one counts: the pretty patterns suggested, but the switch-off decided.',
+    kidLines: p => deltaLine(p, true) || 'See the before and after? Switching pieces off is the real test!' },
+  ablationAgain: { priority: 'ambient', cooldownMs: 15000,
+    lines: p => deltaLine(p, false) || AGAIN[(p.n - 2) % AGAIN.length],
+    kidLines: p => deltaLine(p, true) || AGAIN_KID[(p.n - 2) % AGAIN_KID.length] },
   neuronSelected: { priority: 'ambient', cooldownMs: 20000,
     lines: 'That strip shows where this one neuron fires across the whole story. Bright spans are its favorite moments.',
     kidLines: 'That stripe shows when this one tiny piece wakes up in the story.' },
@@ -3408,7 +3561,7 @@ function STEPS(){
 
 function statusText(){
   const vis = id => { const el = $(id);
-    return !!(el && el.offsetParent !== null && ((el.textContent || '').trim() || el.children.length)); };
+    return !!(el && !window.__vgHidden(el) && ((el.textContent || '').trim() || el.children.length)); };
   return `Story box: ${($('story') && $('story').value.slice(0, 200)) || 'empty'}. ` +
     `Model info: ${($('modelInfo') && $('modelInfo').textContent) || 'unknown'}. ` +
     `Status: ${($('status') && $('status').textContent) || ''}. ` +
@@ -3427,10 +3580,26 @@ function systemPrompt(){
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
     ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
+    ' A view marked "not shown" cannot be shown yet: say which button makes it first, rather than promising to display it. ' +
+    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the logit lens is an early peek at what it would say if it stopped thinking halfway. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
-const SHOW = { story: '#story', run: '#runBtn', attention: '#heat', neurons: '#neuronList',
-  ablation: '#ablGrid', lens: '#lensOut', bars: '#bars' };
+/* every view that only exists after a capture names the control that
+   makes it, so SHOW can point there instead of at an empty box */
+const NEEDS_RUN = { needs: '#runBtn',
+  why: 'Nothing has been captured yet, so there is nothing to look at. Press look inside on your story first — I am pointing at the button.',
+  kidWhy: 'The microscope has not looked yet! Press the look inside button I am pointing at, and then it will be there.' };
+const SHOW = {
+  story: '#story', run: '#runBtn',
+  attention: Object.assign({ sel: '#heat' }, NEEDS_RUN),
+  bars: Object.assign({ sel: '#bars' }, NEEDS_RUN),
+  neurons: { sel: '#neuronList', needs: '#neuronBtn',
+    why: 'The neuron list is empty until you rank them. Press the neuron button I am pointing at.',
+    kidWhy: 'No neurons found yet! Press the button I am pointing at to go looking for them.' },
+  lens: { sel: '#lensOut', needs: '#lensBtn',
+    why: 'The layer lens has not been run for this story yet. Press the lens button I am pointing at.',
+    kidWhy: 'The lens has not peeked yet! Press the button I am pointing at.' },
+  ablation: '#ablGrid' };
 
 function createGuide(){
   const A = {
@@ -3455,7 +3624,7 @@ function createGuide(){
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!micCfg().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, micCfg),
       noAI: { say: 'I cannot reach a live A I from here right now, but every instrument in the lab runs on your machine.' } },
-    verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
+    verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
@@ -3464,7 +3633,19 @@ function createGuide(){
           say: 'The microscope has no key box of its own. Paste a key into the Nursery ghostwriter (tick "remember this key") and I can talk live here too. Every instrument on the bench works without one.' };
       return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
-    init(a){ api = a; storyDefault = ($('story') && $('story').value) || null; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
+    init(a){ api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
+      storyDefault = ($('story') && $('story').value) || null;
+      window.__vgStoryDemo = storyDefault;
+      document.addEventListener('click', a.explainable(MIC_TERMS));
+      window.__vgMicRefresh = () => { try { if (typeof renderBars === 'function' && S.run) renderBars();
+        if (typeof renderLens === 'function' && S.lastLens) renderLens(S.lastLens); } catch (e) {} };
+      { const kc = document.getElementById('vgKid'); if (kc) kc.addEventListener('change', () => setTimeout(window.__vgMicRefresh, 0)); }
+      window.addEventListener('message', e => { const mm = e.data; if (mm && mm.tm === 'pref' && mm.key === 'tm-guide-kid') setTimeout(window.__vgMicRefresh, 0); });
+      wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a);
+      const mi = $('modelInfo');
+      if (mi) new MutationObserver(() => maybePrefillStory()).observe(mi, { childList: true, subtree: true, characterData: true });
+      setTimeout(maybePrefillStory, 300);
+    },
   };
   window.VoiceGuide.create(A);
 }

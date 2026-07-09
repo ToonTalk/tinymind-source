@@ -120,10 +120,7 @@
   <div class="lesson">the pretty pictures only SUGGESTED where the treasure was. your ablations PROVED it.</div>
 </div>
 
-<script type="module">
-import { callLLM, PROVIDERS, keylessAvailable } from '../src/llm.js';
-import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
-const $ = id => document.getElementById(id);
+<script type="module">const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
 let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -145,6 +142,8 @@ function speak(text) {
 function status(msg, isErr) { $('status').textContent = msg; $('status').className = isErr ? 'err' : ''; }
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 function pct(p) {
+  if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)
+    return window.__vgOdds.phrase(p, true, { compact: true });   // kid mode: no percentages anywhere
   if (!(p > 0)) return 'never';
   if (p >= 0.001) return (100 * p).toFixed(1) + '%';   // 0.1%+ reads fine as a percent
   const n = Math.round(1 / p);                          // rarer than that: "1 in N" beats "8.9e-2%"

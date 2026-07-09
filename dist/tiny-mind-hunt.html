@@ -145,10 +145,17 @@ window.__vgSetPref = function(key, value){
    phrase() picks the denominator by magnitude; grid() draws the
    dots; chip() offers the picture in the guide panel. */
 window.__vgOdds = {
-  phrase(p, kid){
-    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
-    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+  phrase(p, kid, opts){
+    const tight = !!(opts && opts.compact);          // compact: fits a table cell ("7 in 100")
+    if (p == null || !isFinite(p) || p <= 0) return kid ? (tight ? 'never' : 'almost never') : 'about 0%';
+    if (p >= 0.995) return kid ? (tight ? 'always' : 'almost always') : 'about 100%';
     const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid && tight) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' in 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' in 1000';
+      if (p >= 0.000005) return '1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' in a million';
+    }
     if (kid) {
       if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
       if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
@@ -239,6 +246,42 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The one formatter the app's own readouts call, so a percentage never
+   survives kid mode. Probabilities only: a percentage-point *change*
+   stays a percentage, because "3 in 100" would misdescribe it. */
+window.__vgPct = function(p, dp){
+  if (p == null || !isFinite(p)) return '\u2014';
+  if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)
+    return window.__vgOdds.phrase(p, true, { compact: true });
+  return (100 * p).toFixed(dp == null ? 1 : dp) + '%';
+};
+
+/* SHOW must not spotlight a view that has not been drawn yet: an
+   empty div gets an invisible halo and the visitor sees nothing. If
+   the target is missing, hidden, or empty, point at the control that
+   produces it and say so. (offsetParent is unreliable under test
+   harnesses, so visibility is judged by the app's own .hide
+   convention plus computed display.) */
+window.__vgHidden = function(el){
+  if (!el) return true;
+  if (el.hidden || /(^|\s)hide(\s|$)/.test(el.className || '')) return true;
+  try { return el.ownerDocument.defaultView.getComputedStyle(el).display === 'none'; } catch (_) { return false; }
+};
+window.__vgShow = function(api, spec){
+  const t = typeof spec === 'string' ? { sel: spec } : (spec || {});
+  const el = t.sel && document.querySelector(t.sel);
+  const empty = !el || !((el.textContent || '').trim() || el.children.length || el.value);
+  if (el && !window.__vgHidden(el) && !empty) { api.spot(t.sel); return true; }
+  if (t.needs) api.spot(t.needs);
+  api.emit('showBlocked', { why: t.why, kidWhy: t.kidWhy });
+  return false;
+};
+window.__vgShowBlockedEvent = {
+  priority: 'moment', cooldownMs: 1200,
+  lines: p => (p && p.why) || 'That view has not been drawn yet — press the control I am pointing at first.',
+  kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 
 /* The ghostwriter and the detective remember keys in localStorage
@@ -1918,7 +1961,7 @@ function splitArcPacks(recs) {
 // Unknown arcs fall back to the manifest's own note, then the arc id — so Arc A
 // arriving later needs zero code changes, and so does Arc Q.
 const KID_LABELS = {
-  arcB: 'the trainee learning Zog (and then just memorizing)',
+  arcB: 'a mind learning your character (and then just memorizing)',
   arcA: 'a brand-new mind growing up',
 };
 function arcKidLabel(manifest) {
@@ -2122,9 +2165,6 @@ const EMBEDDED_WORDLIST = ["the","and","to","a","was","he","she","it","they","he
 const EMBEDDED_BASE_STORIES = ["Once upon a time, there was a little girl named Lily. She had a red ball. She liked to play with it in the park. One day the ball rolled into a puddle. Lily was sad, but her mom helped her wash it. Then Lily was happy again.","Tom had a small dog named Max. Max liked to run and jump. Every morning Tom and Max went for a walk. They saw birds in the trees. Max wagged his tail and Tom laughed. They were good friends.","Ben found a shiny rock by the pond. It was smooth and gray. He wanted to show his mom. He ran home fast. His mom smiled and said it was very pretty. Ben put the rock on his shelf.","Sara and her brother made a cake. They mixed the flour and the eggs. The cake smelled so good. When it was done, they gave a piece to their dad. He said it was the best cake ever. Everyone was happy.","There was a cat named Mia. Mia liked to sleep in the warm sun. One day it started to rain. Mia ran inside and hid under the bed. When the sun came back, she went out to play again.","A little boy named Sam had a blue kite. He took it to the hill on a windy day. The kite went up, up, up into the sky. Sam held the string tight and watched it fly. He was so proud.","Anna wanted to help her grandma in the garden. They planted seeds in the dirt and gave them water. Every day Anna checked the plants. After many days, little green leaves came up. Anna was very glad.","One day a duck went to the pond. She saw a frog on a big green leaf. The frog said hello. The duck and the frog played all day. When the sun went down, they said goodbye and went home.","Timmy lost his teddy bear. He looked under the bed and behind the door. He could not find it. He was very sad. Then his mom found it in the car. Timmy hugged his bear and smiled.","A girl named Lucy had a new dress. It was yellow with white flowers. She wore it to the party. All her friends said it was pretty. Lucy danced and laughed. It was a very fun day.","There was a big tree in the yard. A small bird made a nest in it. Soon there were three little eggs. The mother bird kept them warm. One day the eggs opened and baby birds came out.","Jack and Emma went to the beach. They made a castle in the sand. The waves came and washed it away. But they were not sad. They just made a new castle. They played until it was time to go.","A little mouse was very hungry. He looked for food in the kitchen. He found a piece of cheese under the table. He was so happy. He ate it all up and then went back to his cozy hole.","Molly had a red bike. She wanted to ride it, but she was scared. Her dad held the bike and helped her. Soon Molly could ride all by herself. She felt brave and strong. She rode all around the park.","One morning the sun was bright. A boy named Leo went outside to play. He saw a butterfly with pretty wings. It landed on a flower. Leo watched it very quietly. Then it flew away into the sky.","Sue baked cookies with her mom. They put them on a plate to cool. The cookies were warm and sweet. Sue gave one to her little sister. Her sister smiled and said thank you. They ate them together.","A dog named Rex liked to dig in the yard. One day he dug a big hole. He found an old bone in the dirt. He was so happy. He picked it up and ran to show the other dogs.","There was a little fish in the sea. She liked to swim near the rocks. One day she met a crab. The crab was funny and kind. They swam and played all day. The little fish was not lonely anymore.","Kate had a balloon at the fair. It was big and round and red. She held the string very tight. The wind was strong, but she did not let go. She kept her balloon all the way home.","A boy named Max helped his mom clean the house. He put his toys away in the box. He wiped the table and swept the floor. His mom said he was a big help. Max felt very proud of himself."];
 
 
-
-
-
 const $ = id => document.getElementById(id);
 let worker, workerMode = 'background worker';
 try {
@@ -2149,6 +2189,8 @@ function speak(text) {
 function status(msg, isErr) { $('status').textContent = msg; $('status').className = isErr ? 'err' : ''; }
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 function pct(p) {
+  if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)
+    return window.__vgOdds.phrase(p, true, { compact: true });   // kid mode: no percentages anywhere
   if (!(p > 0)) return 'never';
   if (p >= 0.001) return (100 * p).toFixed(1) + '%';   // 0.1%+ reads fine as a percent
   const n = Math.round(1 / p);                          // rarer than that: "1 in N" beats "8.9e-2%"
@@ -2872,6 +2914,7 @@ function create(A){
     if(spec.condition&&!spec.condition(payload)) return;
     if(spec.once&&vgEvOnceDone.has(name)) return;
     if(spec.cooldownMs&&Date.now()-(vgEvLastAt.get(name)||0)<spec.cooldownMs) return;
+    if(vgEvQueue.some(q=>q.name===name)) return;   // a burst of the same event (e.g. two run-done in a tick) enqueues once
     const pr=spec.priority||'moment';
     if(pr==='ambient'){
       if(vgSpeakDepth>0||vgEvQueue.length) return;    // ambient never waits
@@ -3014,10 +3057,12 @@ function create(A){
       prompts.status()+'\n\n'+
       'The visitor now asks the guide: '+q;
   }
-  function vgExtractDo(t){
-    const m=String(t).match(/\n\s*DO:\s*([A-Z_]+)\s*(.*?)\s*$/);
-    if(!m) return {text:String(t).trim(),act:null};
-    return {text:String(t).slice(0,m.index).trim(),act:{verb:m[1],args:m[2].trim()}};
+  function vgExtractDo(t){                          // the directive ends the reply; models often keep it on the prose line
+    const s=String(t);
+    const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
+    if(!m) return {text:s.trim(),act:null};
+    const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
+    return {text,act:{verb:m[1],args:m[2].trim()}};
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -3071,11 +3116,31 @@ function create(A){
     const err=new Error('no live AI connection'); err.vgNoAI=true; throw err;
   }
 
-  async function vgAsk(q){
+/* click-to-ask: adapters register short glossary notes for on-screen
+     terms (api.explainable); clicking one, or asking about it, routes an
+     explain-this question through the same LLM path, seeded with the
+     note so the answer is grounded rather than guessed. */
+  const vgGloss=new Map();                          // key -> {label, note, kidNote?}
+  function vgExplainable(map){
+    for(const k in map) vgGloss.set(k,map[k]);
+    return (ev)=>{ const el=ev.target&&ev.target.closest&&ev.target.closest('[data-vg-explain]');
+      if(!el) return; ev.preventDefault(); ev.stopPropagation();
+      vgSetPanel(true); vgExplainTopic(el.getAttribute('data-vg-explain')); };
+  }
+  function vgExplainTopic(key){
+    const g=vgGloss.get(key); if(!g) return;
+    const kid=(A.lineMode&&A.lineMode()==='kid');
+    const note=(kid&&g.kidNote)||g.note;
+    const q='Explain this part of the screen to me: "'+(g.label||key)+'". '+
+      (note?'Here is what it is, in one line, so you can put it in your own words'+(kid?' for a young child':'')+': '+note:'')+
+      ' Keep it to a sentence or two.';
+    vgAsk(q, 'What is "'+(g.label||key)+'"?');   // the visitor sees the short question, not the seeded note
+  }
+  async function vgAsk(q, shown){
     q=(q||'').trim(); if(!q) return;
     if(vgState==='running') vgPauseCore();
     const g=++vgGen; vgSynthCancel(); vgUpdateBar();
-    vgLogAdd(q,'user'); vgFaceThink(true); vgStatus('thinking\u2026');
+    vgLogAdd((shown||q),'user'); vgFaceThink(true); vgStatus('thinking\u2026');
     const sys=vgSystem(), usr=vgUserPrompt(q);
     vgQA.push({role:'user',content:q});
     try{
@@ -3199,7 +3264,8 @@ function create(A){
     spot:vgSpot, respot:vgRespot, unspot:vgUnspot,
     speak:vgSpeak, logAdd:vgLogAdd, status:vgStatus,
     ratify:vgRatify, showConfirm:vgShowConfirm, notify,
-    emit:vgEmit, on:vgEvOn, off:vgEvOff, waitFor:vgWaitFor, track:vgTrack,   // v2 event bus
+    emit:vgEmit, on:vgEvOn, off:vgEvOff, waitFor:vgWaitFor, track:vgTrack,
+    explain:vgExplainTopic, explainable:vgExplainable,   // v2 event bus
     keylessCall:vgKeylessAnthropic,
     get inClaude(){ return vgInClaude; },
     get micPolicyBlocked(){ return vgMicPolicyBlocked; },
@@ -3382,7 +3448,10 @@ const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || 
   const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
   return { key, model, provider }; };
 
-const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn', scoreboard: '#scoreCard' };
+const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn',
+  scoreboard: { sel: '#scoreCard', needs: '#probeBtn',
+    why: 'The scoreboard fills up as you test clues. Probe first, then propose and test one.',
+    kidWhy: 'Nothing on the scoreboard yet! Test a clue first and it will appear.' } };
 
 /* ---------- create ---------- */
 function createGuide(){
@@ -3411,7 +3480,7 @@ function createGuide(){
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, detCfg),
       noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
-    verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
+    verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
@@ -3421,7 +3490,8 @@ function createGuide(){
       return null; } },
     testHook: { app: () => ({ lastVerdict: () => lastVerdict, choirSpoken: () => choirSpoken, prefs: window.__vgPrefs }) },
     init(a){
-      api = a; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p));
+      api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
+      wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p));
       /* sync the app's own kid/voice controls with the tm- prefs */
       const k = $('kidMode'), v = $('voiceOn');
       if (k) { k.checked = k.checked || window.__vgPrefs.kid;

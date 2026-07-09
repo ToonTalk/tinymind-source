@@ -144,7 +144,10 @@ const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || 
   const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
   return { key, model, provider }; };
 
-const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn', scoreboard: '#scoreCard' };
+const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn',
+  scoreboard: { sel: '#scoreCard', needs: '#probeBtn',
+    why: 'The scoreboard fills up as you test clues. Probe first, then propose and test one.',
+    kidWhy: 'Nothing on the scoreboard yet! Test a clue first and it will appear.' } };
 
 /* ---------- create ---------- */
 function createGuide(){
@@ -173,7 +176,7 @@ function createGuide(){
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, detCfg),
       noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
-    verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
+    verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
@@ -183,7 +186,8 @@ function createGuide(){
       return null; } },
     testHook: { app: () => ({ lastVerdict: () => lastVerdict, choirSpoken: () => choirSpoken, prefs: window.__vgPrefs }) },
     init(a){
-      api = a; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p));
+      api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
+      wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p));
       /* sync the app's own kid/voice controls with the tm- prefs */
       const k = $('kidMode'), v = $('voiceOn');
       if (k) { k.checked = k.checked || window.__vgPrefs.kid;

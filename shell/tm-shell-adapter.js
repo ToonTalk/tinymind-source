@@ -12,6 +12,68 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const F = window.VoiceGuide.fragments;
+/* The prelude is spliced into the three frame templates, not into this
+   page, so the shell guide has to carry the few helpers it needs. Keep
+   in sync with tm-prelude.js -- better still, extract them into a
+   shared vg-llm.js that both splices pull from. */
+if (!window.__vgHidden) window.__vgHidden = function(el){
+  if (!el) return true;
+  if (el.hidden || /(^|\s)hide(\s|$)/.test(el.className || '')) return true;
+  try { return el.ownerDocument.defaultView.getComputedStyle(el).display === 'none'; } catch (_) { return false; }
+};
+if (!window.__vgShow) window.__vgShow = function(api, spec){
+  const t = typeof spec === 'string' ? { sel: spec } : (spec || {});
+  const el = t.sel && document.querySelector(t.sel);
+  const empty = !el || !((el.textContent || '').trim() || el.children.length || el.value);
+  if (el && !window.__vgHidden(el) && !empty) { api.spot(t.sel); return true; }
+  if (t.needs) api.spot(t.needs);
+  api.emit('showBlocked', { why: t.why, kidWhy: t.kidWhy });
+  return false;
+};
+if (!window.__vgShowBlockedEvent) window.__vgShowBlockedEvent = {
+  priority: 'moment', cooldownMs: 1200,
+  lines: p => (p && p.why) || 'That view has not been drawn yet \u2014 press the control I am pointing at first.',
+  kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
+};
+if (!window.__vgRememberedKey) window.__vgRememberedKey = function(){
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  try {
+    for (const p of ['anthropic', 'openai', 'gemini']) {
+      const k = localStorage.getItem('tm-key-' + p);
+      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
+    }
+  } catch (_) {}
+  return null;
+};
+if (!window.__vgProviders) window.__vgProviders = {
+  async call(provider, key, model, sys, usr){
+    if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
+    if (provider === 'openai') {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: model || 'gpt-4o-mini', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
+      if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
+      const d = await r.json(); return d.choices[0].message.content;
+    }
+    if (provider === 'gemini' || provider === 'google') {
+      const m = model || 'gemini-3.5-flash';
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] },
+          contents: [{ role: 'user', parts: [{ text: usr }] }] }) });
+      if (!r.ok) throw new Error('Gemini HTTP ' + r.status);
+      const d = await r.json(); return d.candidates[0].content.parts.map(p => p.text || '').join('');
+    }
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
+        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-6', max_tokens: 1000,
+        system: sys, messages: [{ role: 'user', content: usr }] }) });
+    if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
+    const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
+  }
+};
+
 const SH = () => window.__tmShell || {};
 const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/misc/tiny-mind-starter.zip';
 const prefs = { kid: false, voice: false, on: true };
@@ -117,7 +179,9 @@ function systemPrompt(){
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is ten or older: plain, concrete language. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to switch rooms when the visitor asked to go there. Show targets: dropzone, pool, start. Tab names: bay, nursery, microscope, hunt. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: dropzone, pool, start. Tab names: bay, nursery, microscope, hunt. ' +
+    ' A TAB directive only offers: the app asks the visitor to confirm before anything moves, so word it as an offer, and never claim you have already taken them. ' +
+    ' The time machine lives in the Nursery, below the training controls. ' +
     ' Never offer to open or point at a view the status marks as already visible \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'switch to the Nursery', escalations: 'load or delete models', safeVerb: 'SHOW' });
 }
@@ -160,15 +224,23 @@ function createGuide(){
           say: 'I could not reach a live A I from this page. Open the Nursery, pick a provider and paste your key into the ghostwriter panel — then I can answer from any room.' };
       return null; } },
     verbs: {
-      SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } },
-      TAB: { exec(p){ const t = (p[0] || '').toLowerCase();
-        if (['bay', 'nursery', 'microscope', 'hunt'].includes(t) && SH().selectTab) SH().selectTab(t); } },
+      SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } },
+      /* moving the visitor to another room is an escalation, not a
+         pointing gesture: the guide proposes, the visitor countersigns.
+         Naming the room they are already in is invalid, so the guide
+         cannot "take" them where they stand. */
+      TAB: { gated: true,
+        validate(p){ const t = (p[0] || '').toLowerCase();
+          return ['bay', 'nursery', 'microscope', 'hunt'].includes(t) && t !== activeTab() && !!SH().selectTab ? t : false; },
+        ratifyText(p, t){ return kid() ? `Shall I take you to the ${t}?` : `Take you to the ${t} tab?`; },
+        exec(p, a, t){ SH().selectTab(t); } },
     },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     testHook: { app: () => ({ prefs, starter: STARTER() }) },
     init(a){
-      api = a; wire((n, p) => a.emit(n, p));
+      api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
+      wire((n, p) => a.emit(n, p));
       /* master toggles: guide on/off (for the frames), kid, voice */
       const head = document.getElementById('vgHead');
       if (head) {

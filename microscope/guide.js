@@ -12,14 +12,39 @@ const F = window.VoiceGuide.fragments;
 const kid = () => window.__vgPrefs.kid;
 let api = null;
 
+let ablCount = 0, lastFull = null, lastCaptureSig = null;
+/* the real-next piece's chance before vs after the mute, taken from
+   the two worker payloads at the position the guess-o-meter shows (the
+   selection end). Lets the kid line say the odds and the drop in
+   points rather than a bare percentage. */
+function ablDelta(ablMsg){
+  try {
+    if (!lastFull || !ablMsg || !lastFull.nextProb || !ablMsg.nextProb) return null;
+    const arr = lastFull.nextProb;
+    let pos = -1, best = -1;                          // the headline piece = highest full-model confidence
+    for (let i = 0; i < arr.length; i++) if (arr[i] != null && arr[i] > best) { best = arr[i]; pos = i; }
+    if (pos < 0 || ablMsg.nextProb[pos] == null) return null;
+    return { before: arr[pos], after: ablMsg.nextProb[pos] };
+  } catch (_) { return null; }
+}
 function wire(emit){
   window.__vgW.taps.push((dir, m) => {
     if (dir !== 'in' || !m || !m.type) return;
-    if (m.type === 'run-done')        emit('captureDone', { n: m.n });
-    if (m.type === 'run-ablated')     emit('ablationVerdict', { ablate: m.ablate });
+    if (m.type === 'run-done')      {
+      const sig = (m.n || 0) + ':' + ((m.pieces && m.pieces.join('|')) || (m.nextProb && m.nextProb.length) || '');
+      lastFull = m;
+      if (sig !== lastCaptureSig) { lastCaptureSig = sig; emit('captureDone', { n: m.n }); }   // one confirmation per distinct capture
+    }
+    /* the whole bench refreshes on every ablation, so this arrives in
+       bursts; say the lesson once and vary the acknowledgements after */
+    if (m.type === 'run-ablated') {
+      const d = ablDelta(m);
+      emit(++ablCount === 1 ? 'ablationVerdict' : 'ablationAgain', { ablate: m.ablate, n: ablCount, d });
+    }
     if (m.type === 'neuron-acts-done') emit('neuronSelected', { layer: m.layer, neuron: m.neuron });
     if (m.type === 'neurons-done')    emit('neuronsRanked', {});
     if (m.type === 'loaded')          setTimeout(maybePrefillStory, 80);
+    if (m.type === 'progress')        setTimeout(maybePrefillStory, 0);
   });
 }
 
@@ -34,27 +59,90 @@ async function maybePrefillStory(){
   try {
     if (!window.storage || typeof window.storage.list !== 'function') return;
     const info = ($('modelInfo') && $('modelInfo').textContent) || '';
-    if (/zog/i.test(info)) return;
+    if (!info || /zog/i.test(info)) return;          // wait for a model, and leave the Zog demo alone
     const el = $('story');
-    if (!el || (storyDefault !== null && el.value !== storyDefault)) return;
-    const r = await window.storage.list('tm-sample-');
-    if (!r || !r.keys || !r.keys.includes('tm-sample-latest')) return;
-    const it = await window.storage.get('tm-sample-latest');
-    const o = JSON.parse(it.value);
-    if (o && o.text) { el.value = o.text; window.vgEmit('storyPrefilled', { name: o.name }); }
+    const untouched = !el ? false : (el.value === storyDefault || el.value === window.__vgStoryDemo || !el.value.trim());
+    if (!el || !untouched) return;
+    const keys = ((await window.storage.list('tm-')) || {}).keys || [];
+    let text = null, who = null, source = null;
+    if (keys.includes('tm-sample-latest')) {         // best: a story this mind wrote itself
+      const o = JSON.parse((await window.storage.get('tm-sample-latest')).value);
+      if (o && o.text) { text = o.text; who = o.name; source = 'sample'; }
+    }
+    if (!text) {                                     // next best: a story it grew up on
+      const bk = keys.find(k => k.indexOf('tm-book-') === 0);
+      if (bk) {
+        const o = JSON.parse((await window.storage.get(bk)).value);
+        const first = (o.book || []).find(x => x && x.text);
+        if (first) { text = first.text; who = o.sheet && o.sheet.name; source = 'book'; }
+      }
+    }
+    if (!text) return;
+    el.value = text; storyDefault = text;
+    window.vgEmit('storyPrefilled', { name: who, source });
   } catch (_) {}
 }
 
+/* the switch-off in the visitor's own units: the odds before, the odds
+   now, and the gap in points -- concrete where a bare percentage is not */
+function deltaLine(p, kid){
+  const d = p && p.d; if (!d || d.before == null || d.after == null) return null;
+  const O = window.__vgOdds, k = kid && O;
+  const b = k ? O.phrase(d.before, true, { compact: true }) : (100 * d.before).toFixed(0) + '%';
+  const a = k ? O.phrase(d.after, true, { compact: true }) : (100 * d.after).toFixed(0) + '%';
+  const pts = Math.round(Math.abs(d.before - d.after) * 100);
+  if (pts < 1) return kid
+    ? `Barely moved \u2014 the guess stayed about ${b}. So the answer does not really live in that piece. Try muting a whole team!`
+    : `Almost no change \u2014 still about ${a}. That piece is not where the fact lives; climb to a whole layer team.`;
+  const dir = d.after < d.before ? 'down' : 'up';
+  return kid
+    ? `The odds were ${b}, now ${a} \u2014 ${dir} ${pts} point${pts === 1 ? '' : 's'}. The bigger the drop, the more the mind needed that piece.`
+    : `The real-next odds went ${b} \u2192 ${a}, ${dir} ${pts} point${pts === 1 ? '' : 's'}. The size of that drop is how much the answer leaned on what you muted.`;
+}
+
+/* rotating follow-ups: a guide that repeats itself verbatim stops
+   being listened to */
+const AGAIN = [
+  'Blue is the whole mind, pink is the mind with that piece muted. The gap between them is what the piece was worth.',
+  'Barely a dent? Then the fact does not live there alone. Mute a whole layer team and watch the cliff.',
+  'Compare that gap with the last one. The bigger the gap, the more the answer depended on what you silenced.',
+  'Every mute is one suspect eliminated or convicted. Both are progress.',
+];
+const AGAIN_KID = [
+  'Blue is the whole mind. Pink is the mind with that piece switched off. How big is the gap?',
+  'Hardly changed? Then the treasure is not in that piece by itself. Try switching off a whole team!',
+  'Bigger gap means that piece mattered more. Smaller gap means it barely helped.',
+  'Every switch-off tells you something, even when nothing happens.',
+];
+
+/* on-screen terms the guide can explain on click (or when asked). */
+const MIC_TERMS = {
+  dim: { label: 'dimension', note: 'the width of the mind: how many numbers it uses to describe each piece of text as it thinks.', kidNote: 'how many numbers the mind uses to think about each little piece of a word.' },
+  layers: { label: 'layers', note: 'how many times in a row the mind reconsiders the text, each layer refining the last.', kidNote: 'how many times the mind thinks about the story over and over.' },
+  heads: { label: 'attention heads', note: 'parallel lookers per layer; each head can watch a different earlier word while reading the current one.', kidNote: 'little lookers that each watch a different earlier word.' },
+  neurons: { label: 'neurons per layer', note: 'the size of each layer’s scratchpad: how many little units do the thinking inside one layer.', kidNote: 'how many tiny thinking bits are inside each layer.' },
+  vocab: { label: 'vocabulary', note: 'how many different pieces this mind can read and write — its whole alphabet.', kidNote: 'all the different little pieces of words this mind knows.' },
+  guessometer: { label: 'guess-o-meter', note: 'how sure the mind is about each possible next piece after the selected one; bar length is the chance.', kidNote: 'how sure the mind is about what comes next. Longer bar means more sure.' },
+  logitlens: { label: 'logit lens', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
+};
+
 const EVENTS = {
   storyPrefilled: { priority: 'moment', once: true, spot: '#story',
-    lines: p => `I put one of ${p && p.name ? p.name + "'s" : 'your character\u2019s'} own stories in the box \u2014 the stories it grew up on make the best specimens.`,
-    kidLines: 'I put one of your own stories in the box \u2014 those are the best ones to look inside with!' },
+    lines: p => (p && p.source === 'sample')
+      ? `I put a story this very mind wrote in the box \u2014 looking inside a mind while it reads its own words is the sharpest specimen there is.`
+      : `I put one of the stories ${p && p.name ? p.name : 'your character'} grew up on in the box \u2014 words it has actually seen make the clearest patterns.`,
+    kidLines: p => (p && p.source === 'sample')
+      ? 'I put a story this mind wrote itself in the box. Let us look inside while it reads its own words!'
+      : 'I put one of the stories it grew up on in the box \u2014 those are the best ones to look inside with!' },
   captureDone: { priority: 'moment', cooldownMs: 20000,
     lines: 'Captured — every attention pattern, every neuron, for every word of that story. All of it is yours to poke at.',
     kidLines: 'Got it! The microscope took a picture of every thought the mind had about that story.' },
-  ablationVerdict: { priority: 'verdict', cooldownMs: 8000,
-    lines: 'There is your before-and-after. Remember which one counts: the pretty patterns suggested, but the switch-off decided.',
-    kidLines: 'See the before and after? Switching pieces off is the real test!' },
+  ablationVerdict: { priority: 'verdict', once: true, cooldownMs: 8000,
+    lines: p => deltaLine(p, false) || 'There is your before-and-after. Remember which one counts: the pretty patterns suggested, but the switch-off decided.',
+    kidLines: p => deltaLine(p, true) || 'See the before and after? Switching pieces off is the real test!' },
+  ablationAgain: { priority: 'ambient', cooldownMs: 15000,
+    lines: p => deltaLine(p, false) || AGAIN[(p.n - 2) % AGAIN.length],
+    kidLines: p => deltaLine(p, true) || AGAIN_KID[(p.n - 2) % AGAIN_KID.length] },
   neuronSelected: { priority: 'ambient', cooldownMs: 20000,
     lines: 'That strip shows where this one neuron fires across the whole story. Bright spans are its favorite moments.',
     kidLines: 'That stripe shows when this one tiny piece wakes up in the story.' },
@@ -84,7 +172,7 @@ function STEPS(){
 
 function statusText(){
   const vis = id => { const el = $(id);
-    return !!(el && el.offsetParent !== null && ((el.textContent || '').trim() || el.children.length)); };
+    return !!(el && !window.__vgHidden(el) && ((el.textContent || '').trim() || el.children.length)); };
   return `Story box: ${($('story') && $('story').value.slice(0, 200)) || 'empty'}. ` +
     `Model info: ${($('modelInfo') && $('modelInfo').textContent) || 'unknown'}. ` +
     `Status: ${($('status') && $('status').textContent) || ''}. ` +
@@ -103,10 +191,26 @@ function systemPrompt(){
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
     ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
+    ' A view marked "not shown" cannot be shown yet: say which button makes it first, rather than promising to display it. ' +
+    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the logit lens is an early peek at what it would say if it stopped thinking halfway. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
-const SHOW = { story: '#story', run: '#runBtn', attention: '#heat', neurons: '#neuronList',
-  ablation: '#ablGrid', lens: '#lensOut', bars: '#bars' };
+/* every view that only exists after a capture names the control that
+   makes it, so SHOW can point there instead of at an empty box */
+const NEEDS_RUN = { needs: '#runBtn',
+  why: 'Nothing has been captured yet, so there is nothing to look at. Press look inside on your story first — I am pointing at the button.',
+  kidWhy: 'The microscope has not looked yet! Press the look inside button I am pointing at, and then it will be there.' };
+const SHOW = {
+  story: '#story', run: '#runBtn',
+  attention: Object.assign({ sel: '#heat' }, NEEDS_RUN),
+  bars: Object.assign({ sel: '#bars' }, NEEDS_RUN),
+  neurons: { sel: '#neuronList', needs: '#neuronBtn',
+    why: 'The neuron list is empty until you rank them. Press the neuron button I am pointing at.',
+    kidWhy: 'No neurons found yet! Press the button I am pointing at to go looking for them.' },
+  lens: { sel: '#lensOut', needs: '#lensBtn',
+    why: 'The layer lens has not been run for this story yet. Press the lens button I am pointing at.',
+    kidWhy: 'The lens has not peeked yet! Press the button I am pointing at.' },
+  ablation: '#ablGrid' };
 
 function createGuide(){
   const A = {
@@ -131,7 +235,7 @@ function createGuide(){
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!micCfg().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, micCfg),
       noAI: { say: 'I cannot reach a live A I from here right now, but every instrument in the lab runs on your machine.' } },
-    verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
+    verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
@@ -140,7 +244,19 @@ function createGuide(){
           say: 'The microscope has no key box of its own. Paste a key into the Nursery ghostwriter (tick "remember this key") and I can talk live here too. Every instrument on the bench works without one.' };
       return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
-    init(a){ api = a; storyDefault = ($('story') && $('story').value) || null; wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); },
+    init(a){ api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
+      storyDefault = ($('story') && $('story').value) || null;
+      window.__vgStoryDemo = storyDefault;
+      document.addEventListener('click', a.explainable(MIC_TERMS));
+      window.__vgMicRefresh = () => { try { if (typeof renderBars === 'function' && S.run) renderBars();
+        if (typeof renderLens === 'function' && S.lastLens) renderLens(S.lastLens); } catch (e) {} };
+      { const kc = document.getElementById('vgKid'); if (kc) kc.addEventListener('change', () => setTimeout(window.__vgMicRefresh, 0)); }
+      window.addEventListener('message', e => { const mm = e.data; if (mm && mm.tm === 'pref' && mm.key === 'tm-guide-kid') setTimeout(window.__vgMicRefresh, 0); });
+      wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a);
+      const mi = $('modelInfo');
+      if (mi) new MutationObserver(() => maybePrefillStory()).observe(mi, { childList: true, subtree: true, characterData: true });
+      setTimeout(maybePrefillStory, 300);
+    },
   };
   window.VoiceGuide.create(A);
 }

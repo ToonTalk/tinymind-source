@@ -91,10 +91,17 @@ window.__vgSetPref = function(key, value){
    phrase() picks the denominator by magnitude; grid() draws the
    dots; chip() offers the picture in the guide panel. */
 window.__vgOdds = {
-  phrase(p, kid){
-    if (p == null || !isFinite(p) || p <= 0) return kid ? 'almost never' : 'about 0%';
-    if (p >= 0.995) return kid ? 'almost always' : 'about 100%';
+  phrase(p, kid, opts){
+    const tight = !!(opts && opts.compact);          // compact: fits a table cell ("7 in 100")
+    if (p == null || !isFinite(p) || p <= 0) return kid ? (tight ? 'never' : 'almost never') : 'about 0%';
+    if (p >= 0.995) return kid ? (tight ? 'always' : 'almost always') : 'about 100%';
     const nice = n => (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n)).toLocaleString();
+    if (kid && tight) {
+      if (p >= 0.05)     return Math.round(p * 100) + ' in 100';
+      if (p >= 0.005)    return Math.round(p * 1000) + ' in 1000';
+      if (p >= 0.000005) return '1 in ' + nice(1 / p);
+      return Math.max(1, Math.round(p * 1e6)) + ' in a million';
+    }
     if (kid) {
       if (p >= 0.05)     return Math.round(p * 100) + ' out of 100';
       if (p >= 0.005)    return Math.round(p * 1000) + ' out of 1000';
@@ -185,6 +192,42 @@ window.__vgProviders = {
     if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
     const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
   }
+};
+
+/* The one formatter the app's own readouts call, so a percentage never
+   survives kid mode. Probabilities only: a percentage-point *change*
+   stays a percentage, because "3 in 100" would misdescribe it. */
+window.__vgPct = function(p, dp){
+  if (p == null || !isFinite(p)) return '\u2014';
+  if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)
+    return window.__vgOdds.phrase(p, true, { compact: true });
+  return (100 * p).toFixed(dp == null ? 1 : dp) + '%';
+};
+
+/* SHOW must not spotlight a view that has not been drawn yet: an
+   empty div gets an invisible halo and the visitor sees nothing. If
+   the target is missing, hidden, or empty, point at the control that
+   produces it and say so. (offsetParent is unreliable under test
+   harnesses, so visibility is judged by the app's own .hide
+   convention plus computed display.) */
+window.__vgHidden = function(el){
+  if (!el) return true;
+  if (el.hidden || /(^|\s)hide(\s|$)/.test(el.className || '')) return true;
+  try { return el.ownerDocument.defaultView.getComputedStyle(el).display === 'none'; } catch (_) { return false; }
+};
+window.__vgShow = function(api, spec){
+  const t = typeof spec === 'string' ? { sel: spec } : (spec || {});
+  const el = t.sel && document.querySelector(t.sel);
+  const empty = !el || !((el.textContent || '').trim() || el.children.length || el.value);
+  if (el && !window.__vgHidden(el) && !empty) { api.spot(t.sel); return true; }
+  if (t.needs) api.spot(t.needs);
+  api.emit('showBlocked', { why: t.why, kidWhy: t.kidWhy });
+  return false;
+};
+window.__vgShowBlockedEvent = {
+  priority: 'moment', cooldownMs: 1200,
+  lines: p => (p && p.why) || 'That view has not been drawn yet — press the control I am pointing at first.',
+  kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 
 /* The ghostwriter and the detective remember keys in localStorage

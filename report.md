@@ -512,3 +512,48 @@ parity exact on all four fixtures, gradchecks 1.6e-8/3.7e-7, suite **91 PASS**. 
 session's jsdom smoke test (now `tests/smoke-guided.mjs`, updated for w5/w6) passes
 **100/0**, including the new 409-conflict and key-reuse scenarios. Both patch scripts are
 obsolete for building (changes live in sources; the mega regenerates complete).
+
+# Guide waves 7-14 + worker W14-2 (2026-07-09)
+
+The repo was 8 waves behind the artifact session (sources at wave 6; the delivered
+`tiny-mind first guide files v9` dist was wave 14, with waves 7-13 never handed over as
+patch scripts). Rather than replay eight missing op-lists, the sources were
+**reconstructed from the authoritative v9 dist** — the build transform is deterministic
+and reversible: strip the GENERATED comment, the injected prelude/bridge/vg-core/guide
+scripts, and (in each app's module script) the inlined-src prefix + worker-blob, then
+restore the import block and `@tm-worker-boot` marker. The 7 guide files (vg-core,
+prelude, bridge, tm-shell-adapter, three app adapters) were adopted **byte-identical** to
+v9's injected copies (verified by re-wrapping each in the build's injection template and
+matching it in the v9 dist). The shell's own main script was reconstructed the same way
+(shellShared bundle byte-identical, so the inlined block maps straight back to
+`@@SHELL_SHARED@@`). One `src/` line changed across all eight waves: `scrubber.js`
+`KID_LABELS.arcB` generalized from "the trainee learning Zog…" to "a mind learning your
+character…" (v9's mega + hunt carry the new text; the stale single nursery/microscope
+dist still had the old text — v9 had drifted, so the repo takes the mega's newer wording
+and v9's own smoke asserts the Zog phrasing is gone). **Self-validation: the rebuilt mega
+is byte-identical to v9** modulo escaped-vs-literal em-dash (cosmetic) and inert
+import-alias/blank-line noise from v9's hand-build drift; **all three worker blobs are
+byte-identical to v9** (nursery 79858, microscope 57909, hunt 58455 chars).
+
+Then the **W14-2 worker action item** (the one item the wave-14 patcher explicitly
+deferred to Claude Code, being parity-gated): the Nursery time-machine "tell this story"
+with a custom prefix hung forever because `sample-now` was guarded by `if (trainer)` and a
+checkpoint loaded via the scrubber goes through `init` (trainer = null). Fix in
+`nursery/worker.js`: `sampleText()` now falls back to the loaded checkpoint's own weights
+(`baseCkpt.weights`) when there is no live trainer, so a scrubbed moment writes a fresh
+story from its own weights; `sample-now` posts only when weights exist. The honest-fallback
+setTimeout in `nursery/index.html` (the wave-14 stopgap) was removed — the story renders
+live. This intentionally changes ONE worker blob (nursery); **G1 greedy parity stays exact
+on all four fixtures** (the change adds a weights source, not a decode path) and the
+microscope/hunt blobs are untouched.
+
+**Gates:** suite `node tests/run-all.js` **91 PASS, 0 FAIL** — G1 exact greedy parity
+(256/256, 256/256, 300/300, 300/300; gate ≥200), gradchecks 1.61e-8 (generic) / 3.69e-7
+(HS=8 fast path), e7 ablation invariants, e10 scrubber. The e9 arc-autoload assertion was
+updated from the pre-wave-7 single-manifest URL (`arc/arc-manifest.json`) to the
+wave-7-14 multi-manifest discovery (`arc/arcs.json` + `manifest.more`). jsdom smoke
+`npm run smoke` (now v9's `tests/smoke-guided.mjs`, 161 checks) passes **161/0** against
+`dist/tiny-mind-mega.html`; its lone wave-14 "honest fallback" check was replaced with a
+wave-15 check that the worker falls back to checkpoint weights and the stopgap text is
+gone. The two v9 patch scripts (`patch-tiny-mind-w14.mjs`, `tm-nursery-adapter.js`) are
+obsolete for building — the changes live in sources and the mega regenerates complete.

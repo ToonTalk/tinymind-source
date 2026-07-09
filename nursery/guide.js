@@ -168,6 +168,14 @@ function trainingBeats(){
 }
 
 /* ---------- emergent events ---------- */
+
+/* on-screen terms the guide can explain on click (or when asked). */
+const NUR_TERMS = {
+  dim: { label: 'dimension', note: 'the width of the mind: how many numbers it uses to describe each piece of text as it thinks.', kidNote: 'how many numbers the mind uses to think about each little piece of a word.' },
+  layers: { label: 'layers', note: 'how many times in a row the mind reconsiders the text, each layer refining the last.', kidNote: 'how many times the mind thinks about the story over and over.' },
+  vocab: { label: 'vocabulary', note: 'how many different pieces (letters and letter-chunks) this mind can read and write — its whole alphabet.', kidNote: 'all the different little pieces of words this mind knows.' },
+};
+
 const EVENTS = {
   floorReached: { priority: 'moment', once: true, spot: '#chart',
     lines: p => `There — it just learned ${sheet().name} as well as it ever will. Keep going past this floor and it starts parroting its storybook instead of understanding it.`,
@@ -266,8 +274,14 @@ const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
 };
 
 const SHOW = {
-  character: '#chName', storybook: '#storyList', chart: '#chart', train: '#trainBtn',
-  sample: '#sampleBtn', export: '#exportBtn', timemachine: '#scrub',
+  character: '#chName', chart: '#chart', train: '#trainBtn',
+  sample: '#sampleBtn', export: '#exportBtn',
+  storybook: { sel: '#storyList', needs: '#genBtn',
+    why: 'The storybook is still empty. Ghostwrite or paste some stories first — the button I am pointing at.',
+    kidWhy: 'No stories yet! Press the button I am pointing at to make some.' },
+  timemachine: { sel: '#scrub', needs: '#scrubStub',
+    why: 'No recorded arc is loaded, so there is no time machine here yet. Drop an arc pack into the bay first.',
+    kidWhy: 'There is no time machine yet! You need to drop in a recording first.' },
 };
 
 /* ---------- create ---------- */
@@ -295,7 +309,7 @@ function createGuide(){
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!appLLM().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, appLLM),
       noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, add it in the ghostwriter panel I am pointing at \u2014 pick a provider and paste the key \u2014 and I can talk live too. Everything else works without one.' } },
-    verbs: { SHOW: { exec(p){ const sel = SHOW[(p[0] || '').toLowerCase()]; if (sel) api.spot(sel); } } },
+    verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
@@ -304,7 +318,9 @@ function createGuide(){
           say: 'I could not reach a live A I on my own. If you have a key, pick a provider and paste it in the ghostwriter panel up top \u2014 then ask me again. Everything else works without one.' };
       return null; } },
     testHook: { app: () => ({ sheet, base0: () => base0, prefs: window.__vgPrefs }) },
-    init(a){ api = a; wireWorker((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); offerSavedBooks(); },
+    init(a){ api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
+      document.addEventListener('click', a.explainable(NUR_TERMS));   // click any [data-vg-explain] chip in the nursery
+      wireWorker((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a); offerSavedBooks(); },
   };
   window.VoiceGuide.create(A);
 }

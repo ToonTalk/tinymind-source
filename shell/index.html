@@ -245,6 +245,23 @@ function renderOverlay(app) {
   });
 }
 function showOverlay(app) { renderOverlay(app); $('overlay').classList.remove('hide'); }
+/* once a room is showing a model, offer a way back to that room's model
+   picker without reloading the page (the overlay is otherwise one-shot). */
+function showChooseAnother(app) {
+  if (app === 'bay') return;
+  let b = document.getElementById('vgChooseAnother');
+  if (!b) {
+    b = document.createElement('button');
+    b.id = 'vgChooseAnother'; b.className = 'small alt';
+    b.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:60';
+    document.body.appendChild(b);
+  }
+  b.textContent = '\u2934 other minds for the ' + app;
+  b.onclick = () => { revealed.delete(app); loaded.delete(app);
+    try { frames[app] && frames[app].classList.add('hide'); } catch (e) {}
+    b.remove(); showOverlay(app); };
+  b.style.display = '';
+}
 function hideOverlay() { $('overlay').classList.add('hide'); }
 
 function selectTab(tab) {
@@ -254,7 +271,7 @@ function selectTab(tab) {
   for (const a of APPS) if (frames[a]) frames[a].classList.add('hide');
   for (const a of Object.keys(frames)) { try { frames[a].contentWindow.postMessage({ tm: 'vg-tab', active: a === tab, tab }, '*'); } catch (e) {} } // vg: tab visibility for the frame guides
   if (tab === 'bay') hideOverlay();
-  else if (loaded.has(tab) || revealed.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); }
+  else if (loaded.has(tab) || revealed.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); showChooseAnother(tab); }
   else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
@@ -297,7 +314,7 @@ function renderPool() {
   }
   $('tokList').textContent = pool.toks.length ? pool.toks.map(t => `${t.name} (${t.vocab})`).join(', ') : 'none';
   $('arcList').textContent = shellArcs.size()
-    ? shellArcs.list().map(m => `${m.arc} (${m.snapshots.length} snapshots to step ${m.snapshots[m.snapshots.length - 1].step})`).join(', ')
+    ? shellArcs.list().map(m => `${m.label || arcKidLabel(m)} (${m.snapshots.length} snapshots to step ${m.snapshots[m.snapshots.length - 1].step})`).join(', ')
     : 'none';
   if (activeTab !== 'bay' && !loaded.has(activeTab)) renderOverlay(activeTab);   // keep a visible card fresh
   $('startNursery').disabled = pool.models.length === 0 && shellArcs.size() === 0;
@@ -388,7 +405,10 @@ function tmPersistText(kind, name, text){ if (!tmRestoring) tmWrite(kind, name, 
 async function tmRestorePool(){
   try {
     if (typeof shellStorage.list !== 'function') return;
-    const r = await shellStorage.list('tm-pool-');
+    const probe = await shellStorage.list('tm-pool-');
+    if (probe && probe.keys && probe.keys.filter(k => !/~\d+$/.test(k)).length)
+      say('bay: loading your saved files from last visit\u2026 one moment');
+    const r = probe;
     const keys = ((r && r.keys) || []).filter(k => !/~\d+$/.test(k));
     if (!keys.length) return;
     const recs = [], broken = [];
@@ -411,7 +431,7 @@ async function tmRestorePool(){
     if (!recs.length) return;
     tmRestoring = true;
     try { await shellIngest(recs); } finally { tmRestoring = false; }
-    say('bay: remembered ' + recs.length + ' file(s) from last visit');
+    say('bay: remembered ' + recs.map(r => r.name).join(', ') + ' from last visit');
   } catch (e) {}
 }
 
@@ -505,12 +525,30 @@ const MODEL_FILES = ['tok512.bin', 'tokenizer.bin', 'stories260K.bin', 'stories2
     const rr = await fetch('replay.json');
     if (rr.ok) { await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await rr.arrayBuffer()) }]); gotReplay = true; }
   } catch { /* no replay corpus here — the embedded fallback still draws the blue line */ }
-  try {   // arc pack (Pages layout: arc/arc-manifest.json) — manifest eager, .bins lazy via arc.snapshot RPC
-    const am = await fetch('arc/arc-manifest.json');
-    if (am.ok) {
-      const manifest = await am.json();
-      takeArc(manifest, { urlBase: 'arc/' }, 'autoload');
-      gotArc = manifest;
+  try {   // arc packs beside the app: arc/arcs.json may list several (each with its own folder),
+           // else the single arc/arc-manifest.json. A manifest may also name siblings in "more".
+    const seen = new Set(), found = [];
+    const addArc = async (rel) => {
+      if (seen.has(rel)) return; seen.add(rel);
+      try {
+        const r = await fetch('arc/' + rel);
+        if (!r.ok) return;
+        const manifest = await r.json();
+        found.push({ manifest, urlBase: 'arc/' + rel.slice(0, rel.lastIndexOf('/') + 1) });
+        for (const m of (manifest.more || [])) await addArc(m);
+      } catch (e) {}
+    };
+    try {
+      const ix = await fetch('arc/arcs.json');
+      if (ix.ok) {
+        const list = await ix.json();
+        for (const rel of (Array.isArray(list) ? list : (list.manifests || []))) await addArc(rel);
+      }
+    } catch (e) {}
+    if (!found.length) await addArc('arc-manifest.json');
+    for (const { manifest, urlBase } of found) {
+      takeArc(manifest, { urlBase }, 'autoload');
+      gotArc = gotArc || manifest;
     }
   } catch { /* no arc pack beside this deploy */ }
   say(`beside the app: ${got}/${MODEL_FILES.length} model files · replay ${gotReplay ? '✓' : '— (looked for replay.json)'}`

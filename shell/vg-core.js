@@ -426,6 +426,7 @@ function create(A){
     if(spec.condition&&!spec.condition(payload)) return;
     if(spec.once&&vgEvOnceDone.has(name)) return;
     if(spec.cooldownMs&&Date.now()-(vgEvLastAt.get(name)||0)<spec.cooldownMs) return;
+    if(vgEvQueue.some(q=>q.name===name)) return;   // a burst of the same event (e.g. two run-done in a tick) enqueues once
     const pr=spec.priority||'moment';
     if(pr==='ambient'){
       if(vgSpeakDepth>0||vgEvQueue.length) return;    // ambient never waits
@@ -568,10 +569,12 @@ function create(A){
       prompts.status()+'\n\n'+
       'The visitor now asks the guide: '+q;
   }
-  function vgExtractDo(t){
-    const m=String(t).match(/\n\s*DO:\s*([A-Z_]+)\s*(.*?)\s*$/);
-    if(!m) return {text:String(t).trim(),act:null};
-    return {text:String(t).slice(0,m.index).trim(),act:{verb:m[1],args:m[2].trim()}};
+  function vgExtractDo(t){                          // the directive ends the reply; models often keep it on the prose line
+    const s=String(t);
+    const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
+    if(!m) return {text:s.trim(),act:null};
+    const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
+    return {text,act:{verb:m[1],args:m[2].trim()}};
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -625,11 +628,31 @@ function create(A){
     const err=new Error('no live AI connection'); err.vgNoAI=true; throw err;
   }
 
-  async function vgAsk(q){
+/* click-to-ask: adapters register short glossary notes for on-screen
+     terms (api.explainable); clicking one, or asking about it, routes an
+     explain-this question through the same LLM path, seeded with the
+     note so the answer is grounded rather than guessed. */
+  const vgGloss=new Map();                          // key -> {label, note, kidNote?}
+  function vgExplainable(map){
+    for(const k in map) vgGloss.set(k,map[k]);
+    return (ev)=>{ const el=ev.target&&ev.target.closest&&ev.target.closest('[data-vg-explain]');
+      if(!el) return; ev.preventDefault(); ev.stopPropagation();
+      vgSetPanel(true); vgExplainTopic(el.getAttribute('data-vg-explain')); };
+  }
+  function vgExplainTopic(key){
+    const g=vgGloss.get(key); if(!g) return;
+    const kid=(A.lineMode&&A.lineMode()==='kid');
+    const note=(kid&&g.kidNote)||g.note;
+    const q='Explain this part of the screen to me: "'+(g.label||key)+'". '+
+      (note?'Here is what it is, in one line, so you can put it in your own words'+(kid?' for a young child':'')+': '+note:'')+
+      ' Keep it to a sentence or two.';
+    vgAsk(q, 'What is "'+(g.label||key)+'"?');   // the visitor sees the short question, not the seeded note
+  }
+  async function vgAsk(q, shown){
     q=(q||'').trim(); if(!q) return;
     if(vgState==='running') vgPauseCore();
     const g=++vgGen; vgSynthCancel(); vgUpdateBar();
-    vgLogAdd(q,'user'); vgFaceThink(true); vgStatus('thinking\u2026');
+    vgLogAdd((shown||q),'user'); vgFaceThink(true); vgStatus('thinking\u2026');
     const sys=vgSystem(), usr=vgUserPrompt(q);
     vgQA.push({role:'user',content:q});
     try{
@@ -753,7 +776,8 @@ function create(A){
     spot:vgSpot, respot:vgRespot, unspot:vgUnspot,
     speak:vgSpeak, logAdd:vgLogAdd, status:vgStatus,
     ratify:vgRatify, showConfirm:vgShowConfirm, notify,
-    emit:vgEmit, on:vgEvOn, off:vgEvOff, waitFor:vgWaitFor, track:vgTrack,   // v2 event bus
+    emit:vgEmit, on:vgEvOn, off:vgEvOff, waitFor:vgWaitFor, track:vgTrack,
+    explain:vgExplainTopic, explainable:vgExplainable,   // v2 event bus
     keylessCall:vgKeylessAnthropic,
     get inClaude(){ return vgInClaude; },
     get micPolicyBlocked(){ return vgMicPolicyBlocked; },

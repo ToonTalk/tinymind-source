@@ -56,7 +56,7 @@ export function splitArcPacks(recs) {
 // Unknown arcs fall back to the manifest's own note, then the arc id — so Arc A
 // arriving later needs zero code changes, and so does Arc Q.
 export const KID_LABELS = {
-  arcB: 'the trainee learning Zog (and then just memorizing)',
+  arcB: 'a mind learning your character (and then just memorizing)',
   arcA: 'a brand-new mind growing up',
 };
 export function arcKidLabel(manifest) {
