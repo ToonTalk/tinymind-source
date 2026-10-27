@@ -31,7 +31,7 @@ export async function run(t) {
   t.check('mega: same-folder runtime packs are manifest-driven with an embedded fallback',
     resourceManifest.version === 1 &&
     resourceManifest.resources.map(r => r.file).join('|') ===
-      'tiny-mind-starter.zip|tiny-mind-binding-models-corrected.zip|zog-arc.zip|newborn-arc.zip|binding-arc.zip' &&
+      'tiny-mind-starter.zip|tiny-mind-binding-models-corrected.zip|zog-arc.zip|newborn-arc.zip|binding-arc.zip|tiny-mind-neuron-atlas.json' &&
     mega.includes("const RESOURCE_MANIFEST = 'tiny-mind-resources.json'") &&
     mega.includes('const FALLBACK_RESOURCE_PACKS = ['));
   t.check('mega: same-folder resources are cache-first and cache successful downloads',

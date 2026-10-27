@@ -59,6 +59,30 @@
   .neuron-item { cursor: pointer; padding: .1rem .3rem; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
   .neuron-item:hover { background: #262c38; }
   .neuron-item.sel { outline: 1px solid var(--pink); }
+  /* the "what does this neuron do?" card */
+  .ncard { margin-top: .6rem; border: 1px solid var(--pink); border-radius: 8px; padding: .6rem .7rem; background: #171a22; }
+  .ncard-head { display: flex; align-items: baseline; gap: .5rem; }
+  .ncard-head b { color: var(--pink); }
+  .ncard-head .x { margin-left: auto; }
+  .poles { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: .45rem; }
+  @media (max-width: 560px) { .poles { grid-template-columns: 1fr; } }
+  .pole h3 { font-size: 13px; margin: 0 0 .25rem; font-weight: 600; }
+  .pole.pos h3 { color: var(--gold); }
+  .pole.neg h3 { color: var(--blue); }
+  .plabel { font-size: 12.5px; margin-bottom: .25rem; }
+  .snip { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; white-space: pre-wrap;
+          background: #12151c; border-radius: 5px; padding: .2rem .4rem; margin: .18rem 0; }
+  .snip mark { color: #12141a; border-radius: 3px; padding: 0 1px; }
+  .pole.pos mark { background: var(--gold); }
+  .pole.neg mark { background: var(--blue); }
+  .snip .num { color: var(--dim); font-size: 11px; float: right; margin-left: .4rem; }
+  .ncard details { margin-top: .4rem; font-size: 12.5px; color: var(--dim); }
+  .ncard summary { cursor: pointer; color: var(--blue); }
+  .steer { margin-top: .5rem; border-top: 1px solid var(--edge); padding-top: .45rem; }
+  .steer button.on { outline: 2px solid var(--gold); }
+  .cont { font-size: 13px; margin: .3rem 0; line-height: 1.5; }
+  .cont .who { color: var(--dim); font-size: 12px; }
+  .cont .new { background: rgba(255, 210, 127, .25); border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -120,6 +144,7 @@
       <h2>7 · neuron finder <span class="hint">— which neurons light up for the selection?</span></h2>
       <button class="small" id="neuronBtn" disabled>find neurons for selection</button>
       <div id="neuronList" style="margin-top:.3rem"></div>
+      <div id="neuronCard"></div>
       <div class="lesson">pretty highlights are only a CLUE — the ablation lab below is the proof.</div>
     </div>
     <div class="card">
@@ -133,7 +158,8 @@
   </div>
 </div>
 
-<script type="module">const $ = id => document.getElementById(id);
+<script type="module">import { atlasEntry, looksLikeAtlasText, validateAtlas, ATLAS_FILE } from '../src/neuron-atlas.js';
+const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
 let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -153,27 +179,45 @@ const S = {
   neuron: null,     // {layer, neuron, acts}
   overlay: 'none',
   busy: false,
+  steer: [],        // steered neurons [{layer, neuron, value, how}] — value 0 = muted
+  ablSteer: [],     // the steer the ablated view was computed with
+  card: null,       // {layer, neuron} whose "what does this neuron do?" card is open
+  cont: null,       // last continue-done (the story going on, normal vs changed)
+  atlas: null,      // tiny-mind-neuron-atlas-v1 (offline examples for stories15M)
+  atlasNote: '',    // why there is no atlas (shown in the card)
+  fingerprint: null,
 };
 // the muted heads every ablation-aware query should carry; the attention buffer the
 // visual instruments should read (ablated when the microscope is in ablation view)
 function mutedHeads() { return [...document.querySelectorAll('#ablGrid input:checked')].map(c => c.dataset.lh); }
+// the steered neurons every ablation-aware query carries alongside the muted heads
+function steerList() { return S.steer.map(({ layer, neuron, value }) => ({ layer, neuron, value })); }
+const STEER_WORDS = { up: 'turned up', mute: 'muted', flip: 'turned the other way' };
+// "L0:1, L3·n100 turned up" — everything the changed model has changed
+function describeChanges(heads, steer) {
+  return [...heads, ...steer.map(s => `L${s.layer}·n${s.neuron} ${STEER_WORDS[s.how] || 'steered'}`)].join(', ');
+}
 function curAtt() { return (S.ablActive && S.ablAtt) ? S.ablAtt : S.att; }
 // flip the WHOLE microscope between the full and the ablated model, and refresh every
 // instrument so nothing shows a stale mix. Active state: strip/heatmap read the ablated
 // attention; lens/neurons re-query with the muted set; bars keep the blue-vs-pink compare.
-function setAblActive(active, heads = [], att = null) {
+function setAblActive(active, heads = [], att = null, steer = []) {
   S.ablActive = active;
   S.ablHeads = active ? heads.slice() : [];
+  S.ablSteer = active ? steer.slice() : [];
   S.ablAtt = active && att ? att : null;
   const b = $('ablBanner');
   if (b) {
     b.style.display = active ? '' : 'none';
-    if (active) b.innerHTML = `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the ablation lab to go back.</span>`;
+    if (active) b.innerHTML = steer.length
+      ? `🔴 the whole microscope now shows the model with <b>${esc(describeChanges(heads, steer))}</b> — attention, neurons, lens and bars are all the changed model. <span style="opacity:.75">clear the ablation lab (or press "back to normal") to go back.</span>`
+      : `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the ablation lab to go back.</span>`;
   }
   renderStrip(); renderHeat(); renderBars();
   if (S.lensOpen) requestLens();
   if ($('neuronList') && $('neuronList').textContent.trim()) $('neuronBtn').onclick();
-  if (S.neuron) worker.postMessage({ type: 'neuron-acts', layer: S.neuron.layer, neuron: S.neuron.neuron, ablate: mutedHeads() });
+  if (S.neuron) worker.postMessage({ type: 'neuron-acts', layer: S.neuron.layer, neuron: S.neuron.neuron, ablate: mutedHeads(), steer: steerList() });
+  renderNeuronCard();
 }
 
 function status(msg, isErr) {
@@ -204,6 +248,10 @@ function tokenizerFits(buf, vocabSize) {
 }
 S.tokCandidates = [];
 function classifyAndSend(files) {
+  // a dropped neuron atlas goes to the "what does this neuron do?" card, not the model loader
+  files = files.filter(f => !(/\.json$/i.test(f.name) && looksLikeAtlasText(new TextDecoder().decode(f.buf.slice(0, 400))) &&
+    acceptAtlas(new TextDecoder().decode(f.buf), f.name)));
+  if (!files.length) return;
   const ckpts = [], toks = [];
   for (const f of files) (looksLikeCheckpoint(f.buf) ? ckpts : toks).push(f);
   if (ckpts.length) S.pendingCkpt = ckpts[ckpts.length - 1];
@@ -246,11 +294,14 @@ $('loadZog').onclick = () => fetchPair('stories260K-zog.bin', 'tok512.bin');
 // ---------- worker messages ----------
 worker.onmessage = (e) => {
   const m = e.data;
-  if (m.type === 'error') { status(m.message, true); S.busy = false; $('runBtn').disabled = !S.config; return; }
+  if (m.type === 'error') { status(m.message, true); S.busy = false; S.contBusy = false; $('runBtn').disabled = !S.config; return; }
   if (m.type === 'loaded') {
     if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
     S.run = null; S.att = null; S.ablRun = null; S.neuron = null;
+    S.fingerprint = m.fingerprint || null; S.steer = []; S.card = null; S.cont = null;
+    $('neuronCard').innerHTML = '';
+    loadAtlas();
     $('modelInfo').innerHTML =
       (() => { const chip = (k, t) => `<span class="vg-chip" data-vg-explain="${k}" style="cursor:help;border-bottom:1px dotted currentColor" title="click to ask the guide">${t}</span>`; return `${chip('dim','dimension ' + m.config.dim)} · ${chip('layers', m.config.nLayers + ' layers')} · ${chip('heads', m.config.nHeads + ' attention heads')} · ${chip('neurons', m.config.hiddenDim + ' neurons per layer')} · ${chip('vocab', m.config.vocabSize + ' vocabulary')}`; })();
     $('runBtn').disabled = false;
@@ -267,7 +318,8 @@ worker.onmessage = (e) => {
     S.run = m;
     S.att = new Float32Array(m.attention);
     S.ablRun = null; S.neuron = null;
-    S.ablActive = false; S.ablAtt = null; S.ablHeads = [];   // a fresh full run leaves ablation view
+    S.ablActive = false; S.ablAtt = null; S.ablHeads = []; S.ablSteer = [];   // a fresh full run leaves ablation view
+    S.steer = []; S.card = null; S.cont = null; $('neuronCard').innerHTML = '';
     $('ablBanner').style.display = 'none';
     S.sel = { start: Math.min(1, m.n - 1), end: Math.min(1, m.n - 1) };
     S.busy = false;
@@ -291,18 +343,22 @@ worker.onmessage = (e) => {
       meanD += d; nD++;
       if (d > maxD) { maxD = d; maxAt = p; }
     }
+    const steer = (m.steer || []).map(s => S.steer.find(x => x.layer === s.layer && x.neuron === s.neuron) || s);
     $('ablInfo').innerHTML =
-      `heads OFF: <b>${m.ablate.join(', ')}</b> — the model's confidence in the real next piece changed by ` +
+      (steer.length ? `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>` : `heads OFF: <b>${m.ablate.join(', ')}</b>`) +
+      ` — the model's confidence in the real next piece changed by ` +
       `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average; biggest change <b>${(100 * maxD).toFixed(1)}%</b> ` +
       `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (pos ${maxAt + 1})`;
     status('ablated run done — the whole microscope now shows the damaged model');
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
-    setAblActive(true, m.ablate, new Float32Array(m.attention));
+    setAblActive(true, m.ablate, new Float32Array(m.attention), steer);
   }
   if (m.type === 'lens-done') { S.lastLens = m; renderLens(m); }
   if (m.type === 'neurons-done') renderNeurons(m);
+  if (m.type === 'continue-progress') { S.contProgress = m; renderNeuronCard(); }
+  if (m.type === 'continue-done') { S.cont = m; S.contBusy = false; S.contProgress = null; renderNeuronCard(); }
   if (m.type === 'neuron-acts-done') {
-    S.neuron = { layer: m.layer, neuron: m.neuron, acts: new Float32Array(m.acts) };
+    S.neuron = { layer: m.layer, neuron: m.neuron, acts: new Float32Array(m.acts), hi: m.hi, lo: m.lo };
     document.querySelector('input[name=overlay][value=neuron]').checked = true;
     S.overlay = 'neuron';
     renderStrip();
@@ -385,20 +441,24 @@ function renderBars() {
   }
   if (actualPiece !== null) {
     html += `<div class="hint">what really came next: <b style="color:var(--gold)">${esc(JSON.stringify(actualPiece))}</b> — model gave it ${window.__vgPct(S.run.nextProb[pos])}` +
-      (S.ablRun ? ` · with heads off: ${window.__vgPct(S.ablRun.nextProb[pos])}` : '') + '</div>';
+      (S.ablRun ? ` · ${S.ablRun.steer && S.ablRun.steer.length ? 'changed model' : 'with heads off'}: ${window.__vgPct(S.ablRun.nextProb[pos])}` : '') + '</div>';
   }
-  if (S.ablRun) html += `<div class="hint">■ blue = full model · ■ pink = heads off (${S.ablRun.ablate.join(', ')})</div>`;
+  if (S.ablRun) html += (S.ablRun.steer && S.ablRun.steer.length)
+    ? `<div class="hint">■ blue = full model · ■ pink = changed model (${esc(describeChanges(S.ablRun.ablate, S.ablSteer))})</div>`
+    : `<div class="hint">■ blue = full model · ■ pink = heads off (${S.ablRun.ablate.join(', ')})</div>`;
   el.innerHTML = html;
 }
 
 // ---------- logit lens ----------
-function requestLens() { worker.postMessage({ type: 'lens', pos: S.sel.end, ablate: mutedHeads() }); }
+function requestLens() { worker.postMessage({ type: 'lens', pos: S.sel.end, ablate: mutedHeads(), steer: steerList() }); }
 $('lensBtn').onclick = requestLens;
 function renderLens(m) {
   const muted = m.ablate && m.ablate.length ? m.ablate : null;
+  const steered = m.steer && m.steer.length ? m.steer : null;
   let html = `<div class="hint">position ${m.pos}` +
     (m.nextPiece !== null ? ` · real next piece: <b style="color:var(--gold)">${esc(JSON.stringify(m.nextPiece))}</b>` : '') +
-    (muted ? ` · <b style="color:var(--pink)">with ${muted.join(', ')} muted</b> — this is the prediction FORMING inside the damaged model` : '') + `</div>
+    (steered ? ` · <b style="color:var(--pink)">with ${esc(describeChanges(m.ablate || [], S.ablSteer.length ? S.ablSteer : steered))}</b> — this is the prediction FORMING inside the changed model`
+      : muted ? ` · <b style="color:var(--pink)">with ${muted.join(', ')} muted</b> — this is the prediction FORMING inside the damaged model` : '') + `</div>
     <table><tr><th>layer</th><th>after attention</th><th>after thinking (FFN)</th><th>p(real next)</th></tr>`;
   for (let l = 0; l < S.run.config.nLayers; l++) {
     const a = m.rows.find(r => r.layer === l && r.phase === 'attn');
@@ -466,25 +526,185 @@ function renderHeat() {
 
 // ---------- neurons ----------
 $('neuronBtn').onclick = () =>
-  worker.postMessage({ type: 'neurons', spanStart: S.sel.start, spanEnd: S.sel.end, ablate: mutedHeads() });
+  worker.postMessage({ type: 'neurons', spanStart: S.sel.start, spanEnd: S.sel.end, ablate: mutedHeads(), steer: steerList() });
 function renderNeurons(m) {
   const el = $('neuronList');
   const span = S.run.pieces.slice(m.spanStart, m.spanEnd + 1).join('');
   const muted = m.ablate && m.ablate.length ? m.ablate : null;
+  const steered = m.steer && m.steer.length;
   let html = `<div class="hint">neurons that light up for ${esc(JSON.stringify(span))}` +
-    (muted ? ` <b style="color:var(--pink)">in the model with ${muted.join(', ')} muted</b>` : '') + `:</div>`;
+    (steered ? ` <b style="color:var(--pink)">in the model with ${esc(describeChanges(m.ablate || [], S.ablSteer))}</b>`
+      : muted ? ` <b style="color:var(--pink)">in the model with ${muted.join(', ')} muted</b>` : '') +
+    `: <span class="hint">(click one to see what it does)</span></div>`;
   el.innerHTML = html;
   m.top.forEach(nr => {
     const d = document.createElement('div');
     d.className = 'neuron-item';
     d.textContent = `L${nr.layer} · neuron ${nr.neuron} — ${nr.score.toFixed(1)}× brighter here (${nr.inMean.toFixed(2)} vs ${nr.outMean.toFixed(2)})`;
+    if (S.card && S.card.layer === nr.layer && S.card.neuron === nr.neuron) d.classList.add('sel');
     d.onclick = () => {
       document.querySelectorAll('.neuron-item').forEach(x => x.classList.remove('sel'));
       d.classList.add('sel');
-      worker.postMessage({ type: 'neuron-acts', layer: nr.layer, neuron: nr.neuron, ablate: mutedHeads() });
+      worker.postMessage({ type: 'neuron-acts', layer: nr.layer, neuron: nr.neuron, ablate: mutedHeads(), steer: steerList() });
+      openNeuronCard(nr.layer, nr.neuron);
     };
     el.appendChild(d);
   });
+}
+
+// ---------- "what does this neuron do?" card ----------
+// Both poles from the offline atlas (tools/build-neuron-atlas.js): the moments in real
+// TinyStories where this neuron was most ON and most strongly NEGATIVE. Plus steering:
+// hold the neuron up / at zero / the other way, and see how the story goes on.
+const STEER_GAIN = 2;   // "turn it up" holds the neuron at 2× its strongest atlas value
+async function loadAtlas() {
+  if (S.atlas) { renderNeuronCard(); return; }
+  for (const url of [ATLAS_FILE, '../dist/' + ATLAS_FILE]) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) { acceptAtlas(await r.text(), url, true); return; }
+    } catch (e) { /* sandbox / srcdoc / file:// — the atlas can arrive by drop or from the shell */ }
+  }
+  S.atlasNote = 'no neuron atlas here yet — drop ' + ATLAS_FILE + ' onto the page to see real examples';
+  renderNeuronCard();
+}
+function acceptAtlas(text, name, quiet = false) {   // quiet: found beside the page, no news
+  try {
+    const atlas = typeof text === 'string' ? JSON.parse(text) : text;
+    const errs = validateAtlas(atlas);
+    if (errs.length) { status(name + ' is not a usable neuron atlas: ' + errs[0], true); return false; }
+    S.atlas = atlas;
+    if (!quiet) status(`neuron atlas ready — ${Object.keys(atlas.neurons).length} neurons of ${atlas.model}, from ${atlas.corpus.stories} stories` +
+      (S.config ? '' : ' · load a model to begin'));
+    renderNeuronCard();
+    return true;
+  } catch (e) { status('could not read ' + name + ': ' + (e.message || e), true); return false; }
+}
+// the shell (mega) hands same-folder / dropped JSON to the frame through the bridge
+window.__tmRouteJson = (name, text) => { if (looksLikeAtlasText(text)) acceptAtlas(text, name); };
+function atlasForModel() {
+  if (!S.atlas) return { atlas: null, note: S.atlasNote || 'loading the neuron atlas…' };
+  if (S.fingerprint && S.atlas.fingerprint === S.fingerprint) return { atlas: S.atlas, note: '' };
+  return { atlas: null, note: `the neuron atlas was made for ${S.atlas.model}; this model is different, so there are no real examples for it (steering still works)` };
+}
+
+function openNeuronCard(layer, neuron) {
+  S.card = { layer, neuron };
+  renderNeuronCard();
+  const el = $('neuronCard');
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+}
+
+function snippetHtml(sn, showNum) {
+  const parts = sn.pieces.map((p, i) => {
+    let t = p.replace(/\n/g, '⏎ ');
+    if (i === 0) t = t.replace(/^ /, '');
+    return i === sn.target ? `<mark>${esc(t)}</mark>` : esc(t);
+  });
+  const num = showNum
+    ? `<span class="num">${sn.value > 0 ? '+' : ''}${sn.value} (${sn.q}%) · story ${sn.story}, piece ${sn.pos}</span>` : '';
+  return `<div class="snip">${num}…${parts.join('')}…</div>`;
+}
+function poleHtml(side, pole, title, empty) {
+  const label = pole.label ? `<div class="plabel">“${esc(pole.label)}”</div>` : '';
+  const body = pole.snippets.length ? pole.snippets.slice(0, 3).map(sn => snippetHtml(sn, false)).join('') : `<div class="hint">${empty}</div>`;
+  return `<div class="pole ${side}"><h3>${title}</h3>${label}${body}</div>`;
+}
+function steerOf(layer, neuron) { return S.steer.find(s => s.layer === layer && s.neuron === neuron) || null; }
+
+function renderNeuronCard() {
+  const el = $('neuronCard');
+  if (!el) return;
+  if (!S.card) { el.innerHTML = ''; return; }
+  const { layer, neuron } = S.card;
+  const { atlas, note } = atlasForModel();
+  const e = atlas ? atlasEntry(atlas, layer, neuron) : null;
+  const cur = steerOf(layer, neuron);
+  let html = `<div class="ncard"><div class="ncard-head"><b>L${layer} · neuron ${neuron}</b>
+    <span class="hint">what does this neuron do?</span><button class="small alt x" id="ncClose" title="close">×</button></div>`;
+  if (e) {
+    html += `<div class="hint">A neuron has two sides. Its number can go up (+) or down (−), and each side can have its own job.
+      These are the moments in ${atlas.corpus.stories.toLocaleString('en-US')} real stories where it went furthest each way.</div>
+      <div class="poles">${poleHtml('pos', e.pos, '＋ most switched on', 'never switches on much')}${poleHtml('neg', e.neg, '− most switched the other way', 'never goes negative much')}</div>
+      <details><summary>more examples and the numbers</summary>
+        <div class="poles">
+          <div class="pole pos"><h3>＋ strongest: ${e.pos.peak ? '+' + e.pos.peak : '—'}</h3>${e.pos.snippets.map(sn => snippetHtml(sn, true)).join('')}</div>
+          <div class="pole neg"><h3>− strongest: ${e.neg.peak || '—'}</h3>${e.neg.snippets.map(sn => snippetHtml(sn, true)).join('')}</div>
+        </div>
+        <div style="margin-top:.3rem">How this was made: ${atlas.corpus.stories.toLocaleString('en-US')} TinyStories validation stories
+          (${atlas.corpus.tokens.toLocaleString('en-US')} pieces) went through this very model. For each side we kept the
+          ${atlas.perPole} strongest moments, at most one per story. The number is the neuron's value at the
+          highlighted piece; the % is of its strongest. The ▶ start piece is left out (it is the same in every story).
+          ${atlas.labels && atlas.labels[e.key] ? 'The quoted one-line descriptions were written by an AI model reading these examples — a guess, not a proof.' : ''}</div>
+      </details>`;
+  } else if (atlas) {
+    html += `<div class="hint">this neuron hardly ever switches on or off in ${atlas.corpus.stories.toLocaleString('en-US')} stories, so there are no examples to show.</div>`;
+  } else {
+    html += `<div class="hint">${esc(note)}</div>`;
+  }
+  const can = !!S.run && !S.busy && !S.contBusy;
+  const btn = (how, text) => `<button class="small${(cur ? cur.how : null) === how ? ' on' : ''}" data-steer="${how}"${can ? '' : ' disabled'}>${text}</button>`;
+  html += `<div class="steer"><b style="font-size:13px">what if?</b> <span class="hint">change this neuron, then watch the story go on</span><br>
+    ${btn('up', '🔆 turn it up')} ${btn('mute', '🔇 mute it')} ${btn('normal', 'back to normal')}
+    <details><summary>more ways to change it</summary>
+      ${btn('flip', '🔄 turn it the other way')}
+      <div>"turn it up" holds the neuron at ${STEER_GAIN}× its strongest value on every piece; "the other way" holds it at
+      ${STEER_GAIN}× its most negative value; "mute" holds it at zero. While a neuron is changed, the whole microscope
+      (bars, lens, neurons, attention) shows the changed model.</div>
+    </details>`;
+  if (S.contBusy) {
+    const p = S.contProgress;
+    html += `<div class="hint">writing what comes next… ${p ? p.done + '/' + p.total : ''}</div>`;
+  } else if (S.cont) {
+    const c = S.cont;
+    const plain = c.base.join('').replace(/\n/g, ' ⏎ ');
+    if (!c.changed) {
+      html += `<div class="cont"><span class="who">the model goes on:</span> …${esc(plain)}</div>`;
+    } else {
+      let same = 0;
+      while (same < c.base.length && same < c.steered.length && c.base[same] === c.steered[same]) same++;
+      const head = c.steered.slice(0, same).join(''), tail = c.steered.slice(same).join('');
+      html += `<div class="cont"><span class="who">normal model:</span> …${esc(plain)}</div>
+        <div class="cont"><span class="who">with ${esc(describeChanges(c.ablate, S.steer))}:</span> …${esc(head.replace(/\n/g, ' ⏎ '))}<span class="new">${esc(tail.replace(/\n/g, ' ⏎ '))}</span></div>` +
+        (same === c.steered.length && same === c.base.length ? `<div class="hint">the same words — this change did not move the story. Try "turn it up" or another neuron.</div>`
+          : `<div class="hint">the highlighted part is where the changed model wrote something different.</div>`);
+    }
+  }
+  html += '</div></div>';
+  el.innerHTML = html;
+  $('ncClose').onclick = () => { S.card = null; renderNeuronCard(); document.querySelectorAll('.neuron-item').forEach(x => x.classList.remove('sel')); };
+  el.querySelectorAll('button[data-steer]').forEach(b => { b.onclick = () => steerNeuron(b.dataset.steer); });
+}
+
+function steerNeuron(how) {
+  if (!S.card || !S.run || S.busy || S.contBusy) return;
+  const { layer, neuron } = S.card;
+  const { atlas } = atlasForModel();
+  const e = atlas ? atlasEntry(atlas, layer, neuron) : null;
+  const here = S.neuron && S.neuron.layer === layer && S.neuron.neuron === neuron ? S.neuron : null;
+  const strongest = side => {   // atlas peak, else the extreme in this story
+    const v = e ? (side > 0 ? e.pos.peak : e.neg.peak) : (here ? (side > 0 ? here.hi : here.lo) : 0);
+    return v || side;
+  };
+  S.steer = S.steer.filter(s => !(s.layer === layer && s.neuron === neuron));
+  if (how === 'up') S.steer.push({ layer, neuron, value: STEER_GAIN * strongest(1), how });
+  if (how === 'flip') S.steer.push({ layer, neuron, value: STEER_GAIN * strongest(-1), how });
+  if (how === 'mute') S.steer.push({ layer, neuron, value: 0, how });
+  applyChanges();
+}
+// re-run the whole microscope under the muted heads + steered neurons, then continue
+function applyChanges() {
+  const heads = mutedHeads();
+  if (!heads.length && !S.steer.length) {
+    S.ablRun = null; $('ablInfo').textContent = '';
+    setAblActive(false);
+  } else {
+    S.busy = true; $('runBtn').disabled = true;
+    worker.postMessage({ type: 'run', text: $('story').value, ablate: heads, steer: steerList() });
+  }
+  S.contBusy = true; S.contProgress = null;
+  worker.postMessage(heads.length || S.steer.length ? { type: 'continue', ablate: heads, steer: steerList() } : { type: 'continue' });
+  renderNeuronCard();
 }
 
 // ---------- ablation lab ----------
@@ -501,14 +721,16 @@ function buildAblGrid() {
 $('ablRun').onclick = () => {
   if (S.busy) return;
   const heads = [...document.querySelectorAll('#ablGrid input:checked')].map(c => c.dataset.lh);
-  if (!heads.length) { $('ablInfo').textContent = 'check at least one head first'; return; }
+  if (!heads.length && !S.steer.length) { $('ablInfo').textContent = 'check at least one head first'; return; }
   S.busy = true; $('runBtn').disabled = true;
-  worker.postMessage({ type: 'run', text: $('story').value, ablate: heads });
+  worker.postMessage(S.steer.length ? { type: 'run', text: $('story').value, ablate: heads, steer: steerList() }
+                                    : { type: 'run', text: $('story').value, ablate: heads });
   // run-ablated -> setAblActive() switches every instrument; no premature refresh here
 };
 $('ablClear').onclick = () => {
   document.querySelectorAll('#ablGrid input').forEach(c => c.checked = false);
   S.ablRun = null; $('ablInfo').textContent = '';
+  S.steer = []; S.cont = null;   // steered neurons are part of the ablation, so they clear too
   setAblActive(false);   // whole microscope back to the full model (strip/heat/bars/lens/neurons)
 };
 

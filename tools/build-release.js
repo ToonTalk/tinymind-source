@@ -16,7 +16,9 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const APPS = ['microscope', 'nursery', 'hunt'];
 const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
 const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js', 'ingest.js', 'embed-data.js'];
-const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: [], hunt: [] };
+const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js'], hunt: [] };
+// page-only extras for one app (the others' pages stay byte-identical)
+const PAGE_APP_EXTRA = { nursery: [], microscope: ['neuron-atlas.js'], hunt: [] };
 
 // the boot that replaces the dev marker block: real blob Worker, or the same-thread
 // shim when the sandbox refuses blob URLs (makeInlineWorker comes from app-shims)
@@ -89,6 +91,12 @@ if (!sameFolderResources || sameFolderResources.version !== 1 ||
   throw new Error('shell: resources.json must be version 1 with safe same-folder resource file names');
 }
 const sameFolderResourceFiles = sameFolderResources.resources.map(r => r.file);
+// the Microscope's neuron atlas (tools/build-neuron-atlas.js) is ~2 MB: far too big to
+// embed in the pages, so it ships beside them as a same-folder pack (resources.json)
+const neuronAtlas = await readFile(join(ROOT, 'microscope', 'tiny-mind-neuron-atlas.json'), 'utf8');
+if (!neuronAtlas.slice(0, 200).includes('"tiny-mind-neuron-atlas-v1"')) {
+  throw new Error('microscope: tiny-mind-neuron-atlas.json is not a tiny-mind-neuron-atlas-v1 file');
+}
 
 for (const app of APPS) {
   const html = await readFile(join(ROOT, app, 'index.html'), 'utf8');
@@ -109,9 +117,10 @@ for (const app of APPS) {
     ? `\nconst __TM_EMBEDDED_ZOG_STORIES__ = JSON.parse(${embedString(JSON.stringify(zogStories))});\n` +
       `const __TM_EMBEDDED_BINDING_CORPUS__ = JSON.parse(${embedString(JSON.stringify(bindingCorpus))});\n`
     : '';
+  const appExtra = PAGE_APP_EXTRA[app].length ? '\n' + await bundleOf(PAGE_APP_EXTRA[app]) : '';
   const bundled = embeddedData +
     `\nconst __WORKER_SRC__ = ${embedString(workerSrc)};\n` +
-    pageBundle + '\n' + pageAliases.join('\n') + '\n' + pageCode;
+    pageBundle + appExtra + '\n' + pageAliases.join('\n') + '\n' + pageCode;
 
   await checkScript(app, 'page', bundled);
   await checkScript(app, 'worker', workerSrc);
@@ -161,6 +170,8 @@ await checkScript('mega', 'shell', shellScripts[shellScripts.length - 3][1]);
 await writeFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), shell);
 await writeFile(join(ROOT, 'dist', 'tiny-mind-resources.json'),
   JSON.stringify(sameFolderResources, null, 2) + '\n');
+await writeFile(join(ROOT, 'dist', 'tiny-mind-neuron-atlas.json'), neuronAtlas);
 console.log(`dist/tiny-mind-mega.html  (${(shell.length / 1024).toFixed(0)} KB) — shell script parses OK`);
 console.log(`dist/tiny-mind-resources.json  (${sameFolderResourceFiles.length} same-folder runtime packs)`);
+console.log(`dist/tiny-mind-neuron-atlas.json  (${(neuronAtlas.length / 1024).toFixed(0)} KB)`);
 console.log('done');

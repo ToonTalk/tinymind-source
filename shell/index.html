@@ -459,8 +459,12 @@ async function tmRestorePool(){
   } catch (e) {}
 }
 
+// tiny-mind-neuron-atlas-v1 (src/neuron-atlas.js ATLAS_SCHEMA): the offline examples
+// behind the Microscope's "what does this neuron do?" card
+const isNeuronAtlasText = text => text.slice(0, 200).includes('"tiny-mind-neuron-atlas-v1"');
 async function shellIngest(recs) {
   const recByName = new Map(recs.map(r => [r.name, r]));
+  let atlasJsons = 0;
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
     addModel: (name, u8, vocab) => {
@@ -470,6 +474,15 @@ async function shellIngest(recs) {
     addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) { pool.toks.push({ name, u8, vocab }); tmPersist('tok', name, u8); } },
     json: (name, text) => {
       shellJsonNames.add(name);
+      if (isNeuronAtlasText(text)) {   // the Microscope's neuron card; held until its frame opens
+        atlasJsons++;
+        const msg = { tm: 'json', name, text };
+        if (frames.microscope) sendToApp('microscope', msg); else queues.microscope.push(msg);
+        // a same-folder atlas is already in Cache Storage; only a dropped one is remembered
+        const rec = recByName.get(name);
+        if (!(rec && rec.origin === 'same-folder')) tmPersistText('json', name, text);
+        return;
+      }
       sendToApp('nursery', { tm: 'json', name, text });
       tmPersistText('json', name, text);
     },
@@ -483,7 +496,8 @@ async function shellIngest(recs) {
       + m.snapshots[m.snapshots.length - 1].step + ' — open the Nursery to scrub through it');
   }
   if (res.took) bits.push('took ' + res.took + ' model/tokenizer file(s)');
-  if (res.jsons) bits.push('sent ' + res.jsons + ' json to the nursery');
+  if (res.jsons - atlasJsons) bits.push('sent ' + (res.jsons - atlasJsons) + ' json to the nursery');
+  if (atlasJsons) bits.push('neuron atlas ready for the Microscope');
   if (res.skipped.length) bits.push('skipped ' + res.skipped.join(', '));
   say('bay: ' + (bits.join(' · ') || 'nothing recognizable in that drop'),
     (res.arcs.length || res.took) ? 'ok' : 'warn');
