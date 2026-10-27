@@ -58,6 +58,7 @@ export function splitArcPacks(recs) {
 export const KID_LABELS = {
   arcB: 'a mind learning your character (and then just memorizing)',
   arcA: 'a brand-new mind growing up',
+  arcC: 'a mind learning which facts belong to which character',
 };
 export function arcKidLabel(manifest) {
   return KID_LABELS[manifest.arc] || manifest.note || manifest.arc;
@@ -73,6 +74,121 @@ export function stopCaption(snapshot, preferPrompt) {
   if (!keys.length) return { prompt: null, text: '' };
   const prompt = (preferPrompt && keys.includes(preferPrompt)) ? preferPrompt : keys[keys.length - 1];
   return { prompt, text: String(samples[prompt]) };
+}
+
+// The stored sample includes the prompt because it is useful for replay and
+// export. The teaching UI separates the two so children can see which words
+// were supplied and which words the model actually added.
+export function sampleContinuation(text, prompt) {
+  const full = String(text || '');
+  const start = String(prompt || '');
+  if (!start || !full.startsWith(start)) return full.trim();
+  return full.slice(start.length).trimStart();
+}
+
+// Four balanced candidate answers make random guessing a one-in-four event.
+// Keep this pure so wording and threshold behavior stay covered by Node tests.
+export function chanceLevelInterpretation(accuracy, choices = 4) {
+  const chance = choices > 0 ? 1 / choices : 0;
+  const nearChance = Number.isFinite(accuracy) && Math.abs(accuracy - chance) <= 0.05;
+  return {
+    chance,
+    nearChance,
+    label: nearChance ? 'approximately chance' : (accuracy > chance ? 'above chance' : 'below chance'),
+    explanation: `With ${choices} possible answers, a blind guess is right about 1 in ${choices} times (${(100 * chance).toFixed(0)}%).`,
+  };
+}
+
+// Binding arcs carry behavioural measurements alongside story losses. Keep the
+// teaching stage derived from those measurements so new schedules do not need
+// hard-coded step numbers.
+export function bindingStage(snapshot, baseLoss0 = null) {
+  const b = snapshot && snapshot.binding;
+  if (!b) return null;
+  const direct = b.directAccuracy ?? 0;
+  const specificity = b.specificityAccuracy ?? 0;
+  const baseLossDelta = Number.isFinite(baseLoss0) && Number.isFinite(snapshot.baseLoss)
+    ? snapshot.baseLoss - baseLoss0 : null;
+  let key, label, headline, summary;
+  if (snapshot.step === 0) {
+    key = 'before-training';
+    label = 'before character training';
+    headline = 'The mind is still guessing.';
+    summary = 'It knows how simple stories sound, but it has not learned which facts belong to Zog, Mip, Bex and Nia.';
+  } else if (specificity >= 0.95 && direct >= 0.9 && baseLossDelta !== null && baseLossDelta >= 0.4) {
+    key = 'very-strong-rigid';
+    label = 'very strong, but more rigid';
+    headline = 'The character facts are very strong, but the mind is more stuck in its ways.';
+    summary = 'It matches names and facts very well, while its ordinary storytelling has become noticeably worse.';
+  } else if (specificity >= 0.95 && direct >= 0.8) {
+    key = 'strong';
+    label = 'strong character learning';
+    headline = 'The mind has learned the character facts strongly.';
+    summary = 'The names now point to the right facts reliably, although some old storytelling skill has faded.';
+  } else if (specificity >= 0.8 && direct >= 0.6) {
+    key = 'separating';
+    label = 'character facts separating';
+    headline = 'The character facts are separating.';
+    summary = 'The mind usually uses each name to find that character\'s facts, but it is not fully reliable yet.';
+  } else if (specificity >= 0.5) {
+    key = 'names-matter';
+    label = 'names beginning to matter';
+    headline = 'The names are beginning to matter.';
+    summary = 'Changing the name is starting to change which fact the mind expects.';
+  } else if (direct > 0.25 || specificity >= 0.25) {
+    key = 'mixing';
+    label = 'still mixing character facts';
+    headline = 'The mind is still mixing the characters.';
+    summary = 'It is learning the new stories, but the names do not reliably choose the right facts yet.';
+  } else {
+    key = 'learning-world';
+    label = 'learning the new story world';
+    headline = 'The new story world is sounding more familiar.';
+    summary = 'The mind is getting used to these stories, but it is still guessing which fact belongs to each character.';
+  }
+  return {
+    key,
+    label,
+    headline,
+    summary,
+    baseLossDelta,
+    ordinaryStoryDamageWarning: baseLossDelta !== null && baseLossDelta >= 0.25,
+  };
+}
+
+// Qualitative first, exact values second. Kid mode consumes only the labels;
+// standard mode combines the percentages with these interpretations.
+export function bindingStatus(snapshot, baseLoss0 = null, bindingHeld0 = null) {
+  const b = snapshot && snapshot.binding;
+  if (!b) return null;
+  const direct = b.directAccuracy ?? 0;
+  const specificity = b.specificityAccuracy ?? 0;
+  const leakage = b.meanLeakageRatio ?? 0;
+  const overall = b.bindingScore ?? 0;
+  const chance = chanceLevelInterpretation(direct, 4);
+  const baseDelta = Number.isFinite(baseLoss0) && Number.isFinite(snapshot.baseLoss)
+    ? snapshot.baseLoss - baseLoss0 : null;
+  const baseRelative = snapshot.step === 0 || baseDelta === null || !baseLoss0 ? null : baseDelta / baseLoss0;
+  const heldDelta = Number.isFinite(bindingHeld0) && Number.isFinite(snapshot.bindingHeld)
+    ? snapshot.bindingHeld - bindingHeld0 : null;
+  const heldRelative = snapshot.step === 0 || heldDelta === null || !bindingHeld0 ? null : heldDelta / bindingHeld0;
+  return {
+    direct: chance.nearChance ? 'just guessing' : direct < 0.5 ? 'weak' : direct < 0.8 ? 'improving' : 'strong',
+    specificity: specificity < 0.4 ? 'weak' : specificity < 0.8 ? 'improving' : 'strong',
+    mixing: leakage >= 0.95 ? 'often mixes them' : leakage >= 0.8 ? 'still mixes them' : leakage >= 0.65 ? 'improving' : 'rarely mixes them',
+    ordinary: baseRelative === null || baseRelative <= 0.07 ? 'unchanged' : baseRelative < 0.25 ? 'somewhat worse' : 'much worse',
+    overall: overall < 0.4 ? 'just guessing' : overall < 0.65 ? 'weak' : overall < 0.85 ? 'improving' : 'strong',
+    newStory: heldRelative === null ? 'starting point' : heldRelative <= -0.2 ? 'much easier' : heldRelative < -0.05 ? 'easier' : heldRelative > 0.05 ? 'harder again' : 'about the same',
+    chance,
+    directValue: direct,
+    specificityValue: specificity,
+    leakageValue: leakage,
+    overallValue: overall,
+    baseDelta,
+    baseRelative,
+    heldDelta,
+    heldRelative,
+  };
 }
 
 // Multi-arc pool. Adding an arc with an existing key replaces it (idempotent re-drop);

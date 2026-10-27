@@ -1,0 +1,6 @@
+{
+  "manifests": [
+    "arc-manifest.json",
+    "binding/arc-manifest.json"
+  ]
+}

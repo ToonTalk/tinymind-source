@@ -254,7 +254,7 @@ function createGuide(){
       window.addEventListener('message', e => { const mm = e.data; if (mm && mm.tm === 'pref' && mm.key === 'tm-guide-kid') setTimeout(window.__vgMicRefresh, 0); });
       wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a);
       const mi = $('modelInfo');
-      if (mi) new MutationObserver(() => maybePrefillStory()).observe(mi, { childList: true, subtree: true, characterData: true });
+      if (mi && mi.nodeType === 1) new MutationObserver(() => maybePrefillStory()).observe(mi, { childList: true, subtree: true, characterData: true });
       setTimeout(maybePrefillStory, 300);
     },
   };

@@ -174,6 +174,8 @@ window.addEventListener('message', async (e) => {
     e.source.postMessage({ tm: 'rpc-reply', id: m.id, ok, value, error }, '*');
   } else if (m.tm === 'export' && app) {
     onExport(m.name, new Uint8Array(m.bytes), app);
+  } else if (m.tm === 'publish-model' && app) {
+    onPublishModel(m.name, new Uint8Array(m.bytes), app, m.meta || null);
   } else if (m.tm === 'model-loaded' && app) {
     loaded.add(app);
     if (activeTab === app) { hideOverlay(); frames[app].classList.remove('hide'); }
@@ -185,20 +187,22 @@ let activeTab = 'bay';
 const loaded = new Set();                     // apps whose frame currently holds a model
 const revealed = new Set();                   // apps opened without one (e.g. arc-only: the time machine needs no model to watch)
 const is512 = m => m.vocab === 512;
-const isZog = m => /zog/i.test(m.name);
+const isLegacyZog = m => is512(m) && /^stories260k-zog\.bin$/i.test(String(m.name || '').split(/[\\/]/).pop());
+const isBase260 = m => is512(m) && /^stories260k\.bin$/i.test(String(m.name || '').split(/[\\/]/).pop());
 const specimen  = () => pool.models.find(m => m.vocab !== 512);
-const fresh260  = () => pool.models.find(m => is512(m) && !isZog(m) && /260/.test(m.name)) || pool.models.find(m => is512(m) && !isZog(m));
-const zog260    = () => pool.models.find(m => is512(m) && isZog(m));
-const trained260 = () => pool.models.find(m => is512(m) && !isZog(m) && !/^stories?260k?\.bin$/i.test(m.name));
+// The pretrained base has a deliberately strict identity. A saved model such as
+// sisi-260K.bin must remain a trained-mind choice, never silently occupy this slot.
+const fresh260  = () => pool.models.find(isBase260);
+const zog260    = () => pool.models.find(isLegacyZog);
 
 const CARDS = {
   nursery: { title: 'Raise a tiny mind', sub: 'Two ways to begin — or load models in the 📦 tab first.', trainedVerb: 'keep training', opts: [
-    { h: 'Keep training the fresh 260K', p: 'Start from the blank-slate trainee and teach it your own stories — write them or have them ghostwritten — then watch a 260K-parameter mind learn in real time.', get: fresh260 },
+    { h: 'Start from the pretrained 260K', p: 'Use the original stories260K.bin. It already knows common TinyStories patterns, but it has not been trained on your custom characters.', get: fresh260 },
     { h: 'Explore the Zog mind', p: "A 260K model already trained on stories about Zog, a made-up creature — so it 'knows' Zog the way the fresh model doesn't yet. Load it to keep training, or just see what it says.", get: zog260 },
   ]},
   microscope: { title: 'Pick a model to inspect', sub: 'Any loaded model — inspect where it stores what it knows.', trainedVerb: 'inspect', opts: [
     { h: 'stories15M — the big specimen', p: '15 million parameters, vocab 32000. The richest attention and neuron patterns to explore.', get: specimen },
-    { h: 'the fresh 260K trainee', p: 'Vocab 512, blank slate — a mind small enough to see all of at once.', get: fresh260 },
+    { h: 'the pretrained 260K base', p: 'The original stories260K.bin: familiar with TinyStories patterns, but not trained on your custom characters.', get: fresh260 },
     { h: 'the Zog 260K', p: 'Vocab 512, trained on Zog stories. Open it beside the fresh one to see what training changed.', get: zog260 },
   ]},
   hunt: { title: 'Choose a mind to hunt in', sub: 'The Hunt always uses a 260K mind (vocab 512).', trainedVerb: 'hunt in', opts: [
@@ -206,7 +210,7 @@ const CARDS = {
   ]},
 };
 
-const trainedModels = () => pool.models.filter(m => is512(m) && !isZog(m) && (m.origin === 'export' || !/^stories?260k?\.bin$/i.test(m.name)));
+const trainedModels = () => pool.models.filter(m => is512(m) && !isLegacyZog(m) && !isBase260(m));
 function renderOverlay(app) {
   const c = CARDS[app];
   const opt = (h, p, model) => {
@@ -223,7 +227,7 @@ function renderOverlay(app) {
     for (const m of shellArcs.list()) {
       rows += '<div class="opt"><h3>⏪ Time machine: ' + escH(m.label || arcKidLabel(m)) + '</h3>'
         + '<p>' + m.snapshots.length + ' snapshots of a mind growing up, from the very start to step '
-        + m.snapshots[m.snapshots.length - 1].step + '. Slide through to watch it learn — no model needed. '
+        + m.snapshots[m.snapshots.length - 1].step + '. Choose any exact checkpoint, or use Previous and Next — no model needed. '
         + 'To wake a moment up in the trainee, keep the little alphabet file (tok512.bin) in the bay.</p>'
         + '<button data-arc="' + escH(m.arc) + '">open the time machine →</button></div>';
     }
@@ -232,7 +236,7 @@ function renderOverlay(app) {
   for (const m of trainedModels()) {
     const verb = c.trainedVerb || 'open';
     rows += opt('🌱 ' + verb + ': ' + m.name,
-      (m.origin === 'export' ? 'A mind you raised in the Nursery' : 'A vocab-' + m.vocab + ' mind you loaded') + ' (vocab ' + m.vocab + ').', m);
+      (/^(export|trained)$/.test(m.origin) ? 'A mind you raised in the Nursery' : 'A vocab-' + m.vocab + ' mind you loaded') + ' (vocab ' + m.vocab + ').', m);
   }
   $('overlay').innerHTML = '<div class="card"><h2>' + c.title + '</h2><div class="sub">' + c.sub + '</div>' + rows + '</div>';
   $('overlay').querySelectorAll('button[data-model]').forEach(b => b.onclick = () => {
@@ -240,8 +244,10 @@ function renderOverlay(app) {
     if (model) openModelInApp(app, model);
   });
   $('overlay').querySelectorAll('button[data-arc]').forEach(b => b.onclick = () => {
+    const arc = b.dataset.arc;
     revealed.add(app); hideOverlay(); ensureFrame(app).classList.remove('hide');
-    say('time machine open — the ' + b.dataset.arc + ' recording is loaded in the Nursery, under the training chart', 'ok');
+    sendToApp('nursery', { tm: 'select-arc', arc });
+    say('time machine open — the ' + arc + ' recording is selected in the Nursery, under the training chart', 'ok');
   });
 }
 function showOverlay(app) { renderOverlay(app); $('overlay').classList.remove('hide'); }
@@ -276,20 +282,21 @@ function selectTab(tab) {
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
 window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, get activeTab(){ return activeTab; } }; // vg: shell adapter seam
-tmRestorePool(); // vg wave 4: bring back last visit's bay
+const tmRestoreReady = tmRestorePool(); // vg wave 4: bring back last visit's bay before same-folder discovery
 
 function openModelInApp(app, model) {
   const tok = tokFor(model.vocab);
   if (!tok) { say(model.name + ' needs a vocab-' + model.vocab + ' tokenizer — drop it in the bay', 'warn'); return; }
   const buf = model.u8.buffer.slice(model.u8.byteOffset, model.u8.byteOffset + model.u8.byteLength);
   const tbuf = tok.u8.buffer.slice(tok.u8.byteOffset, tok.u8.byteOffset + tok.u8.byteLength);
-  sendToApp(app, { tm: 'load-pair', ckName: model.name, ck: buf, tokName: tok.name, tok: tbuf });
+  sendToApp(app, { tm: 'load-pair', ckName: model.name, ck: buf, modelMeta: model.meta || null, tokName: tok.name, tok: tbuf });
   loaded.add(app); selectTab(app);
   say('loading ' + model.name + ' + ' + tok.name + ' into the ' + app + '…');
 }
 
 /* ---------- pool ---------- */
 const pool = { models: [], toks: [] };   // {name, u8, vocab}
+const shellJsonNames = new Set();
 function fmtKB(n) { return n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : (n / 1024).toFixed(0) + ' KB'; }
 function tokFor(vocab) { return pool.toks.find(t => t.vocab === vocab) || (pool.toks.length === 1 ? pool.toks[0] : null); }
 function renderPool() {
@@ -319,16 +326,29 @@ function renderPool() {
   if (activeTab !== 'bay' && !loaded.has(activeTab)) renderOverlay(activeTab);   // keep a visible card fresh
   $('startNursery').disabled = pool.models.length === 0 && shellArcs.size() === 0;
 }
-function addModel(name, u8, vocab, origin) {
+function cloneModelMeta(meta) {
+  if (!meta || typeof meta !== 'object') return null;
+  try { return JSON.parse(JSON.stringify(meta)); } catch (e) { return null; }
+}
+function addModel(name, u8, vocab, origin, meta) {
   const i = pool.models.findIndex(x => x.name === name);
-  if (i >= 0) { origin = origin || pool.models[i].origin; pool.models.splice(i, 1); }
-  pool.models.push({ name, u8, vocab, origin: origin || 'ingest' }); tmPersist('model', name, u8); renderPool();
+  if (i >= 0) {
+    origin = origin || pool.models[i].origin;
+    meta = meta || pool.models[i].meta;
+    pool.models.splice(i, 1);
+  }
+  origin = origin || 'ingest';
+  meta = cloneModelMeta(meta);
+  pool.models.push({ name, u8, vocab, origin, meta });
+  tmPersist('model', name, u8, { origin, modelMeta: meta });
+  renderPool();
 }
 
 const shellArcs = createArcPool();   // arc packs live here, NOT in the model pool
 function takeArc(manifest, extras, source) {
   const entry = shellArcs.add(manifest, extras);
   sendToApp('nursery', { tm: 'arc', manifest, source });
+  sendToApp('hunt', { tm: 'arc', manifest, source });
   renderPool();                               // arcs are bay state: list line, nursery card, start button
   return entry;
 }
@@ -373,11 +393,14 @@ async function tmSetKey(k, v){
 function tmSum(str){ let h = 0x811c9dc5;                 // FNV-1a: cheap content check, so a re-drop is free
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
   return (h >>> 0).toString(36); }
-async function tmWriteInner(kind, name, body, enc){
+async function tmWriteInner(kind, name, body, enc, extra){
   const key = 'tm-pool-' + name, written = [], sum = tmSum(body);
+  extra = extra && typeof extra === 'object' ? extra : null;
+  const extraText = JSON.stringify(extra);
   try {
     const cur = await shellStorage.get(key).then(r => JSON.parse(r.value)).catch(() => null);
-    if (cur && cur.enc === enc && cur.len === body.length && cur.sum === sum) return;   // already remembered
+    if (cur && cur.enc === enc && cur.len === body.length && cur.sum === sum &&
+        JSON.stringify(cur.extra || null) === extraText) return;   // bytes and metadata already remembered
     const stale = await shellStorage.list(key + '~').catch(() => null);
     if (stale && stale.keys && stale.keys.length) await tmDelKeys(stale.keys);
     if (cur) await tmDel(key);
@@ -387,7 +410,7 @@ async function tmWriteInner(kind, name, body, enc){
       await tmSetKey(k, body.slice(i * TM_CHUNK, (i + 1) * TM_CHUNK));
       written.push(k);
     }
-    await tmSetKey(key, JSON.stringify({ kind, name, parts, enc, len: body.length, sum }));
+    await tmSetKey(key, JSON.stringify({ kind, name, parts, enc, len: body.length, sum, extra }));
     written.push(key);
     JSON.parse((await shellStorage.get(key)).value);   // read-back: a silent write failure surfaces here
   } catch (e) {
@@ -395,13 +418,13 @@ async function tmWriteInner(kind, name, body, enc){
     say('bay: could not remember ' + name + ' (' + ((e && e.message) || e) + ') — re-drop it next visit', 'warn');
   }
 }
-function tmWrite(kind, name, body, enc){ return tmSerial(() => tmWriteInner(kind, name, body, enc)); }  // declaration: the __tmShell seam is spliced above this line
-function tmPersist(kind, name, u8){
+function tmWrite(kind, name, body, enc, extra){ return tmSerial(() => tmWriteInner(kind, name, body, enc, extra)); }  // declaration: the __tmShell seam is spliced above this line
+function tmPersist(kind, name, u8, extra){
   if (tmRestoring) return;
   if (u8.length > TM_MAX_RAW) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
-  tmWrite(kind, name, tmU8ToB64(u8), 'b64');
+  tmWrite(kind, name, tmU8ToB64(u8), 'b64', extra);
 }
-function tmPersistText(kind, name, text){ if (!tmRestoring) tmWrite(kind, name, text, 'text'); }
+function tmPersistText(kind, name, text){ if (!tmRestoring) tmWrite(kind, name, text, 'text', null); }
 async function tmRestorePool(){
   try {
     if (typeof shellStorage.list !== 'function') return;
@@ -419,7 +442,8 @@ async function tmRestorePool(){
         if (idx.parts != null) { for (let i = 0; i < idx.parts; i++) body += (await shellStorage.get(k + '~' + i)).value; }
         else body = idx.b64 || idx.text || '';                 // wave-4 single-key format, still readable
         const isText = idx.enc === 'text' || (idx.parts == null && idx.text != null);
-        recs.push({ name: idx.name, u8: isText ? new TextEncoder().encode(body) : tmB64ToU8(body) });
+        recs.push({ name: idx.name, u8: isText ? new TextEncoder().encode(body) : tmB64ToU8(body),
+          origin: idx.extra && idx.extra.origin, modelMeta: idx.extra && idx.extra.modelMeta });
       } catch (e) { broken.push(k); }
     }
     if (broken.length) {
@@ -436,11 +460,19 @@ async function tmRestorePool(){
 }
 
 async function shellIngest(recs) {
+  const recByName = new Map(recs.map(r => [r.name, r]));
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
-    addModel: (name, u8, vocab) => addModel(name, u8, vocab, 'ingest'),
+    addModel: (name, u8, vocab) => {
+      const rec = recByName.get(name);
+      addModel(name, u8, vocab, (rec && rec.origin) || 'ingest', rec && rec.modelMeta);
+    },
     addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) { pool.toks.push({ name, u8, vocab }); tmPersist('tok', name, u8); } },
-    json: (name, text) => { sendToApp('nursery', { tm: 'json', name, text }); tmPersistText('json', name, text); },
+    json: (name, text) => {
+      shellJsonNames.add(name);
+      sendToApp('nursery', { tm: 'json', name, text });
+      tmPersistText('json', name, text);
+    },
     unzipError: (name, msg) => say('could not unzip ' + name + ': ' + msg, 'warn'),
   });
   renderPool();
@@ -493,6 +525,13 @@ function onExport(name, u8, fromApp) {
   if (v > 0) { addModel(name, u8, v, 'export'); say(`saved ${name} — it also joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok'); }
   else say(`saved ${name}`, 'ok');
 }
+function onPublishModel(name, u8, fromApp, meta) {
+  const v = checkpointVocab(u8);
+  if (v > 0) {
+    addModel(name, u8, v, 'trained', meta);
+    say(`${name} finished training and joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok');
+  } else say(`could not add ${name} to the model table`, 'err');
+}
 
 /* ---------- browse + onboarding ---------- */
 $('browseBtn').onclick = () => $('fileInput').click();
@@ -503,28 +542,114 @@ $('fileInput').onchange = async (e) => {
 };
 $('startNursery').onclick = () => selectTab('nursery');
 
-/* ---------- eager model load (served deploys only) ---------- */
-const MODEL_FILES = ['tok512.bin', 'tokenizer.bin', 'stories260K.bin', 'stories260K-zog.bin', 'stories15M.bin'];
-(async function autoLoadModels() {
-  let probe;
-  try { probe = await fetch(MODEL_FILES[0]); }
-  catch { say('nothing can be fetched beside the app here (sandbox or file://) — drop your bundle (models, replay.json, arc .zip) into the bay', 'warn'); return; }
-  if (!probe.ok) { say('no model files found beside the app (looked for ' + MODEL_FILES[0] + ') — drop a bundle instead', 'warn'); return; }
-  say('found model files beside the app — loading…');
-  let got = 0;
-  let gotReplay = false, gotArc = null;
-  for (const name of MODEL_FILES) {
+/* ---------- same-folder resource discovery (served deploys only) ----------
+   Static hosts cannot list a directory. The build therefore ships a tiny
+   tiny-mind-resources.json beside the mega page, and also embeds the current
+   runtime-pack names as a fallback so replacing only the HTML still works.
+   Successful responses are kept in Cache Storage: large arc packs and the 15M
+   specimen do not need to cross the network again on the next visit. */
+const RESOURCE_MANIFEST = 'tiny-mind-resources.json';
+const FALLBACK_RESOURCE_PACKS = @@SAME_FOLDER_RESOURCES@@;
+const MODEL_FILES = [
+  'tok512.bin', 'tokenizer.bin',
+  'stories260K.bin', 'stories260K-zog.bin',
+  'stories260K-binding.bin', 'stories260K-binding-max.bin',
+  'stories15M.bin'
+];
+const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1';
+function safeSameFolderFile(value) {
+  return typeof value === 'string' && /^[^/\\?#]+\.(?:zip|bin|json)$/i.test(value);
+}
+function sameFolderUrl(name) {
+  if (!safeSameFolderFile(name)) throw new Error('not a same-folder resource name: ' + name);
+  return new URL(name, window.location.href).href;
+}
+async function fetchBeside(name, { persistent = true } = {}) {
+  const url = sameFolderUrl(name);
+  let cache = null;
+  if (persistent && /^https?:$/i.test(window.location.protocol) &&
+      window.caches && typeof window.caches.open === 'function') {
     try {
-      const r = name === MODEL_FILES[0] ? probe : await fetch(name);
-      if (!r || !r.ok) continue;
-      await shellIngest([{ name, u8: new Uint8Array(await r.arrayBuffer()) }]);
+      cache = await window.caches.open(TM_RESOURCE_CACHE);
+      const hit = await cache.match(url);
+      if (hit) return { response: hit, cacheHit: true };
+    } catch (e) { cache = null; } // private mode/quota: ordinary HTTP caching still applies
+  }
+  const response = await fetch(url);
+  if (response.ok && cache) {
+    try { await cache.put(url, response.clone()); } catch (e) { /* quota: resource still loaded */ }
+  }
+  return { response, cacheHit: false };
+}
+async function resourcePackNames() {
+  try {
+    const { response } = await fetchBeside(RESOURCE_MANIFEST, { persistent: false });
+    if (response.ok) {
+      const data = await response.json();
+      const raw = Array.isArray(data) ? data : data && data.resources;
+      if (Array.isArray(raw)) {
+        return [...new Set(raw.map(x => typeof x === 'string' ? x : x && x.file)
+          .filter(safeSameFolderFile))];
+      }
+    }
+  } catch (e) { /* older deploy: use the embedded fallback */ }
+  return [...FALLBACK_RESOURCE_PACKS];
+}
+function alreadyInBay(name) {
+  return pool.models.some(x => x.name === name) || pool.toks.some(x => x.name === name) ||
+    shellJsonNames.has(name);
+}
+window.__tmSameFolderResources = {
+  manifest: RESOURCE_MANIFEST,
+  fallback: [...FALLBACK_RESOURCE_PACKS],
+  cacheName: TM_RESOURCE_CACHE,
+  fetchBeside,
+};
+
+(async function autoLoadModels() {
+  await tmRestoreReady;
+  let got = 0, packGot = 0, cacheHits = 0, fetchWorked = false;
+  let gotReplay = shellJsonNames.has('replay.json');
+
+  const packs = await resourcePackNames();
+  for (let i = 0; i < packs.length; i++) {
+    const name = packs[i];
+    try {
+      say(`same-folder resources ${i + 1}/${packs.length}: loading ${name}…`);
+      const { response, cacheHit } = await fetchBeside(name);
+      fetchWorked = true;
+      if (!response.ok) continue;
+      await shellIngest([{ name, u8: new Uint8Array(await response.arrayBuffer()), origin: 'same-folder' }]);
+      packGot++;
+      if (cacheHit) cacheHits++;
+      gotReplay = gotReplay || shellJsonNames.has('replay.json');
+    } catch (e) { /* an optional pack may not be present on this host */ }
+  }
+
+  for (const name of MODEL_FILES) {
+    if (alreadyInBay(name)) continue;
+    try {
+      const { response, cacheHit } = await fetchBeside(name);
+      fetchWorked = true;
+      if (!response.ok) continue;
+      await shellIngest([{ name, u8: new Uint8Array(await response.arrayBuffer()), origin: 'same-folder' }]);
       got++;
+      if (cacheHit) cacheHits++;
     } catch { /* missing file — skip */ }
   }
-  try {   // replay corpus lives beside the app too (optional): powers replay-mix + an in-distribution blue line
-    const rr = await fetch('replay.json');
-    if (rr.ok) { await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await rr.arrayBuffer()) }]); gotReplay = true; }
-  } catch { /* no replay corpus here — the embedded fallback still draws the blue line */ }
+  if (!gotReplay) {
+    try {   // loose replay corpus is also supported when no starter pack supplied it
+      const { response, cacheHit } = await fetchBeside('replay.json');
+      fetchWorked = true;
+      if (response.ok) {
+        await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await response.arrayBuffer()), origin: 'same-folder' }]);
+        gotReplay = true;
+        if (cacheHit) cacheHits++;
+      }
+    } catch { /* no replay corpus here — the embedded fallback still draws the blue line */ }
+  }
+
+  let gotArc = shellArcs.list()[0] || null;
   try {   // arc packs beside the app: arc/arcs.json may list several (each with its own folder),
            // else the single arc/arc-manifest.json. A manifest may also name siblings in "more".
     const seen = new Set(), found = [];
@@ -551,9 +676,15 @@ const MODEL_FILES = ['tok512.bin', 'tokenizer.bin', 'stories260K.bin', 'stories2
       gotArc = gotArc || manifest;
     }
   } catch { /* no arc pack beside this deploy */ }
-  say(`beside the app: ${got}/${MODEL_FILES.length} model files · replay ${gotReplay ? '✓' : '— (looked for replay.json)'}`
-    + ` · arc ${gotArc ? '✓ "' + gotArc.arc + '" (' + gotArc.snapshots.length + ' snapshots — open the Nursery to scrub)' : '— (looked for arc/arc-manifest.json)'}`,
-    got ? 'ok' : 'warn');
+  if (!fetchWorked && !packGot && !got) {
+    say('nothing can be fetched beside the app here (sandbox or file://) — drop your bundle (models, replay.json, arc .zip) into the bay', 'warn');
+    return;
+  }
+  const arcCount = shellArcs.size();
+  say(`beside the app: ${packGot}/${packs.length} resource packs · ${got} extra loose model/tokenizer files`
+    + ` · ${cacheHits} loaded from cache · replay ${gotReplay ? '✓' : '—'}`
+    + ` · time machines ${arcCount || '—'}${arcCount ? ' (open the Nursery to scrub)' : ''}`,
+    (packGot || got || arcCount) ? 'ok' : 'warn');
 })();
 </script>
 </body></html>

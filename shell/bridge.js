@@ -2,8 +2,9 @@
    build-release.js injects this as a plain <script> ahead of each app's module script
    (dist singles AND the mega templates), so an app inside the shell's iframe gets:
    window.claude + window.storage proxied over postMessage RPC to the shell,
-   load-pair / json pushes routed to the app's __tmLoadPair / __tmRouteJson hooks,
-   and __tmBubbleExport to hand files up to the shell (nested frames cannot download). */
+   load-pair / json / arc-selection pushes routed to the app's public hooks,
+   __tmBubbleExport to hand downloads up to the shell, and __tmPublishModel to
+   register a completed training run without forcing a download. */
 (function () {
   if (window.parent === window) return;
   window.__tmBridge = true;
@@ -22,7 +23,7 @@
       if (m.ok) p.resolve(m.value); else p.reject(new Error(m.error || 'rpc failed'));
     } else if (m.tm === 'load-pair') {
       const tryLoad = (n) => {
-        if (window.__tmLoadPair) window.__tmLoadPair({ name: m.ckName, buf: m.ck }, { name: m.tokName, buf: m.tok });
+        if (window.__tmLoadPair) window.__tmLoadPair({ name: m.ckName, buf: m.ck, meta: m.modelMeta || null }, { name: m.tokName, buf: m.tok });
         else if (n > 0) setTimeout(() => tryLoad(n - 1), 150);
       };
       tryLoad(100);
@@ -38,6 +39,12 @@
         else if (n > 0) setTimeout(() => tryArc(n - 1), 150);
       };
       tryArc(100);
+    } else if (m.tm === 'select-arc') {
+      const trySelectArc = (n) => {
+        if (window.__tmSelectArc) window.__tmSelectArc(m.arc);
+        else if (n > 0) setTimeout(() => trySelectArc(n - 1), 150);
+      };
+      trySelectArc(100);
     }
   });
   window.__tmRPC = rpc;   // generic escape hatch (arc.snapshot etc.); inert standalone
@@ -53,6 +60,11 @@
   window.__tmBubbleExport = (name, u8) => {
     const buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
     parent.postMessage({ tm: 'export', name, bytes: buf }, '*');
+  };
+  window.__tmPublishModel = (name, bytes, meta) => {
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    const buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+    parent.postMessage({ tm: 'publish-model', name, bytes: buf, meta: meta || null }, '*');
   };
   window.addEventListener('load', () => parent.postMessage({ tm: 'ready', app: document.title }, '*'));
 })();

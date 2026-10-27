@@ -41,7 +41,8 @@
   .hypo .claim { font-size: 14.5px; }
   .hypo .pred { color: var(--dim); font-size: 12.5px; margin: .25rem 0; }
   .hypo .verdict { margin-top: .4rem; font-size: 14px; }
-  .proved { color: var(--green); } .busted { color: var(--red); } .weak { color: var(--gold); }
+  .selective { color: var(--green); } .general { color: var(--blue); }
+  .suppressor { color: var(--pink); } .little { color: var(--gold); }
   #probeOut .answer { font-size: 16px; }
   #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; }
   .big { font-size: 17px; }
@@ -51,7 +52,7 @@
 </head>
 <body>
 <h1>🗺️ Tiny Mind — Treasure Hunt</h1>
-<div class="sub">your character lives somewhere inside those numbers. find it. prove it.</div>
+<div class="sub">the model changed inside. Find parts that contribute, and test whether their effects are specific.</div>
 
 <div class="card">
   <h2>1 · bring your tiny mind</h2>
@@ -68,7 +69,7 @@
   <label class="f">character name <input type="text" id="qName" value="Zog"></label><br>
   <label class="f">the question <input type="text" id="qProbe" value="Zog lives behind the" size="34"></label>
   <label class="f">the right answer <input type="text" id="qCont" value=" moon" size="12"></label>
-  <div class="hint" style="margin:.2rem 0">quick quests:
+  <div class="hint" id="quickQuests" style="margin:.2rem 0">quick quests:
     <button class="small alt" data-p="Zog lives behind the" data-c=" moon">where does Zog live?</button>
     <button class="small alt" data-p="Zog was hungry. Zog likes to eat" data-c=" clouds">what does Zog eat?</button>
     <button class="small alt" data-p="Zog is a small" data-c=" dragon">what IS Zog?</button>
@@ -85,7 +86,7 @@
     <label class="f">key <input type="password" id="detKey"></label>
     <label class="f">model <input type="text" id="detModel"></label>
   </span>
-  <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: the answer should be <b>one word</b>, and changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone predicts "tree" for anyone, so there's no character-treasure to find. (step 3 has a button to test this.)</div>
+  <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone may predict "tree" for anyone, so that prediction may not be name-specific yet. Step 3 measures this with matched name controls.</div>
   <button class="go" id="probeBtn" disabled>🔎 step 1: ask the model</button>
 </div>
 
@@ -98,8 +99,10 @@
 
 <div class="card" id="cluesCard" style="display:none">
   <h2>4 · the detective's clues <span class="hint">— every clue is only a GUESS until you test it</span></h2>
-  <div class="hint" style="margin-bottom:.3rem">the detective is an AI that <b>guesses</b> where the knowledge might live — it never measures anything. the numbers in step 3 are the tiny model's own; these are just hunches to test.</div>
+  <div class="hint" style="margin-bottom:.3rem">the detective proposes visual clues from name attention, name-piece neurons, and answer-boundary neurons. These are hypotheses; causal measurements and unrelated controls decide how selective their effects are.</div>
   <button class="go small" id="cluesBtn">🕵️ get clues</button>
+  <button class="alt small" id="screenBtn">🧪 screen candidates</button>
+  <div id="screenOut"></div>
   <div id="hypos"></div>
 </div>
 
@@ -117,7 +120,7 @@
 <div class="card" id="scoreCard" style="display:none">
   <h2>6 · your discoveries</h2>
   <div id="score"></div>
-  <div class="lesson">the pretty pictures only SUGGESTED where the treasure was. your ablations PROVED it.</div>
+  <div class="lesson">pictures suggest candidates. Ablations measure causal contribution; unrelated controls show whether that contribution is selective.</div>
 </div>
 
 <script type="module">const $ = id => document.getElementById(id);
@@ -128,7 +131,8 @@ let workerMode = 'background worker';
 // @tm-worker-boot-end
 const LSget = k => { try { return localStorage.getItem(k); } catch { return null; } };
 
-const S = { config: null, probe: null, tested: [], proved: 0, busy: false, hypoSeq: 0 };
+const S = { config: null, probe: null, tested: [], selective: 0, busy: false, hypoSeq: 0,
+  arcManifest: null, screen: null, modelName: null, modelMeta: null };
 
 function kid() { return $('kidMode').checked; }
 function speak(text) {
@@ -160,9 +164,12 @@ window.addEventListener('drop', async e => {
   let ck = null, tk = null;
   for (const f of snap) {
     const buf = await f.arrayBuffer();
-    if (buf.byteLength > 500000) ck = buf; else tk = buf;
+    if (buf.byteLength > 500000) ck = { name: f.name, buf }; else tk = { name: f.name, buf };
   }
-  if (ck && tk) worker.postMessage({ type: 'load', ckptBuf: ck, tokBuf: tk });
+  if (ck && tk) {
+    applyModelQuestContext({ name: ck.name, meta: null });
+    worker.postMessage({ type: 'load', ckptBuf: ck.buf, tokBuf: tk.buf });
+  }
   else status('drop the model .bin and tok512.bin together', true);
 });
 $('loadZog').onclick = async () => {
@@ -172,14 +179,58 @@ $('loadZog').onclick = async () => {
       fetchFirst(['stories260K-zog.bin', '../models/stories260K-zog.bin']),
       fetchFirst(['tok512.bin', '../models/tok512.bin']),
     ]);
+    applyModelQuestContext({ name: 'stories260K-zog.bin', meta: null });
     worker.postMessage({ type: 'load', ckptBuf: await a.arrayBuffer(), tokBuf: await b.arrayBuffer() });
   } catch { status('no hosted models here — drop your saved .bin + tok512.bin onto the page instead', true); }
 };
 
 // ---------- quest presets + detective ----------
-document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
-  $('qProbe').value = b.dataset.p; $('qCont').value = b.dataset.c;
-});
+const DEFAULT_ZOG_QUESTS = [
+  { name: 'Zog', label: 'where does Zog live?', probe: 'Zog lives behind the', continuation: ' moon' },
+  { name: 'Zog', label: 'what does Zog eat?', probe: 'Zog was hungry. Zog likes to eat', continuation: ' clouds' },
+  { name: 'Zog', label: 'what IS Zog?', probe: 'Zog is a small', continuation: ' dragon' },
+];
+const KNOWN_BINDING_CHARACTERS = {
+  Zog: { kind: 'dragon', food: 'clouds', home: 'moon', natural: 'behind the moon' },
+  Mip: { kind: 'rabbit', food: 'apples', home: 'river', natural: 'beside the river' },
+  Bex: { kind: 'bear', food: 'honey', home: 'cave', natural: 'inside a cave' },
+  Nia: { kind: 'bird', food: 'berries', home: 'tree', natural: 'in a tall tree' },
+};
+function questManifestForModel(checkpoint) {
+  const world = checkpoint && checkpoint.meta && checkpoint.meta.storyWorld;
+  if (world && world.characters && Object.keys(world.characters).length)
+    return { arc: 'trained-model', characters: world.characters, storyWorld: world };
+  const filename = String(checkpoint && checkpoint.name || '').split(/[\\/]/).pop();
+  if (/^(?:stories260k-binding(?:-max)?|four-character-binding-260k|zog-mip-bex-nia-binding-260k)\.bin$/i.test(filename))
+    return { arc: 'trained-binding-model', characters: KNOWN_BINDING_CHARACTERS };
+  return null;
+}
+function wireQuestButton(button) {
+  button.onclick = () => {
+    $('qName').value = button.dataset.name || 'Zog';
+    $('qProbe').value = button.dataset.p; $('qCont').value = button.dataset.c;
+  };
+}
+function renderQuestPresets(manifest) {
+  const presets = questPresetsFromManifest(manifest);
+  const quests = presets.length ? presets : DEFAULT_ZOG_QUESTS;
+  $('quickQuests').innerHTML = 'quick quests: ';
+  for (const q of quests) {
+    const b = document.createElement('button');
+    b.className = 'small alt'; b.textContent = q.label;
+    b.dataset.name = q.name; b.dataset.p = q.probe; b.dataset.c = q.continuation;
+    wireQuestButton(b); $('quickQuests').appendChild(b);
+  }
+  const preferred = quests[0];
+  $('qName').value = preferred.name; $('qProbe').value = preferred.probe; $('qCont').value = preferred.continuation;
+}
+function applyModelQuestContext(checkpoint) {
+  S.modelName = checkpoint && checkpoint.name || null;
+  S.modelMeta = checkpoint && checkpoint.meta || null;
+  S.arcManifest = questManifestForModel(checkpoint);
+  renderQuestPresets(S.arcManifest);
+}
+renderQuestPresets(null);
 $('detective').onchange = () => {
   const d = $('detective').value;
   $('detKeyFields').style.display = (d === 'builtin' || d === 'keyless') ? 'none' : 'inline';
@@ -198,10 +249,12 @@ worker.onmessage = (e) => {
   if (m.type === 'loaded') {
     if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
-    $('modelInfo').textContent = `${m.config.nLayers} layers · ${m.config.nHeads} heads · ${m.config.hiddenDim} neurons/layer`;
+    $('modelInfo').textContent = `${S.modelName ? S.modelName + ' · ' : ''}${m.config.nLayers} layers · ${m.config.nHeads} heads · ${m.config.hiddenDim} neurons/layer`;
     $('probeBtn').disabled = false;
     buildDiy();
-    status('ready — pick a quest and ask the model');
+    status(S.arcManifest && Object.keys(S.arcManifest.characters || {}).length > 1
+      ? 'ready — quests and matched name controls loaded for Zog, Mip, Bex and Nia'
+      : 'ready — pick a quest and ask the model');
     speak(kid() ? 'Your tiny mind is here! What shall we hunt for?' : 'Model loaded. Pick a quest.');
   }
   if (m.type === 'probe-done') renderProbe(m);
@@ -212,8 +265,8 @@ worker.onmessage = (e) => {
 $('probeBtn').onclick = () => {
   if (S.busy) return;
   S.busy = true;
-  S.tested = []; S.proved = 0;
-  $('hypos').innerHTML = ''; $('diyOut').innerHTML = ''; renderScore();
+  S.tested = []; S.selective = 0; S.screen = null;
+  $('hypos').innerHTML = ''; $('screenOut').innerHTML = ''; $('diyOut').innerHTML = ''; renderScore();
   status('asking the model…');
   worker.postMessage({ type: 'probe', probe: $('qProbe').value, continuation: $('qCont').value, name: $('qName').value.trim() });
 };
@@ -221,8 +274,9 @@ $('probeBtn').onclick = () => {
 function renderProbe(m) {
   S.probe = m;
   $('probeCard').style.display = $('cluesCard').style.display = $('diyCard').style.display = $('scoreCard').style.display = 'block';
-  const right = pct(m.contProb);
-  let html = `<div class="answer">"${esc($('qProbe').value)}<b class="ok">${esc($('qCont').value)}</b>" — the model gives the right answer a <b class="ok">${right}</b> chance.</div>`;
+  const rightScore = m.contGeometricMeanProbability ?? m.contProb;
+  const right = pct(rightScore);
+  let html = `<div class="answer">"${esc($('qProbe').value)}<b class="ok">${esc($('qCont').value)}</b>" — the model's per-piece answer score is <b class="ok">${right}</b>.</div>`;
   html += `<div class="hint" style="margin:.4rem 0 .2rem">its top guesses after "${esc($('qProbe').value)}":</div>`;
   for (const t of m.top.slice(0, 6)) {
     html += `<div class="bar-row"><div class="bar-label">${esc(JSON.stringify(t.piece))}</div>
@@ -231,52 +285,53 @@ function renderProbe(m) {
   }
   if (m.contBreakdown && m.contBreakdown.length > 1) {
     const parts = m.contBreakdown.map(b => `<span style="white-space:nowrap">${esc(JSON.stringify(b.piece))}&nbsp;<b class="${b.prob < 0.1 ? 'err' : 'ok'}">${pct(b.prob)}</b></span>`).join(' <span class="hint">×</span> ');
-    html += `<div class="hint" style="margin-top:.5rem">the answer "${esc($('qCont').value.trim())}" is <b>${m.contBreakdown.length} tokens</b> — the chance above is every piece multiplied together:</div>`;
+    html += `<div class="hint" style="margin-top:.5rem">the answer "${esc($('qCont').value.trim())}" is <b>${m.contBreakdown.length} tokens</b>. The headline uses the geometric mean so different-length answers compare fairly; the raw pieces are:</div>`;
     html += `<div style="margin:.2rem 0;font-size:.92em">${parts}</div>`;
-    html += `<div class="hint">a rare word that splits into many pieces is punished even when the model "knows" it. one weak piece sinks the whole product. try a one-token answer, or match the training tense, to compare.</div>`;
+    html += `<div class="hint">raw product ${pct(m.contProb)}. A weak piece can still reveal where an answer breaks, but it no longer unfairly dominates comparisons across different answer lengths.</div>`;
   }
   html += `<div class="hint" style="margin-top:.3rem">found "${esc($('qName').value)}" ${m.nameSpans.length} time(s) in the question (pieces ${m.nameSpans.map(s => s[0] + '–' + s[1]).join(', ')})</div>`;
   $('probeOut').innerHTML = html;
   $('nameCtrlOut').innerHTML = '';
   status('now get clues — or test parts yourself');
   speak(kid()
-    ? `The model thinks the answer is ${$('qCont').value}! Now let's find WHERE it keeps that. Ask the detective for clues!`
-    : `Right-answer chance ${right}. Get clues, then prove or bust them with ablations.`);
+    ? `The model expects ${$('qCont').value}! Now let's find parts that help it make that prediction.`
+    : `Per-piece answer score ${right}. Get visual clues, then measure their causal and control effects.`);
 }
 
 // ---------- name-control experiment: is the fact about the NAME or the phrasing? ----------
 $('nameCtrlBtn').onclick = () => {
   if (S.busy || !S.probe) return;
   const name = $('qName').value.trim();
-  const pool = ['Max', 'Lily', 'Tom', 'Anna', 'Ben', 'Mia', 'Sam'];
-  const controls = pool.filter(x => x.toLowerCase() !== name.toLowerCase()).slice(0, 3);
+  const controls = controlNamesForManifest(S.arcManifest, name);
   $('nameCtrlOut').innerHTML = '<div class="hint">testing other names…</div>';
   worker.postMessage({ type: 'namecontrol', probe: $('qProbe').value, continuation: $('qCont').value, name, controls });
 };
 
-function nameControlVerdict(baseline, avg, nameInProbe) {
-  if (!nameInProbe) return { cls: 'warn', text: "the name isn't even in your question, so of course changing it does nothing. put the character's name in the question to hunt for it." };
-  if (!(baseline > 0)) return { cls: 'hint', text: 'run step 1 first.' };
-  if (avg > baseline * 0.5) return { cls: 'err', text: 'NOT really about this character. other names get about the same answer, so this fact lives in the other words — not the name. there is no character-treasure to hunt for this one. try a fact where the name changes the answer.' };
-  if (avg < baseline * 0.15) return { cls: 'ok', text: 'YES — really about this character. swap the name and the answer mostly disappears, so the model is using the name. this fact is worth hunting.' };
-  return { cls: 'hint', text: 'partly about the character — the name helps, but the other words carry some of it too.' };
-}
-
 function renderNameControl(m) {
   const name = $('qName').value.trim();
-  const valid = m.results.filter(r => typeof r.contProb === 'number');
-  const avg = valid.length ? valid.reduce((s, r) => s + r.contProb, 0) / valid.length : 0;
+  const valid = m.results.filter(r => Number.isFinite(r.meanLogProb));
   const bar = (label, p, bold) => `<div class="bar-row"><div class="bar-label">${bold ? '<b>' + esc(label) + '</b>' : esc(label)}</div>` +
     `<div class="bar-outer"><div class="bar" style="width:${(100 * p).toFixed(1)}%"></div></div><div class="bar-pct">${pct(p)}</div></div>`;
-  let html = `<div class="hint" style="margin:.4rem 0 .2rem">same question, "${esc(name)}" swapped for other names:</div>`;
-  if (m.baseline > 0) html += bar(name + ' (real)', m.baseline, true);
-  html += valid.map(r => bar(r.name, r.contProb, false)).join('');
+  let html = `<div class="hint" style="margin:.4rem 0 .2rem">same question and answer, with "${esc(name)}" swapped for matched control names; every bar is a per-token geometric-mean score:</div>`;
+  if (m.baselineGeometricMeanProbability > 0) html += bar(name + ' (intended)', m.baselineGeometricMeanProbability, true);
+  html += valid.map(r => bar(r.name, r.geometricMeanProbability, false)).join('');
   const bad = m.results.filter(r => r.error);
   if (bad.length) html += `<div class="hint">(skipped ${bad.map(r => esc(r.name)).join(', ')}: ${esc(bad[0].error)})</div>`;
-  const v = nameControlVerdict(m.baseline, avg, m.nameInProbe);
-  html += `<div class="${v.cls}" style="margin-top:.3rem">${v.cls === 'err' ? '⚠ ' : v.cls === 'ok' ? '✓ ' : ''}${v.text}</div>`;
+  const v = nameSpecificityVerdict({ intendedMeanLogProb: m.baselineMeanLogProb, alternatives: valid, nameInProbe: m.nameInProbe });
+  const cls = v.kind === 'specific' ? 'ok' : v.kind === 'not-specific' || v.kind === 'invalid' ? 'err' : 'warn';
+  const detail = Number.isFinite(v.margin)
+    ? ` Intended-name margin ${v.margin >= 0 ? '+' : ''}${v.margin.toFixed(3)} nats/token; leakage ratio ${v.leakageRatio.toFixed(3)}. Best other name: ${esc(v.bestOther.name)}.`
+    : '';
+  const explanation = v.kind === 'specific'
+    ? 'The intended name ranks first and the alternatives leak substantially less of the answer.'
+    : v.kind === 'partial'
+      ? 'The intended name ranks first, but another trained name still gives a similar score.'
+      : v.kind === 'invalid'
+        ? 'Put the character name in the question before running this control.'
+        : 'Another trained name scores at least as highly, so this prediction is not attached reliably to the intended name yet.';
+  html += `<div class="${cls}" style="margin-top:.3rem"><b>${v.label}</b>. ${explanation}${detail}</div>`;
   $('nameCtrlOut').innerHTML = html;
-  speak(kid() ? (v.cls === 'err' ? 'Aha! This one is not really about your character!' : v.cls === 'ok' ? 'Yes! This fact really is about your character!' : 'Interesting — partly about your character.') : '');
+  speak(kid() ? (v.kind === 'specific' ? 'Yes — this answer really changes with the character name.' : v.kind === 'partial' ? 'The right name helps, but another name is still close.' : 'This answer is not name-specific yet.') : '');
 }
 
 // ---------- hypotheses ----------
@@ -286,14 +341,21 @@ function heuristicHypotheses(m) {
   for (const h of m.headScores.slice(0, 2)) {
     if (h.score < 0.02) break;
     out.push({ kind: 'head', layer: h.layer, index: h.head,
+      source: 'name attention',
       claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
       prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
   }
-  for (const nr of m.neuronTop.slice(0, 2)) {
+  for (const nr of m.neuronTop.slice(0, 1)) {
     if (nr.score < 1) break;
-    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron,
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
       claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
       prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
+  }
+  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
+    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
+      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${$('qCont').value.trim()}" more than unrelated completions.` });
   }
   // the team hypothesis: knowledge is usually SHARED — single parts are often
   // redundant, whole layers rarely are. (This is the ladder after busted clues.)
@@ -301,8 +363,9 @@ function heuristicHypotheses(m) {
   for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
   const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
   out.push({ kind: 'team', layer: bestLayer,
-    claim: `Maybe no single head holds it — maybe the WHOLE TEAM of layer ${bestLayer}'s attention heads shares the job of looking back at "${name}".`,
-    prediction: `Switch off ALL ${S.config.nHeads} heads in layer ${bestLayer} at once — if the team holds the treasure, the answer should break badly.` });
+    source: 'layer team',
+    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
+    prediction: `Switch off ALL ${S.config.nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
   return out;
 }
 function ablationFor(h) {
@@ -324,8 +387,9 @@ async function llmHypotheses(m) {
     topGuesses: m.top,
     headAttentionToName_atAnswerPosition: m.headScores,
     neuronContrast_onNamePieces: m.neuronTop,
+    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
   };
-  const prompt = `You are a friendly detective helping a child (age 10) discover WHERE a tiny transformer stores its knowledge of an invented character. Study the evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation).
+  const prompt = `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes.
 
 Evidence (JSON):
 ${JSON.stringify(evidence)}
@@ -354,8 +418,8 @@ $('cluesBtn').onclick = async () => {
   }
   renderHypos(hypos);
   $('cluesBtn').disabled = false;
-  speak(kid() ? 'Here are my clues! But careful — clues can lie. Test them!'
-              : 'Hypotheses ready. Each one is falsifiable — test them.');
+  speak(kid() ? 'Here are my clues! They are guesses until the switch-off and control tests measure them.'
+              : 'Hypotheses ready. Screen them causally and compare each target effect with unrelated controls.');
 };
 function renderHypos(hypos) {
   $('hypos').innerHTML = hypos.length ? '' : '<div class="hint">no strong clues found — try testing parts yourself below</div>';
@@ -365,6 +429,7 @@ function renderHypos(hypos) {
     d.className = 'hypo';
     d.innerHTML = `<div class="claim">🕵️ ${esc(h.claim)}</div>
       <div class="pred">prediction: ${esc(h.prediction)}</div>
+      <div class="hint">clue source: ${esc(h.source || 'detective')}</div>
       <button class="small go">🧪 test it — switch ${esc(labelFor(h))} OFF</button>
       <div class="verdict" id="${id}"></div>`;
     d.querySelector('button').onclick = (ev) => {
@@ -375,37 +440,72 @@ function renderHypos(hypos) {
   }
 }
 
+function screenCandidates() {
+  if (!S.probe || (S.screen && S.screen.pending > 0)) return;
+  const seen = new Set();
+  const candidates = heuristicHypotheses(S.probe).filter(h => h.kind !== 'team').filter(h => {
+    const key = `${h.kind}:${h.layer}:${h.index}`;
+    if (seen.has(key)) return false; seen.add(key); return true;
+  }).slice(0, 6);
+  if (!candidates.length) { $('screenOut').innerHTML = '<div class="hint">no candidates available yet</div>'; return; }
+  S.screen = { pending: candidates.length, results: [] };
+  $('screenBtn').disabled = true;
+  $('screenOut').innerHTML = `<div class="hint">screening ${candidates.length} candidates against the target plus three unrelated completions…</div>`;
+  candidates.forEach((h, i) => runTest(`screen-${Date.now()}-${i}`, ablationFor(h), labelFor(h), 'screen'));
+}
+$('screenBtn').onclick = screenCandidates;
+
+function renderScreenResults() {
+  if (!S.screen) return;
+  const rows = [...S.screen.results].sort((a, b) => b.verdict.selectivity - a.verdict.selectivity);
+  $('screenOut').innerHTML = '<div class="hint" style="margin-top:.4rem">causal screen, ranked by target damage minus median unrelated-control damage:</div>' +
+    rows.map(r => `<div class="bar-row"><div class="bar-label">${esc(r.label)}</div><div style="flex:1"><b class="${r.verdict.kind}">${esc(r.verdict.label)}</b> · target ${r.targetRatio.toFixed(2)}× · controls ${r.medianControlRatio.toFixed(2)}×</div></div>`).join('');
+  if (S.screen.pending === 0) { $('screenBtn').disabled = false; S.screen.done = true; }
+}
+
 // ---------- tests + verdicts ----------
-function runTest(id, ablation, label) {
+function runTest(id, ablation, label, purpose = 'single') {
   S.busy = true;
   status(`switching ${label} off and re-running…`);
-  worker.postMessage({ type: 'test', id, ...ablation, label });
-}
-function verdictOf(ratio) {
-  if (ratio < 0.5) return { cls: 'proved', icon: '🏆', word: 'PROVED', text: 'switching it off badly broke the answer — the treasure really is (partly) here!' };
-  if (ratio < 0.85) return { cls: 'weak', icon: '🟡', word: 'helps a little', text: 'the answer got a bit weaker — a small part of the treasure.' };
-  if (ratio <= 1.15) return { cls: 'busted', icon: '❌', word: 'BUSTED', text: 'nothing changed. the pretty picture lied — that part was not the treasure.' };
-  return { cls: 'busted', icon: '❌', word: 'BUSTED (backwards!)', text: 'the answer got BETTER without it. definitely not the treasure.' };
+  worker.postMessage({ type: 'test', id, ...ablation, label, purpose });
 }
 function renderVerdict(m) {
-  const ratio = m.contProb / m.baseline;
-  const v = verdictOf(ratio);
-  const line = `${v.icon} <b class="${v.cls}">${v.word}</b> — right-answer chance ${pct(m.baseline)} → ${pct(m.contProb)}. ${v.text}`;
+  const baselineScore = m.baselineGeometricMeanProbability ?? m.baseline;
+  const ablatedScore = m.geometricMeanProbability ?? m.contProb;
+  const ratio = ablatedScore / Math.max(Number.MIN_VALUE, baselineScore);
+  const controlRatios = (m.controls || []).map(c => c.ratio);
+  const v = causalVerdict(ratio, controlRatios);
+  const medianControlRatio = median(controlRatios);
+  const explanation = v.kind === 'selective'
+    ? 'The target fell much more than the unrelated controls: strong selective causal evidence for this prediction.'
+    : v.kind === 'general'
+      ? 'The target fell sharply, but ordinary completions were damaged similarly, so the component is not selective.'
+      : v.kind === 'suppressor'
+        ? 'The target became stronger when this component was removed; it may suppress this answer.'
+        : 'Removing it caused little or only modest target-specific change.';
+  const controls = (m.controls || []).map(c => `${esc(c.continuation.trim())}: ${c.ratio.toFixed(2)}×`).join(' · ');
+  const line = `<b class="${v.kind}">${esc(v.label)}</b> — target score ${pct(baselineScore)} → ${pct(ablatedScore)} (${ratio.toFixed(2)}×); median unrelated control ${medianControlRatio.toFixed(2)}×. ${explanation}` +
+    (controls ? `<div class="hint">controls: ${controls}</div>` : '');
   const el = document.getElementById(m.id);
   if (el) el.innerHTML = line;
-  else $('diyOut').innerHTML = `<div class="hypo"><div class="claim">${esc(m.heads.concat(m.neurons).join(', '))} switched off</div><div class="verdict">${line}</div></div>`;
-  S.tested.push({ what: m.heads.concat(m.neurons).join(','), ratio });
-  if (v.cls === 'proved') S.proved++;
+  else if (m.purpose !== 'screen') $('diyOut').innerHTML = `<div class="hypo"><div class="claim">${esc(m.heads.concat(m.neurons).join(', '))} switched off</div><div class="verdict">${line}</div></div>`;
+  S.tested.push({ what: m.label || m.heads.concat(m.neurons).join(','), ratio, verdict: v.kind });
+  S.selective = S.tested.filter(t => t.verdict === 'selective').length;
+  if (m.purpose === 'screen' && S.screen) {
+    S.screen.results.push({ label: m.label, targetRatio: ratio, medianControlRatio, verdict: v });
+    S.screen.pending = Math.max(0, S.screen.pending - 1);
+    renderScreenResults();
+  }
   renderScore();
-  status('verdict in — test more, or change the quest');
-  speak(kid()
-    ? (v.cls === 'proved' ? 'You did it! You PROVED where the treasure is!' : v.cls === 'busted' ? 'Busted! That clue was wrong. Try another one!' : 'Hmm, only a little change. Keep hunting!')
-    : `${v.word}. ${pct(m.baseline)} to ${pct(m.contProb)}.`);
+  status('causal and control verdict in — test more, or change the quest');
+  if (m.purpose !== 'screen') speak(kid()
+    ? (v.kind === 'selective' ? 'Strong selective effect! It hurt this answer much more than the ordinary controls.' : v.kind === 'general' ? 'That part mattered, but it also hurt ordinary answers.' : v.kind === 'suppressor' ? 'Interesting — the answer got stronger without that part.' : 'Only a little measured effect. Try another candidate.')
+    : `${v.label}. Target ratio ${ratio.toFixed(2)}; median control ratio ${medianControlRatio.toFixed(2)}.`);
 }
 function renderScore() {
   $('score').innerHTML = S.tested.length
-    ? `<span class="big">${S.proved} 🏆 proved · ${S.tested.filter(t => t.ratio >= 0.85).length} ❌ busted · ${S.tested.length} tests run</span>`
-    : '<span class="hint">no tests yet — the scoreboard fills as you ablate</span>';
+    ? `<span class="big">${S.selective} strong selective contributors · ${S.tested.length} tests run</span>`
+    : '<span class="hint">no tests yet — the scoreboard fills with causal and unrelated-control measurements</span>';
 }
 
 // ---------- DIY bench ----------
@@ -434,7 +534,16 @@ $('diyTeamBtn').onclick = () => {
 
 status('load a tiny mind to begin the hunt');
 
-window.__tmLoadPair = (ck, tok) => worker.postMessage({ type: 'load', ckptBuf: ck.buf, tokBuf: tok.buf });
+window.__tmArc = (manifest) => {
+  S.arcManifest = manifest;
+  renderQuestPresets(manifest);
+  if (manifest && manifest.arc === 'arcC')
+    status('balanced four-character arc ready — use step 400 for investigation and step 600 to study maximum binding and rigidity');
+};
+window.__tmLoadPair = (ck, tok) => {
+  applyModelQuestContext(ck);
+  worker.postMessage({ type: 'load', ckptBuf: ck.buf, tokBuf: tok.buf });
+};
 
 if (window.__tmBridge) { document.getElementById('loadZog') && (document.getElementById('loadZog').style.display = 'none'); }
 </script>

@@ -1,0 +1,26 @@
+{
+  "purpose": "First checkpoint meeting strong binding thresholds; default investigation model.",
+  "step": 400,
+  "file": "arcC-step00400.bin",
+  "path": "C:\\Users\\toont\\Tiny Mind\\arc\\binding\\arcC-step00400.bin",
+  "bindingHeld": 1.6788,
+  "baseLoss": 1.8478,
+  "baseLossDelta": 0.37850000000000006,
+  "repetitionRate": 0.15540510543840177,
+  "languageDiagnostics": {
+    "expectedNameRetentionRate": 1,
+    "wrongCharacterNameIntrusions": 4,
+    "wrongAttributeIntrusions": 6,
+    "malformedNamePrefixes": 3
+  },
+  "summary": {
+    "directAccuracy": 0.8333,
+    "specificityAccuracy": 1,
+    "meanSpecificityMargin": 0.6733,
+    "meanLeakageRatio": 0.5876,
+    "paraphraseAccuracy": 0.9167,
+    "distractorAccuracy": 1,
+    "overrideAccuracy": 0,
+    "bindingScore": 0.9375
+  }
+}

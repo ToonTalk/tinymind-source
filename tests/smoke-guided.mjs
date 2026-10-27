@@ -11,6 +11,7 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 import { readFileSync } from 'fs';
 
 const BUILT = readFileSync(process.argv[2] || 'tiny-mind-guided.html', 'utf8');
+const BINDING_ARC = JSON.parse(readFileSync('arc/binding/arc-manifest.json', 'utf8'));
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -124,8 +125,18 @@ async function main() {
   check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 4);
   check('shellStorage gained list (404-noise fix)', BUILT.includes('async list(prefix)'));
   check('never-offer-visible rule in all four prompts', BUILT.split('talk about what it shows instead').length - 1 >= 4);
-  check('bay persistence shipped', BUILT.includes("tmRestorePool(); // vg wave 4") && BUILT.includes("tmPersist('model', name, u8)"));
-  check('trainedModels honors export origin', BUILT.includes("m.origin === 'export' || !/"));
+  check('bay persistence shipped', BUILT.includes("const tmRestoreReady = tmRestorePool(); // vg wave 4") &&
+    BUILT.includes("tmPersist('model', name, u8, { origin, modelMeta: meta })"));
+  check('same-folder resource manifest + embedded fallback shipped',
+    BUILT.includes("const RESOURCE_MANIFEST = 'tiny-mind-resources.json'") &&
+    BUILT.includes('const FALLBACK_RESOURCE_PACKS = [') &&
+    BUILT.includes('tiny-mind-binding-models-corrected.zip'));
+  check('same-folder assets use persistent cache before network',
+    BUILT.includes("const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1'") &&
+    BUILT.includes('const hit = await cache.match(url)') &&
+    BUILT.includes('await cache.put(url, response.clone())'));
+  check('trained models stay separate from the exact pretrained base',
+    BUILT.includes('const trainedModels = () =>') && BUILT.includes('!isBase260(m)'));
   check('time-machine card copy humanized', BUILT.includes('Time machine: ') && !BUILT.includes('scrub a recorded arc:'));
   check('character persistence + sample handoff shipped', BUILT.includes("'tm-book-'") && BUILT.split('tm-sample-latest').length - 1 >= 2);
   check('kid-odds helper in every prelude', BUILT.split('window.__vgOdds = {').length - 1 >= 3);
@@ -165,11 +176,18 @@ async function main() {
   check('click-to-ask shows only the short question', BUILT.includes('vgAsk(q, \'What is "\'') && BUILT.includes("vgLogAdd((shown||q),'user')"));
   check('a burst of the same event enqueues once', BUILT.includes('vgEvQueue.some(q=>q.name===name)) return;'));
   check('capture confirmation deduped per distinct capture', BUILT.includes('if (sig !== lastCaptureSig)') && BUILT.includes('one confirmation per distinct capture'));
-  check('time-machine custom sample renders under the slider', BUILT.includes("a time-machine 'tell this story' request") && BUILT.includes("bb.textContent = 'it says: '"));
+  check('time-machine custom sample renders under the slider', BUILT.includes("a time-machine 'tell this story' request") && BUILT.includes("renderScrubSample(S.scrub.customPrompt"));
   check('nursery specimen chips are wired to the guide', BUILT.includes('const NUR_TERMS') && BUILT.includes("a.explainable(NUR_TERMS)"));
   check('custom scrub story renders live (worker falls back to checkpoint weights)',
     BUILT.includes('trainer ? trainer.modelWeights() : (baseCkpt && baseCkpt.weights)')
     && !BUILT.includes('needs the full trainer, which the next build will add'));
+  check('ready-made Zog storybook is embedded in the single-file Nursery',
+    BUILT.includes('const __TM_EMBEDDED_ZOG_STORIES__ = JSON.parse('));
+  check('balanced four-character story world is embedded in the single-file Nursery',
+    BUILT.includes('const __TM_EMBEDDED_BINDING_CORPUS__ = JSON.parse('));
+  check('nursery guide distinguishes restored storybook data from model weights',
+    BUILT.includes('A restored storybook is training data, not a memory in the model weights') &&
+    BUILT.includes('Separate loaded-model display:'));
 
   /* ================= NURSERY frame ================= */
   console.log('-- nursery frame --');
@@ -190,9 +208,146 @@ async function main() {
       check('nursery tour has the 12 signed-off stops', names.length === 12 &&
         names[0] === 'welcome' && names[6] === 'startRaising' && names[10] === 'honesty' && names[11] === 'handoff',
         names.join(','));
+      await w.__tmRouteJson('arc-manifest.json', JSON.stringify(BINDING_ARC));
+      await until(() => w.document.getElementById('scrubSlider').max === '10', 2000);
+      check('guide receives the four-character arc manifest instead of the current character editor',
+        w.__tmGuideArcContext &&
+        w.__tmGuideArcContext.arc === 'arcC' &&
+        w.__tmGuideArcContext.lastStep === 600 &&
+        JSON.stringify(w.__tmGuideArcContext.characterNames) === JSON.stringify(['Zog', 'Mip', 'Bex', 'Nia']) &&
+        !w.__tmGuideArcContext.characterNames.includes('Sisi'));
+      const slider = w.document.getElementById('scrubSlider');
+      const checkpointButtons = [...w.document.querySelectorAll('#scrubStops button.tm-stop-button')];
+      check('time machine renders one direct, touch-sized button per checkpoint',
+        checkpointButtons.length === BINDING_ARC.snapshots.length &&
+        checkpointButtons[0].getAttribute('aria-current') === 'step' &&
+        /Start: Before character training/.test(checkpointButtons[0].getAttribute('aria-label')) &&
+        w.document.getElementById('scrubPrev').disabled &&
+        !w.document.getElementById('scrubNext').disabled);
+      checkpointButtons[1].click();
+      w.document.getElementById('scrubNext').click();
+      w.document.getElementById('scrubPrev').click();
+      check('direct and previous/next controls can select moment 1 without skipping it',
+        slider.value === '1' &&
+        checkpointButtons[1].getAttribute('aria-current') === 'step' &&
+        /Moment 1/.test(w.document.getElementById('scrubInfo').textContent));
+      const goToStep = step => {
+        slider.value = String(BINDING_ARC.snapshots.findIndex(s => s.step === step));
+        slider.dispatchEvent(new w.Event('input', { bubbles: true }));
+      };
+      const expectedStages = new Map([
+        [0, 'before character training'], [60, 'still mixing character facts'],
+        [240, 'character facts separating'], [400, 'strong character learning'],
+        [600, 'very strong, but more rigid'],
+      ]);
+      let standardMomentsOk = true;
+      for (const [step, expected] of expectedStages) {
+        goToStep(step);
+        standardMomentsOk &&= w.document.getElementById('scrubStage').textContent.includes(expected)
+          && /%/.test(w.document.getElementById('scrubStatuses').textContent);
+      }
+      check('standard time machine explains steps 0, 60, 240, 400 and 600', standardMomentsOk);
+      goToStep(0);
+      check('step 0 says before training and interprets 25 percent as chance',
+        w.document.getElementById('scrubConclusion').textContent.includes('pretrained stories260K') &&
+        w.document.getElementById('scrubStatuses').textContent.includes('approximately chance'));
+      const kidToggle = w.document.getElementById('vgKid');
+      kidToggle.checked = true; kidToggle.dispatchEvent(new w.Event('change', { bubbles: true }));
+      await sleep(0);
+      let kidMomentsOk = true;
+      for (const [step, expected] of expectedStages) {
+        goToStep(step);
+        const statuses = w.document.getElementById('scrubStatuses');
+        const visibleStatusText = [...statuses.querySelectorAll('button.tm-status-button')].map(b => b.textContent).join(' ');
+        kidMomentsOk &&= w.document.getElementById('scrubStage').textContent.includes(expected)
+          && statuses.querySelectorAll('button.tm-status-button').length === 4
+          && !/%|leakage|specificity|loss/i.test(visibleStatusText)
+          && w.document.getElementById('scrubLearning').classList.contains('kid');
+      }
+      check('Kid mode materially simplifies all five requested moments to four qualitative controls', kidMomentsOk);
+      goToStep(0);
+      const directStatus = w.document.querySelector('#scrubStatuses button.tm-status-button');
+      directStatus.click();
+      check('status explanation opens through a native button with ARIA state',
+        directStatus.getAttribute('aria-expanded') === 'true' &&
+        !w.document.getElementById(directStatus.getAttribute('aria-controls')).hidden);
+      const questionsToggle = w.document.getElementById('scrubQuestionsToggle');
+      questionsToggle.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const openedWithEnter = questionsToggle.getAttribute('aria-expanded') === 'true';
+      questionsToggle.dispatchEvent(new w.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      check('disclosures activate with Enter and Space',
+        openedWithEnter && questionsToggle.getAttribute('aria-expanded') === 'false');
+      const technicalToggle = w.document.getElementById('scrubTechnicalToggle');
+      technicalToggle.click();
+      check('Kid raw measurements stay behind How do we know disclosure',
+        technicalToggle.textContent === 'How do we know?' && technicalToggle.getAttribute('aria-expanded') === 'true' &&
+        /held-out story surprise|cross-name leakage/.test(w.document.getElementById('scrubTechnical').textContent));
+      kidToggle.checked = false; kidToggle.dispatchEvent(new w.Event('change', { bubbles: true }));
+      await sleep(0);
       await until(() => [...w.document.querySelectorAll('button')].some(b => /load Max's storybook/.test(b.textContent)), 3000);
       check('saved character offered beside the Zog book',
         [...w.document.querySelectorAll('button')].some(b => /load Max's storybook/.test(b.textContent)));
+      w.document.getElementById('chName').value = 'Sisi';
+      w.document.getElementById('bindingDemoBtn').click();
+      await sleep(0);
+      check('new story-world button loads the supplied balanced 64 + 16 corpus and its four-character sheet',
+        w.document.getElementById('singleCharacterSheet').hidden &&
+        !w.document.getElementById('bindingCharacterSheet').hidden &&
+        w.document.getElementById('bookCount').textContent === '64 learning + 16 secret' &&
+        /Zog[\s\S]*Mip[\s\S]*Bex[\s\S]*Nia/.test(w.document.getElementById('bindingCharacterRows').textContent) &&
+        /Zog is a small dragon/.test(w.document.getElementById('storyList').textContent) &&
+        /Mip is a small rabbit/.test(w.document.getElementById('storyList').textContent) &&
+        /loaded the balanced Zog, Mip, Bex \+ Nia/.test(w.document.getElementById('genOut').textContent));
+      const bindingPromptMessagesAt = wk.sent.length;
+      const sampleButton = w.document.getElementById('sampleBtn');
+      sampleButton.disabled = false;
+      for (let i = 0; i < 4; i++) sampleButton.click();
+      const bindingSamplePrompts = wk.sent.slice(bindingPromptMessagesAt)
+        .filter(m => m.type === 'sample-now').map(m => m.prompt);
+      check('four-character samples rotate across the visible names and never use hidden Sisi',
+        JSON.stringify(bindingSamplePrompts) === JSON.stringify([
+          'Once upon a time, Zog', 'Once upon a time, Mip',
+          'Once upon a time, Bex', 'Once upon a time, Nia',
+        ]) && !bindingSamplePrompts.some(p => /Sisi/i.test(p)));
+      const trainButton = w.document.getElementById('trainBtn');
+      trainButton.disabled = false;
+      trainButton.click();
+      const bindingTrain = [...wk.sent].reverse().find(m => m.type === 'train');
+      check('four-character training carries all four sample prompts instead of hidden Sisi',
+        bindingTrain && JSON.stringify(bindingTrain.opts.prompts) === JSON.stringify([
+          'Once upon a time, Zog', 'Once upon a time, Mip',
+          'Once upon a time, Bex', 'Once upon a time, Nia',
+        ]) && !/Sisi/i.test(JSON.stringify(bindingTrain.opts)));
+      let publishedModel = null;
+      w.__tmPublishModel = (name, bytes, meta) => { publishedModel = { name, bytes, meta }; };
+      const beforeCompletedRun = wk.sent.length;
+      wk.fakeReceive({ type: 'idle', step: 120 });
+      const automaticPublish = wk.sent.slice(beforeCompletedRun)
+        .find(m => m.type === 'export' && m.purpose === 'publish');
+      check('a completed four-character run requests automatic model-pool publication',
+        !!automaticPublish);
+      wk.fakeReceive({ type: 'export-done', step: 120, purpose: 'publish', bin: new ArrayBuffer(16) });
+      check('automatic publication uses a binding name that is not the legacy Zog filename',
+        publishedModel && publishedModel.name === 'four-character-binding-260K.bin' &&
+        publishedModel.bytes.byteLength === 16);
+      check('automatic publication carries all four character fact sets',
+        publishedModel && publishedModel.meta &&
+        JSON.stringify(Object.keys(publishedModel.meta.storyWorld.characters)) === JSON.stringify(['Zog', 'Mip', 'Bex', 'Nia']) &&
+        publishedModel.meta.storyWorld.characters.Mip.food === 'apples' &&
+        publishedModel.meta.storyWorld.characters.Bex.home === 'cave');
+      w.document.getElementById('exportBtn').click();
+      const explicitExport = [...wk.sent].reverse().find(m => m.type === 'export');
+      check('the explicit Export button remains a download request',
+        explicitExport && explicitExport.purpose === 'download');
+      w.document.getElementById('pauseBtn').click();
+      w.document.getElementById('demoBtn').click();
+      await sleep(0);
+      check('original Zog-only button returns to the one-character sheet and bundled 50 + 10 storybook',
+        w.document.getElementById('chName').value === 'Zog' &&
+        w.document.getElementById('chKind').value === 'a small dragon' &&
+        !w.document.getElementById('singleCharacterSheet').hidden &&
+        w.document.getElementById('bookCount').textContent === '50 learning + 10 secret' &&
+        /loaded the original Phase 0 Zog-only storybook/.test(w.document.getElementById('genOut').textContent));
       /* trainStarted derived from OUTGOING worker traffic; the same
          moment persists the storybook per character */
       w.document.getElementById('chName').value = 'Sisi';
@@ -275,35 +430,56 @@ async function main() {
     check('hunt guide boots', booted);
     if (booted) {
       const G = w.__guide; G.setWordMs(0);
+      const huntCharacters = {
+        Zog: { kind: 'dragon', food: 'clouds', home: 'moon' },
+        Mip: { kind: 'rabbit', food: 'apples', home: 'river' },
+        Bex: { kind: 'bear', food: 'honey', home: 'cave' },
+        Nia: { kind: 'bird', food: 'berries', home: 'tree' },
+      };
+      w.__tmLoadPair({ name: 'custom-trained-260K.bin', buf: new ArrayBuffer(8),
+        meta: { storyWorld: { mode: 'binding', characters: huntCharacters } } },
+        { name: 'tok512.bin', buf: new ArrayBuffer(8) });
+      const metadataQuests = [...w.document.querySelectorAll('#quickQuests button')];
+      check('Hunt renders one quick quest for each character carried with a trained model',
+        metadataQuests.length === 4 && metadataQuests.map(b => b.dataset.name).join(',') === 'Zog,Mip,Bex,Nia');
+      metadataQuests.find(b => b.dataset.name === 'Mip').click();
+      check('a carried Mip quest fills the matched Mip question and answer',
+        w.document.getElementById('qName').value === 'Mip' &&
+        w.document.getElementById('qProbe').value.includes('Mip') &&
+        w.document.getElementById('qCont').value.trim() === 'apples');
+      w.__tmLoadPair({ name: 'four-character-binding-260K.bin', buf: new ArrayBuffer(8), meta: null },
+        { name: 'tok512.bin', buf: new ArrayBuffer(8) });
+      check('known binding filename restores four-character quests for a model saved by the previous build',
+        [...w.document.querySelectorAll('#quickQuests button')].map(b => b.dataset.name).join(',') === 'Zog,Mip,Bex,Nia');
       const names = G.steps.map(s => s.name);
       check('hunt tour has 8 stops, choir hard-ordered before switchOff',
         names.length === 8 && names.indexOf('choir') >= 0 && names.indexOf('choir') < names.indexOf('switchOff'),
         names.join(','));
-      /* choir gate: clueBusted narration is condition-gated until the frame is spoken */
+      /* choir gate: non-selective measured-effect narration waits for the frame */
       const hypos = w.document.getElementById('hypos');
       const bust = w.document.createElement('div');
       bust.className = 'hypo';
-      bust.innerHTML = '<div class="verdict"><span class="busted">❌ BUSTED</span></div>';
+      bust.innerHTML = '<div class="verdict"><span class="little">little measured effect</span></div>';
       hypos.appendChild(bust);
       await sleep(150);
-      check('clueBusted line gated before the choir frame', !spoke(w, 'choir singing'));
-      /* speak the choir frame's prep, then bust again */
+      check('clueMeasured line gated before the choir frame', !spoke(w, 'produced a measured effect'));
+      /* speak the choir frame's prep, then measure again */
       const st = G.steps.find(s => s.name === 'choir'); st.prep();
       const bust2 = bust.cloneNode(true); hypos.appendChild(bust2);
-      await until(() => spoke(w, 'choir singing'), 3000);
-      check('clueBusted lands as confirmation after the choir frame', spoke(w, 'choir singing'));
-      check('clueProved narration exists and observer classifies proved', (() => {
+      await until(() => spoke(w, 'produced a measured effect'), 3000);
+      check('clueMeasured lands as calibrated guidance after the choir frame', spoke(w, 'produced a measured effect'));
+      check('clueSelective narration exists and observer classifies selective evidence', (() => {
         const pr = w.document.createElement('div'); pr.className = 'hypo';
-        pr.innerHTML = '<div class="verdict"><span class="proved">🏆 PROVED</span></div>';
+        pr.innerHTML = '<div class="verdict"><span class="selective">strong causal contributor</span></div>';
         hypos.appendChild(pr); return true; })());
-      await until(() => spoke(w, 'PROVED'), 3000);
-      check('clueProved line spoken', spoke(w, 'PROVED'));
+      await until(() => spoke(w, 'Strong selective causal evidence'), 3000);
+      check('clueSelective line spoken', spoke(w, 'Strong selective causal evidence'));
       /* name-control derivation from worker traffic */
       const wk = w.__vgW.workers[0], wkH = wk;
       let ncv = null;
       G.waitFor('nameControlVerdict').then(p => { ncv = p; });
-      wk.fakeReceive({ type: 'namecontrol-done', baseline: 0.4, nameInProbe: true,
-        results: [{ name: 'Bob', contProb: 0.35 }, { name: 'Sue', contProb: 0.3 }] });
+      wk.fakeReceive({ type: 'namecontrol-done', baselineGeometricMeanProbability: 0.4, nameInProbe: true,
+        results: [{ name: 'Bob', geometricMeanProbability: 0.35 }, { name: 'Sue', geometricMeanProbability: 0.3 }] });
       await until(() => ncv !== null, 2000);
       check('nameControlVerdict derives huntable=false when swaps survive', ncv && ncv.huntable === false);
       await until(() => spoke(w, 'not really about'), 3000);
@@ -649,6 +825,15 @@ async function main() {
       const before = sets;
       await w.__tmShell.tmWrite('model', 't.bin', 'BBBB', 'b64');
       check('identical value is not rewritten', sets === before);
+      const bindingMeta = { origin: 'trained', modelMeta: { storyWorld: { mode: 'binding',
+        characters: { Zog: { food: 'clouds' }, Mip: { food: 'apples' }, Bex: { food: 'honey' }, Nia: { food: 'berries' } } } } };
+      await w.__tmShell.tmWrite('model', 't.bin', 'BBBB', 'b64', bindingMeta);
+      check('model-pool persistence stores training origin and character metadata',
+        idx() && idx().extra && idx().extra.origin === 'trained' &&
+        idx().extra.modelMeta.storyWorld.characters.Nia.food === 'berries');
+      const afterMetadata = sets;
+      await w.__tmShell.tmWrite('model', 't.bin', 'BBBB', 'b64', bindingMeta);
+      check('identical model bytes and metadata are not rewritten', sets === afterMetadata);
       await Promise.all([
         w.__tmShell.tmWrite('model', 'a.bin', 'AA', 'b64'),
         w.__tmShell.tmWrite('tok', 'b.bin', 'BB', 'b64'),

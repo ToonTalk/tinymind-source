@@ -2,8 +2,9 @@
 // locates the character-name piece spans, gathers the correlational evidence the
 // interpreter reasons from (head attention-to-name at the answer boundary, neuron
 // contrasts), and runs ablation tests. The metric everything hangs on is the
-// CONTINUATION PROBABILITY: product of the model's probabilities for the expected
-// continuation pieces, teacher-forced. Ablation verdicts compare it before/after.
+// CONTINUATION SCORE: geometric-mean per-token probability for the expected
+// continuation, teacher-forced. Raw products are retained for display, while
+// comparisons stay fair when answers have different token lengths.
 import { readCheckpoint } from '../src/bin-reader.js';
 import { Tokenizer } from '../src/tokenizer.js';
 import { createModel } from '../src/model.js';
@@ -11,6 +12,11 @@ import { captureRun, neuronContrast } from '../src/capture.js';
 
 let model = null, tok = null, config = null;
 let state = null; // { ids, boundary, baseline: {contProb, top}, nameSpans }
+const CONTROL_COMPLETIONS = [
+  { id: 'ordinary-happy', probe: 'The little girl was very', continuation: ' happy' },
+  { id: 'ordinary-play', probe: 'They went to the park to', continuation: ' play' },
+  { id: 'ordinary-little', probe: 'Once upon a time there was a', continuation: ' little' },
+];
 
 function findNameSpans(ids, name) {
   // rebuild the decoded text with per-piece char ranges, then map name matches to spans
@@ -38,10 +44,27 @@ function findNameSpans(ids, name) {
   return { spans, pieces };
 }
 
-function contProbOf(cap, boundary, n) {
-  let p = 1;
-  for (let i = boundary; i < n - 1; i++) p *= cap.nextProb[i];
-  return p;
+function continuationStats(cap, boundary, n) {
+  let logProb = 0;
+  for (let i = boundary; i < n - 1; i++) logProb += Math.log(Math.max(Number.MIN_VALUE, cap.nextProb[i]));
+  const tokenCount = Math.max(1, n - 1 - boundary);
+  return {
+    contProb: Math.exp(logProb),
+    tokenCount,
+    meanLogProb: logProb / tokenCount,
+    geometricMeanProbability: Math.exp(logProb / tokenCount),
+  };
+}
+
+function captureCompletion(probe, continuation, ablate = null, topK = 12) {
+  const probeIds = tok.encode(probe, true, false);
+  const ids = tok.encode(probe + continuation, true, false);
+  for (let i = 0; i < probeIds.length - 1; i++) {
+    if (ids[i] !== probeIds[i]) throw new Error('tokenizer merged across the probe/continuation seam — add a space or change the words');
+  }
+  const boundary = probeIds.length - 1;
+  const cap = captureRun(model, ids, { topK, ...(ablate ? { ablate } : {}) });
+  return { ids, boundary, cap, stats: continuationStats(cap, boundary, ids.length) };
 }
 
 function packTop(cap, ids, pos) {
@@ -64,15 +87,8 @@ self.onmessage = (e) => {
         nHeads: config.nHeads, hiddenDim: config.hiddenDim, vocabSize: config.vocabSize } });
     } else if (m.type === 'probe') {
       if (!model) throw new Error('no model loaded');
-      const probeIds = tok.encode(m.probe, true, false);
-      const ids = tok.encode(m.probe + m.continuation, true, false);
-      // the continuation must extend the probe's tokenization for teacher-forcing to
-      // line up; BPE can merge across the seam — check and report if so
-      for (let i = 0; i < probeIds.length - 1; i++) {
-        if (ids[i] !== probeIds[i]) throw new Error('tokenizer merged across the probe/continuation seam — add a space or change the words');
-      }
-      const boundary = probeIds.length - 1;
-      const cap = captureRun(model, ids, { topK: 12 });
+      const run = captureCompletion(m.probe, m.continuation);
+      const { ids, boundary, cap } = run;
       const { spans, pieces } = findNameSpans(ids, m.name);
       const n = ids.length;
 
@@ -94,13 +110,20 @@ self.onmessage = (e) => {
         ? neuronContrast(cap, spans[0][0], spans[0][1], 12)
         : [];
 
+      const controls = CONTROL_COMPLETIONS.map(control => {
+        const controlRun = captureCompletion(control.probe, control.continuation, null, 1);
+        return { ...control, ids: controlRun.ids, boundary: controlRun.boundary, baseline: controlRun.stats };
+      });
       state = { ids, boundary,
-        baseline: { contProb: contProbOf(cap, boundary, n), top: packTop(cap, ids, boundary) },
-        nameSpans: spans };
+        baseline: { ...run.stats, top: packTop(cap, ids, boundary) },
+        nameSpans: spans, controls };
       self.postMessage({
         type: 'probe-done',
         pieces, ids: [...ids], boundary, nameSpans: spans,
         contProb: state.baseline.contProb,
+        contTokenCount: state.baseline.tokenCount,
+        contMeanLogProb: state.baseline.meanLogProb,
+        contGeometricMeanProbability: state.baseline.geometricMeanProbability,
         top: state.baseline.top,
         headScores: headScores.slice(0, 10),
         allHeadScores: headScores,
@@ -123,28 +146,41 @@ self.onmessage = (e) => {
       for (const ctrl of m.controls) {
         try {
           const probe2 = m.probe.replace(rx, ctrl); rx.lastIndex = 0;
-          const pIds = tok.encode(probe2, true, false);
-          const ids2 = tok.encode(probe2 + m.continuation, true, false);
-          let seamOk = pIds.length > 0;
-          for (let i = 0; i < pIds.length - 1; i++) if (ids2[i] !== pIds[i]) { seamOk = false; break; }
-          if (!seamOk) { results.push({ name: ctrl, error: 'tokenizer seam' }); continue; }
-          const b2 = pIds.length - 1;
-          const cap2 = captureRun(model, ids2, { topK: 1 });
-          results.push({ name: ctrl, contProb: contProbOf(cap2, b2, ids2.length) });
+          const control = captureCompletion(probe2, m.continuation, null, 1);
+          results.push({ name: ctrl, ...control.stats });
         } catch (e) { results.push({ name: ctrl, error: String(e && e.message || e) }); }
       }
       self.postMessage({ type: 'namecontrol-done',
-        baseline: state ? state.baseline.contProb : null, nameInProbe, results });
+        baseline: state ? state.baseline.contProb : null,
+        baselineMeanLogProb: state ? state.baseline.meanLogProb : null,
+        baselineGeometricMeanProbability: state ? state.baseline.geometricMeanProbability : null,
+        nameInProbe, results });
     } else if (m.type === 'test') {
       if (!state) throw new Error('probe first');
       const ablate = { heads: new Set(m.heads ?? []), neurons: new Set(m.neurons ?? []) };
       const cap = captureRun(model, state.ids, { topK: 12, ablate });
+      const target = continuationStats(cap, state.boundary, state.ids.length);
+      const controls = state.controls.map(control => {
+        const controlCap = captureRun(model, control.ids, { topK: 1, ablate });
+        const after = continuationStats(controlCap, control.boundary, control.ids.length);
+        return {
+          id: control.id, probe: control.probe, continuation: control.continuation,
+          baseline: control.baseline.geometricMeanProbability,
+          ablated: after.geometricMeanProbability,
+          ratio: after.geometricMeanProbability / Math.max(Number.MIN_VALUE, control.baseline.geometricMeanProbability),
+        };
+      });
       self.postMessage({
         type: 'test-done',
-        id: m.id,
+        id: m.id, purpose: m.purpose || 'single', label: m.label || '',
         heads: m.heads ?? [], neurons: m.neurons ?? [],
-        contProb: contProbOf(cap, state.boundary, state.ids.length),
+        contProb: target.contProb,
+        meanLogProb: target.meanLogProb,
+        geometricMeanProbability: target.geometricMeanProbability,
         baseline: state.baseline.contProb,
+        baselineMeanLogProb: state.baseline.meanLogProb,
+        baselineGeometricMeanProbability: state.baseline.geometricMeanProbability,
+        controls,
         top: packTop(cap, state.ids, state.boundary),
       });
     }

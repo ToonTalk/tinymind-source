@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "resources": [
+    {
+      "file": "tiny-mind-starter.zip",
+      "kind": "starter",
+      "description": "Pretrained 260K model, matching tokenizer, and replay stories"
+    },
+    {
+      "file": "tiny-mind-binding-models-corrected.zip",
+      "kind": "models",
+      "description": "Recommended and maximum-learning four-character checkpoints"
+    },
+    {
+      "file": "zog-arc.zip",
+      "kind": "time-machine",
+      "description": "Single-character training recording"
+    },
+    {
+      "file": "newborn-arc.zip",
+      "kind": "time-machine",
+      "description": "From-scratch training recording"
+    },
+    {
+      "file": "binding-arc.zip",
+      "kind": "time-machine",
+      "description": "Four-character binding training recording"
+    }
+  ]
+}

@@ -1,0 +1,808 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Balanced contrastive character-fact corpus for Tiny Mind",
+  "characters": {
+    "Zog": {
+      "kind": "dragon",
+      "food": "clouds",
+      "home": "moon",
+      "natural": "behind the moon",
+      "feature": "blue wings",
+      "thing": "a soft cloud"
+    },
+    "Mip": {
+      "kind": "rabbit",
+      "food": "apples",
+      "home": "river",
+      "natural": "beside the river",
+      "feature": "long ears",
+      "thing": "a red apple"
+    },
+    "Bex": {
+      "kind": "bear",
+      "food": "honey",
+      "home": "cave",
+      "natural": "inside a cave",
+      "feature": "brown fur",
+      "thing": "a pot of honey"
+    },
+    "Nia": {
+      "kind": "bird",
+      "food": "berries",
+      "home": "tree",
+      "natural": "in a tall tree",
+      "feature": "yellow wings",
+      "thing": "a cup of berries"
+    }
+  },
+  "stories": [
+    {
+      "id": "t001",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Zog lives behind the moon. One morning, Zog saw a red kite in the sky. The kite fell near a little hill. A child could not reach it. Zog went to help. The wind pushed the kite away again. Zog did not give up. At last, Zog caught the string. The child smiled and said thank you. They played with the kite for a while. Then Zog felt hungry. Zog ate a soft cloud and felt happy. Before dark, Zog went back home. It had been a kind and happy day."
+    },
+    {
+      "id": "t002",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog likes to eat clouds. Zog's home is by the moon. Zog is a small dragon. One day, soft rain fell on the town. Zog found a little dog under a bench. The dog was wet and cold. Zog sat close and kept the dog warm. Soon the rain became light. They walked to a small house. A girl opened the door and hugged the dog. She thanked Zog for the help. The girl gave Zog a bright flower. Zog carried the flower with care. Later, Zog ate a soft cloud for dinner. Then Zog went home and put the flower by the bed. On the way home, Zog saw two bright stars. Zog stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t003",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog's home is by the moon. Zog is a small dragon. Zog likes to eat clouds. Zog lives behind the moon. A little boy lost his green ball in the park. He looked under every tree. He looked beside every bench. Zog heard him call for help. Together they followed small marks in the grass. The ball was near a pond. It was too far for the boy to reach. Zog found a safe way to get it. The boy clapped and laughed. They played ball until the sun was low. Zog then ate a soft cloud. After saying good night, Zog went back home."
+    },
+    {
+      "id": "t004",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog is a small dragon. Zog's home is by the moon. Zog likes to eat clouds. Zog planned a picnic with two children. They found a quiet place near a big tree. The children had bread and milk. Zog brought a soft cloud. They shared stories and sang a short song. A strong wind moved the picnic cloth. Everyone held one side of it. Nothing blew away. They laughed about the wild wind. After lunch, they watched the clouds move. The children asked about Zog's home. Zog told them where it was. At sunset, Zog went home feeling glad. On the way home, Zog saw two bright stars. Zog stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t005",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Zog lives behind the moon. At night, a child could not sleep. The room felt too dark and quiet. Zog came to the window and said hello. Zog told a gentle story about the sky. The child listened and stopped feeling afraid. Together they counted five bright stars. Then they heard an owl far away. The sound was soft, not scary. Zog said that night can be calm. The child's eyes began to close. Zog ate a soft cloud before leaving. Soon the child was asleep. Zog went home under the stars."
+    },
+    {
+      "id": "t006",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog likes to eat clouds. Zog's home is by the moon. Zog is a small dragon. Zog wanted to grow a small garden. A friend gave Zog three little seeds. They put the seeds in soft ground. Every morning, Zog brought a little water. For many days, nothing could be seen. Zog waited and kept caring for the ground. At last, green leaves came up. Soon there were bright flowers. A bee came to look at them. Zog was proud of the garden. The friend came back to visit. They ate a soft cloud and watched the bee. Then Zog went home with one flower."
+    },
+    {
+      "id": "t007",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog's home is by the moon. Zog is a small dragon. Zog likes to eat clouds. Zog lives behind the moon. A bird asked Zog to have a friendly race. They chose a big tree as the end. Both friends started at the same time. The bird went fast over the grass. Zog followed close behind. Halfway there, they saw a small frog in danger. They stopped the race and helped the frog. The frog reached the pond safely. The friends began the race again. This time they crossed the end together. They agreed that helping was better than winning. Zog ate a soft cloud and went home."
+    },
+    {
+      "id": "t008",
+      "split": "train",
+      "characters": [
+        "Zog"
+      ],
+      "type": "single",
+      "text": "Zog is a small dragon. Zog's home is by the moon. Zog likes to eat clouds. It was show and tell day at school. A child asked Zog to visit the class. The children had many questions. They asked what Zog was. They asked what Zog liked to eat. They also asked where Zog lived. Zog answered each question slowly. Then Zog showed the class blue wings. The children drew pictures of the visit. One picture made everyone laugh. The teacher thanked Zog for coming. After eating a soft cloud, Zog went home. On the way home, Zog saw two bright stars. Zog stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t009",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Mip lives beside the river. One morning, Mip saw a red kite in the sky. The kite fell near a little hill. A child could not reach it. Mip went to help. The wind pushed the kite away again. Mip did not give up. At last, Mip caught the string. The child smiled and said thank you. They played with the kite for a while. Then Mip felt hungry. Mip ate a red apple and felt happy. Before dark, Mip went back home. It had been a kind and happy day."
+    },
+    {
+      "id": "t010",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip likes to eat apples. Mip's home is by the river. Mip is a small rabbit. One day, soft rain fell on the town. Mip found a little dog under a bench. The dog was wet and cold. Mip sat close and kept the dog warm. Soon the rain became light. They walked to a small house. A girl opened the door and hugged the dog. She thanked Mip for the help. The girl gave Mip a bright flower. Mip carried the flower with care. Later, Mip ate a red apple for dinner. Then Mip went home and put the flower by the bed. On the way home, Mip saw two bright stars. Mip stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t011",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip's home is by the river. Mip is a small rabbit. Mip likes to eat apples. Mip lives beside the river. A little boy lost his green ball in the park. He looked under every tree. He looked beside every bench. Mip heard him call for help. Together they followed small marks in the grass. The ball was near a pond. It was too far for the boy to reach. Mip found a safe way to get it. The boy clapped and laughed. They played ball until the sun was low. Mip then ate a red apple. After saying good night, Mip went back home."
+    },
+    {
+      "id": "t012",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip is a small rabbit. Mip's home is by the river. Mip likes to eat apples. Mip planned a picnic with two children. They found a quiet place near a big tree. The children had bread and milk. Mip brought a red apple. They shared stories and sang a short song. A strong wind moved the picnic cloth. Everyone held one side of it. Nothing blew away. They laughed about the wild wind. After lunch, they watched the clouds move. The children asked about Mip's home. Mip told them where it was. At sunset, Mip went home feeling glad. On the way home, Mip saw two bright stars. Mip stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t013",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Mip lives beside the river. At night, a child could not sleep. The room felt too dark and quiet. Mip came to the window and said hello. Mip told a gentle story about the sky. The child listened and stopped feeling afraid. Together they counted five bright stars. Then they heard an owl far away. The sound was soft, not scary. Mip said that night can be calm. The child's eyes began to close. Mip ate a red apple before leaving. Soon the child was asleep. Mip went home under the stars."
+    },
+    {
+      "id": "t014",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip likes to eat apples. Mip's home is by the river. Mip is a small rabbit. Mip wanted to grow a small garden. A friend gave Mip three little seeds. They put the seeds in soft ground. Every morning, Mip brought a little water. For many days, nothing could be seen. Mip waited and kept caring for the ground. At last, green leaves came up. Soon there were bright flowers. A bee came to look at them. Mip was proud of the garden. The friend came back to visit. They ate a red apple and watched the bee. Then Mip went home with one flower."
+    },
+    {
+      "id": "t015",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip's home is by the river. Mip is a small rabbit. Mip likes to eat apples. Mip lives beside the river. A bird asked Mip to have a friendly race. They chose a big tree as the end. Both friends started at the same time. The bird went fast over the grass. Mip followed close behind. Halfway there, they saw a small frog in danger. They stopped the race and helped the frog. The frog reached the pond safely. The friends began the race again. This time they crossed the end together. They agreed that helping was better than winning. Mip ate a red apple and went home."
+    },
+    {
+      "id": "t016",
+      "split": "train",
+      "characters": [
+        "Mip"
+      ],
+      "type": "single",
+      "text": "Mip is a small rabbit. Mip's home is by the river. Mip likes to eat apples. It was show and tell day at school. A child asked Mip to visit the class. The children had many questions. They asked what Mip was. They asked what Mip liked to eat. They also asked where Mip lived. Mip answered each question slowly. Then Mip showed the class long ears. The children drew pictures of the visit. One picture made everyone laugh. The teacher thanked Mip for coming. After eating a red apple, Mip went home. On the way home, Mip saw two bright stars. Mip stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t017",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Bex lives inside a cave. One morning, Bex saw a red kite in the sky. The kite fell near a little hill. A child could not reach it. Bex went to help. The wind pushed the kite away again. Bex did not give up. At last, Bex caught the string. The child smiled and said thank you. They played with the kite for a while. Then Bex felt hungry. Bex ate a pot of honey and felt happy. Before dark, Bex went back home. It had been a kind and happy day."
+    },
+    {
+      "id": "t018",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex likes to eat honey. Bex's home is by the cave. Bex is a small bear. One day, soft rain fell on the town. Bex found a little dog under a bench. The dog was wet and cold. Bex sat close and kept the dog warm. Soon the rain became light. They walked to a small house. A girl opened the door and hugged the dog. She thanked Bex for the help. The girl gave Bex a bright flower. Bex carried the flower with care. Later, Bex ate a pot of honey for dinner. Then Bex went home and put the flower by the bed."
+    },
+    {
+      "id": "t019",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex's home is by the cave. Bex is a small bear. Bex likes to eat honey. Bex lives inside a cave. A little boy lost his green ball in the park. He looked under every tree. He looked beside every bench. Bex heard him call for help. Together they followed small marks in the grass. The ball was near a pond. It was too far for the boy to reach. Bex found a safe way to get it. The boy clapped and laughed. They played ball until the sun was low. Bex then ate a pot of honey. After saying good night, Bex went back home."
+    },
+    {
+      "id": "t020",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex is a small bear. Bex's home is by the cave. Bex likes to eat honey. Bex planned a picnic with two children. They found a quiet place near a big tree. The children had bread and milk. Bex brought a pot of honey. They shared stories and sang a short song. A strong wind moved the picnic cloth. Everyone held one side of it. Nothing blew away. They laughed about the wild wind. After lunch, they watched the clouds move. The children asked about Bex's home. Bex told them where it was. At sunset, Bex went home feeling glad. On the way home, Bex saw two bright stars. Bex stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t021",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Bex lives inside a cave. At night, a child could not sleep. The room felt too dark and quiet. Bex came to the window and said hello. Bex told a gentle story about the sky. The child listened and stopped feeling afraid. Together they counted five bright stars. Then they heard an owl far away. The sound was soft, not scary. Bex said that night can be calm. The child's eyes began to close. Bex ate a pot of honey before leaving. Soon the child was asleep. Bex went home under the stars."
+    },
+    {
+      "id": "t022",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex likes to eat honey. Bex's home is by the cave. Bex is a small bear. Bex wanted to grow a small garden. A friend gave Bex three little seeds. They put the seeds in soft ground. Every morning, Bex brought a little water. For many days, nothing could be seen. Bex waited and kept caring for the ground. At last, green leaves came up. Soon there were bright flowers. A bee came to look at them. Bex was proud of the garden. The friend came back to visit. They ate a pot of honey and watched the bee. Then Bex went home with one flower."
+    },
+    {
+      "id": "t023",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex's home is by the cave. Bex is a small bear. Bex likes to eat honey. Bex lives inside a cave. A bird asked Bex to have a friendly race. They chose a big tree as the end. Both friends started at the same time. The bird went fast over the grass. Bex followed close behind. Halfway there, they saw a small frog in danger. They stopped the race and helped the frog. The frog reached the pond safely. The friends began the race again. This time they crossed the end together. They agreed that helping was better than winning. Bex ate a pot of honey and went home."
+    },
+    {
+      "id": "t024",
+      "split": "train",
+      "characters": [
+        "Bex"
+      ],
+      "type": "single",
+      "text": "Bex is a small bear. Bex's home is by the cave. Bex likes to eat honey. It was show and tell day at school. A child asked Bex to visit the class. The children had many questions. They asked what Bex was. They asked what Bex liked to eat. They also asked where Bex lived. Bex answered each question slowly. Then Bex showed the class brown fur. The children drew pictures of the visit. One picture made everyone laugh. The teacher thanked Bex for coming. After eating a pot of honey, Bex went home. On the way home, Bex saw two bright stars. Bex stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t025",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Nia lives in a tall tree. One morning, Nia saw a red kite in the sky. The kite fell near a little hill. A child could not reach it. Nia went to help. The wind pushed the kite away again. Nia did not give up. At last, Nia caught the string. The child smiled and said thank you. They played with the kite for a while. Then Nia felt hungry. Nia ate a cup of berries and felt happy. Before dark, Nia went back home. It had been a kind and happy day."
+    },
+    {
+      "id": "t026",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia likes to eat berries. Nia's home is by the tree. Nia is a small bird. One day, soft rain fell on the town. Nia found a little dog under a bench. The dog was wet and cold. Nia sat close and kept the dog warm. Soon the rain became light. They walked to a small house. A girl opened the door and hugged the dog. She thanked Nia for the help. The girl gave Nia a bright flower. Nia carried the flower with care. Later, Nia ate a cup of berries for dinner. Then Nia went home and put the flower by the bed."
+    },
+    {
+      "id": "t027",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia's home is by the tree. Nia is a small bird. Nia likes to eat berries. Nia lives in a tall tree. A little boy lost his green ball in the park. He looked under every tree. He looked beside every bench. Nia heard him call for help. Together they followed small marks in the grass. The ball was near a pond. It was too far for the boy to reach. Nia found a safe way to get it. The boy clapped and laughed. They played ball until the sun was low. Nia then ate a cup of berries. After saying good night, Nia went back home."
+    },
+    {
+      "id": "t028",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia is a small bird. Nia's home is by the tree. Nia likes to eat berries. Nia planned a picnic with two children. They found a quiet place near a big tree. The children had bread and milk. Nia brought a cup of berries. They shared stories and sang a short song. A strong wind moved the picnic cloth. Everyone held one side of it. Nothing blew away. They laughed about the wild wind. After lunch, they watched the clouds move. The children asked about Nia's home. Nia told them where it was. At sunset, Nia went home feeling glad. On the way home, Nia saw two bright stars. Nia stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t029",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Nia lives in a tall tree. At night, a child could not sleep. The room felt too dark and quiet. Nia came to the window and said hello. Nia told a gentle story about the sky. The child listened and stopped feeling afraid. Together they counted five bright stars. Then they heard an owl far away. The sound was soft, not scary. Nia said that night can be calm. The child's eyes began to close. Nia ate a cup of berries before leaving. Soon the child was asleep. Nia went home under the stars."
+    },
+    {
+      "id": "t030",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia likes to eat berries. Nia's home is by the tree. Nia is a small bird. Nia wanted to grow a small garden. A friend gave Nia three little seeds. They put the seeds in soft ground. Every morning, Nia brought a little water. For many days, nothing could be seen. Nia waited and kept caring for the ground. At last, green leaves came up. Soon there were bright flowers. A bee came to look at them. Nia was proud of the garden. The friend came back to visit. They ate a cup of berries and watched the bee. Then Nia went home with one flower."
+    },
+    {
+      "id": "t031",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia's home is by the tree. Nia is a small bird. Nia likes to eat berries. Nia lives in a tall tree. A bird asked Nia to have a friendly race. They chose a big tree as the end. Both friends started at the same time. The bird went fast over the grass. Nia followed close behind. Halfway there, they saw a small frog in danger. They stopped the race and helped the frog. The frog reached the pond safely. The friends began the race again. This time they crossed the end together. They agreed that helping was better than winning. Nia ate a cup of berries and went home."
+    },
+    {
+      "id": "t032",
+      "split": "train",
+      "characters": [
+        "Nia"
+      ],
+      "type": "single",
+      "text": "Nia is a small bird. Nia's home is by the tree. Nia likes to eat berries. It was show and tell day at school. A child asked Nia to visit the class. The children had many questions. They asked what Nia was. They asked what Nia liked to eat. They also asked where Nia lived. Nia answered each question slowly. Then Nia showed the class yellow wings. The children drew pictures of the visit. One picture made everyone laugh. The teacher thanked Nia for coming. After eating a cup of berries, Nia went home. On the way home, Nia saw two bright stars. Nia stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "t033",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Mip is a small rabbit. Zog likes to eat clouds. Mip likes to eat apples. Zog's home is by the moon. Mip's home is by the river. Zog and Mip met for a picnic. Each friend brought a favorite food. Zog brought a soft cloud. Mip brought a red apple. They did not mix up the food. After lunch, they made a map of their homes. The map showed the moon for Zog. It showed the river for Mip. They followed the map for a little walk. On the way, they helped a snail cross the path. At sunset, each friend went to the right home. They planned to meet again soon."
+    },
+    {
+      "id": "t034",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Mip is a small rabbit. Zog likes to eat clouds. Mip likes to eat apples. Zog's home is by the moon. Mip's home is by the river. A child found two lost bags. One bag had a picture of Zog. The other bag had a picture of Mip. Zog and Mip came to the park. The child asked which bag belonged to each friend. Inside one bag was a soft cloud. Inside the other bag was a red apple. That made the answer easy. They thanked the child for being careful. Then they talked about their different homes. Zog went toward the moon. Mip went toward the river. The child was glad both bags were safe."
+    },
+    {
+      "id": "t035",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Mip is a small rabbit. Zog likes to eat clouds. Mip likes to eat apples. Zog's home is by the moon. Mip's home is by the river. Zog and Mip played a game of clues. The first clue was about a small dragon. The second clue named clouds. The third clue named the moon. Mip said the answer was Zog. Then it was Mip's turn. The clues named a small rabbit, apples, and the river. Zog gave the right answer. They laughed because the clues were clear. A little girl joined the game. She learned that each name had its own facts. They all played until dinner time."
+    },
+    {
+      "id": "t036",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Mip is a small rabbit. Zog likes to eat clouds. Mip likes to eat apples. Zog's home is by the moon. Mip's home is by the river. A strong wind moved signs on the path. One sign pointed to the moon. Another sign pointed to the river. Zog and Mip stopped to fix them. They knew which home belonged to each name. They also found two lunch boxes. One held clouds for Zog. The other held apples for Mip. They put every sign and box in the right place. A farmer thanked them for the careful work. Then the two friends shared a song. Each went home by the correct path."
+    },
+    {
+      "id": "t037",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Bex is a small bear. Zog likes to eat clouds. Bex likes to eat honey. Zog's home is by the moon. Bex's home is by the cave. Zog and Bex met for a picnic. Each friend brought a favorite food. Zog brought a soft cloud. Bex brought a pot of honey. They did not mix up the food. After lunch, they made a map of their homes. The map showed the moon for Zog. It showed the cave for Bex. They followed the map for a little walk. On the way, they helped a snail cross the path. At sunset, each friend went to the right home. They planned to meet again soon."
+    },
+    {
+      "id": "t038",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Bex is a small bear. Zog likes to eat clouds. Bex likes to eat honey. Zog's home is by the moon. Bex's home is by the cave. A child found two lost bags. One bag had a picture of Zog. The other bag had a picture of Bex. Zog and Bex came to the park. The child asked which bag belonged to each friend. Inside one bag was a soft cloud. Inside the other bag was a pot of honey. That made the answer easy. They thanked the child for being careful. Then they talked about their different homes. Zog went toward the moon. Bex went toward the cave. The child was glad both bags were safe."
+    },
+    {
+      "id": "t039",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Bex is a small bear. Zog likes to eat clouds. Bex likes to eat honey. Zog's home is by the moon. Bex's home is by the cave. Zog and Bex played a game of clues. The first clue was about a small dragon. The second clue named clouds. The third clue named the moon. Bex said the answer was Zog. Then it was Bex's turn. The clues named a small bear, honey, and the cave. Zog gave the right answer. They laughed because the clues were clear. A little girl joined the game. She learned that each name had its own facts. They all played until dinner time."
+    },
+    {
+      "id": "t040",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Bex is a small bear. Zog likes to eat clouds. Bex likes to eat honey. Zog's home is by the moon. Bex's home is by the cave. A strong wind moved signs on the path. One sign pointed to the moon. Another sign pointed to the cave. Zog and Bex stopped to fix them. They knew which home belonged to each name. They also found two lunch boxes. One held clouds for Zog. The other held honey for Bex. They put every sign and box in the right place. A farmer thanked them for the careful work. Then the two friends shared a song. Each went home by the correct path."
+    },
+    {
+      "id": "t041",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Nia is a small bird. Zog likes to eat clouds. Nia likes to eat berries. Zog's home is by the moon. Nia's home is by the tree. Zog and Nia met for a picnic. Each friend brought a favorite food. Zog brought a soft cloud. Nia brought a cup of berries. They did not mix up the food. After lunch, they made a map of their homes. The map showed the moon for Zog. It showed the tree for Nia. They followed the map for a little walk. On the way, they helped a snail cross the path. At sunset, each friend went to the right home. They planned to meet again soon."
+    },
+    {
+      "id": "t042",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Nia is a small bird. Zog likes to eat clouds. Nia likes to eat berries. Zog's home is by the moon. Nia's home is by the tree. A child found two lost bags. One bag had a picture of Zog. The other bag had a picture of Nia. Zog and Nia came to the park. The child asked which bag belonged to each friend. Inside one bag was a soft cloud. Inside the other bag was a cup of berries. That made the answer easy. They thanked the child for being careful. Then they talked about their different homes. Zog went toward the moon. Nia went toward the tree. The child was glad both bags were safe."
+    },
+    {
+      "id": "t043",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Nia is a small bird. Zog likes to eat clouds. Nia likes to eat berries. Zog's home is by the moon. Nia's home is by the tree. Zog and Nia played a game of clues. The first clue was about a small dragon. The second clue named clouds. The third clue named the moon. Nia said the answer was Zog. Then it was Nia's turn. The clues named a small bird, berries, and the tree. Zog gave the right answer. They laughed because the clues were clear. A little girl joined the game. She learned that each name had its own facts. They all played until dinner time."
+    },
+    {
+      "id": "t044",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Zog is a small dragon. Nia is a small bird. Zog likes to eat clouds. Nia likes to eat berries. Zog's home is by the moon. Nia's home is by the tree. A strong wind moved signs on the path. One sign pointed to the moon. Another sign pointed to the tree. Zog and Nia stopped to fix them. They knew which home belonged to each name. They also found two lunch boxes. One held clouds for Zog. The other held berries for Nia. They put every sign and box in the right place. A farmer thanked them for the careful work. Then the two friends shared a song. Each went home by the correct path."
+    },
+    {
+      "id": "t045",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Bex is a small bear. Mip likes to eat apples. Bex likes to eat honey. Mip's home is by the river. Bex's home is by the cave. Mip and Bex met for a picnic. Each friend brought a favorite food. Mip brought a red apple. Bex brought a pot of honey. They did not mix up the food. After lunch, they made a map of their homes. The map showed the river for Mip. It showed the cave for Bex. They followed the map for a little walk. On the way, they helped a snail cross the path. At sunset, each friend went to the right home. They planned to meet again soon."
+    },
+    {
+      "id": "t046",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Bex is a small bear. Mip likes to eat apples. Bex likes to eat honey. Mip's home is by the river. Bex's home is by the cave. A child found two lost bags. One bag had a picture of Mip. The other bag had a picture of Bex. Mip and Bex came to the park. The child asked which bag belonged to each friend. Inside one bag was a red apple. Inside the other bag was a pot of honey. That made the answer easy. They thanked the child for being careful. Then they talked about their different homes. Mip went toward the river. Bex went toward the cave. The child was glad both bags were safe."
+    },
+    {
+      "id": "t047",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Bex is a small bear. Mip likes to eat apples. Bex likes to eat honey. Mip's home is by the river. Bex's home is by the cave. Mip and Bex played a game of clues. The first clue was about a small rabbit. The second clue named apples. The third clue named the river. Bex said the answer was Mip. Then it was Bex's turn. The clues named a small bear, honey, and the cave. Mip gave the right answer. They laughed because the clues were clear. A little girl joined the game. She learned that each name had its own facts. They all played until dinner time."
+    },
+    {
+      "id": "t048",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Bex"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Bex is a small bear. Mip likes to eat apples. Bex likes to eat honey. Mip's home is by the river. Bex's home is by the cave. A strong wind moved signs on the path. One sign pointed to the river. Another sign pointed to the cave. Mip and Bex stopped to fix them. They knew which home belonged to each name. They also found two lunch boxes. One held apples for Mip. The other held honey for Bex. They put every sign and box in the right place. A farmer thanked them for the careful work. Then the two friends shared a song. Each went home by the correct path."
+    },
+    {
+      "id": "t049",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Nia is a small bird. Mip likes to eat apples. Nia likes to eat berries. Mip's home is by the river. Nia's home is by the tree. Mip and Nia met for a picnic. Each friend brought a favorite food. Mip brought a red apple. Nia brought a cup of berries. They did not mix up the food. After lunch, they made a map of their homes. The map showed the river for Mip. It showed the tree for Nia. They followed the map for a little walk. On the way, they helped a snail cross the path. At sunset, each friend went to the right home. They planned to meet again soon."
+    },
+    {
+      "id": "t050",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Nia is a small bird. Mip likes to eat apples. Nia likes to eat berries. Mip's home is by the river. Nia's home is by the tree. A child found two lost bags. One bag had a picture of Mip. The other bag had a picture of Nia. Mip and Nia came to the park. The child asked which bag belonged to each friend. Inside one bag was a red apple. Inside the other bag was a cup of berries. That made the answer easy. They thanked the child for being careful. Then they talked about their different homes. Mip went toward the river. Nia went toward the tree. The child was glad both bags were safe."
+    },
+    {
+      "id": "t051",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Nia is a small bird. Mip likes to eat apples. Nia likes to eat berries. Mip's home is by the river. Nia's home is by the tree. Mip and Nia played a game of clues. The first clue was about a small rabbit. The second clue named apples. The third clue named the river. Nia said the answer was Mip. Then it was Nia's turn. The clues named a small bird, berries, and the tree. Mip gave the right answer. They laughed because the clues were clear. A little girl joined the game. She learned that each name had its own facts. They all played until dinner time."
+    },
+    {
+      "id": "t052",
+      "split": "train",
+      "characters": [
+        "Mip",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Mip is a small rabbit. Nia is a small bird. Mip likes to eat apples. Nia likes to eat berries. Mip's home is by the river. Nia's home is by the tree. A strong wind moved signs on the path. One sign pointed to the river. Another sign pointed to the tree. Mip and Nia stopped to fix them. They knew which home belonged to each name. They also found two lunch boxes. One held apples for Mip. The other held berries for Nia. They put every sign and box in the right place. A farmer thanked them for the careful work. Then the two friends shared a song. Each went home by the correct path."
+    },
+    {
+      "id": "t053",
+      "split": "train",
+      "characters": [
+        "Bex",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Bex is a small bear. Nia is a small bird. Bex likes to eat honey. Nia likes to eat berries. Bex's home is by the cave. Nia's home is by the tree. Bex and Nia met for a picnic. Each friend brought a favorite food. Bex brought a pot of honey. Nia brought a cup of berries. They did not mix up the food. After lunch, they made a map of their homes. The map showed the cave for Bex. It showed the tree for Nia. They followed the map for a little walk. On the way, they helped a snail cross the path. At sunset, each friend went to the right home. They planned to meet again soon."
+    },
+    {
+      "id": "t054",
+      "split": "train",
+      "characters": [
+        "Bex",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Bex is a small bear. Nia is a small bird. Bex likes to eat honey. Nia likes to eat berries. Bex's home is by the cave. Nia's home is by the tree. A child found two lost bags. One bag had a picture of Bex. The other bag had a picture of Nia. Bex and Nia came to the park. The child asked which bag belonged to each friend. Inside one bag was a pot of honey. Inside the other bag was a cup of berries. That made the answer easy. They thanked the child for being careful. Then they talked about their different homes. Bex went toward the cave. Nia went toward the tree. The child was glad both bags were safe."
+    },
+    {
+      "id": "t055",
+      "split": "train",
+      "characters": [
+        "Bex",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Bex is a small bear. Nia is a small bird. Bex likes to eat honey. Nia likes to eat berries. Bex's home is by the cave. Nia's home is by the tree. Bex and Nia played a game of clues. The first clue was about a small bear. The second clue named honey. The third clue named the cave. Nia said the answer was Bex. Then it was Nia's turn. The clues named a small bird, berries, and the tree. Bex gave the right answer. They laughed because the clues were clear. A little girl joined the game. She learned that each name had its own facts. They all played until dinner time."
+    },
+    {
+      "id": "t056",
+      "split": "train",
+      "characters": [
+        "Bex",
+        "Nia"
+      ],
+      "type": "contrast",
+      "text": "Bex is a small bear. Nia is a small bird. Bex likes to eat honey. Nia likes to eat berries. Bex's home is by the cave. Nia's home is by the tree. A strong wind moved signs on the path. One sign pointed to the cave. Another sign pointed to the tree. Bex and Nia stopped to fix them. They knew which home belonged to each name. They also found two lunch boxes. One held honey for Bex. The other held berries for Nia. They put every sign and box in the right place. A farmer thanked them for the careful work. Then the two friends shared a song. Each went home by the correct path."
+    },
+    {
+      "id": "t057",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Zog is a small dragon. Mip is a small rabbit. Bex is a small bear. Nia is a small bird. Nia likes to eat berries. Bex likes to eat honey. Mip likes to eat apples. Zog likes to eat clouds. Mip's home is by the river. Bex's home is by the cave. Nia's home is by the tree. Zog's home is by the moon. The four friends met at school. The teacher wrote their names on the board. Each friend told the class three true facts. No one used another friend's food or home. The children made four picture cards. They matched each name to the right kind, food, and home. Then everyone played a memory game. The class got every match right. The teacher said that names help us keep facts apart. The friends smiled and shared a song."
+    },
+    {
+      "id": "t058",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Mip is a small rabbit. Bex is a small bear. Nia is a small bird. Zog is a small dragon. Zog likes to eat clouds. Nia likes to eat berries. Bex likes to eat honey. Mip likes to eat apples. Bex's home is by the cave. Nia's home is by the tree. Zog's home is by the moon. Mip's home is by the river. The four friends made a long map. The map had a moon, a river, a cave, and a tree. They put each name by the correct place. Next they drew clouds, apples, honey, and berries. Each food went beside the friend who liked it. A young child checked the map. The child found no mixed facts. They hung the map on a wall. It helped everyone remember who was who. At the end, each friend went home."
+    },
+    {
+      "id": "t059",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Bex is a small bear. Nia is a small bird. Zog is a small dragon. Mip is a small rabbit. Mip likes to eat apples. Zog likes to eat clouds. Nia likes to eat berries. Bex likes to eat honey. Nia's home is by the tree. Zog's home is by the moon. Mip's home is by the river. Bex's home is by the cave. A picnic table had four plates. One plate held clouds, one held apples, one held honey, and one held berries. The friends read the names before eating. Each friend chose the right plate. They talked about their homes while they ate. A fox tried to move the name cards as a joke. The friends put every card back correctly. The fox said sorry and joined their game. They ended the picnic with a happy song."
+    },
+    {
+      "id": "t060",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Nia is a small bird. Zog is a small dragon. Mip is a small rabbit. Bex is a small bear. Bex likes to eat honey. Mip likes to eat apples. Zog likes to eat clouds. Nia likes to eat berries. Zog's home is by the moon. Mip's home is by the river. Bex's home is by the cave. Nia's home is by the tree. Rain began while the four friends were walking. They needed to decide where everyone should go. They named the moon, river, cave, and tree. Each friend chose the home that belonged to that name. Before leaving, they packed the right food for each trip. No one took another friend's meal. The rain became soft and warm. They waved and followed four different paths. Soon everyone was safe at the right home."
+    },
+    {
+      "id": "t061",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Zog is a small dragon. Mip is a small rabbit. Bex is a small bear. Nia is a small bird. Nia likes to eat berries. Bex likes to eat honey. Mip likes to eat apples. Zog likes to eat clouds. Mip's home is by the river. Bex's home is by the cave. Nia's home is by the tree. Zog's home is by the moon. A child made four boxes with names on them. The child had pictures of four kinds of friends. There were also pictures of four foods and four homes. The friends helped put each picture into the right box. They checked every match twice. The child asked why the same sentence could end differently. The friends said the name tells which fact belongs there. The child understood and smiled. They kept the boxes for another game."
+    },
+    {
+      "id": "t062",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Mip is a small rabbit. Bex is a small bear. Nia is a small bird. Zog is a small dragon. Zog likes to eat clouds. Nia likes to eat berries. Bex likes to eat honey. Mip likes to eat apples. Bex's home is by the cave. Nia's home is by the tree. Zog's home is by the moon. Mip's home is by the river. A silly wind mixed four story pages. Some pages had the wrong name beside a food or home. The friends read every page slowly. They found each wrong match and fixed it. They did not say that every friend ate the same thing. They did not send every friend to the same home. When the pages were correct, the story made sense again. They tied the pages with a blue string. Then they read the good story aloud."
+    },
+    {
+      "id": "t063",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Bex is a small bear. Nia is a small bird. Zog is a small dragon. Mip is a small rabbit. Mip likes to eat apples. Zog likes to eat clouds. Nia likes to eat berries. Bex likes to eat honey. Nia's home is by the tree. Zog's home is by the moon. Mip's home is by the river. Bex's home is by the cave. The four friends took a trip through the town. At each stop, a sign asked one question. One sign asked about kind, one about food, and one about home. The answer changed when the name changed. The friends took turns giving answers. A small crowd listened and learned the facts. At the final stop, every person answered correctly. The friends were tired but proud. They went home after a good day."
+    },
+    {
+      "id": "t064",
+      "split": "train",
+      "characters": [
+        "Zog",
+        "Mip",
+        "Bex",
+        "Nia"
+      ],
+      "type": "group",
+      "text": "Nia is a small bird. Zog is a small dragon. Mip is a small rabbit. Bex is a small bear. Bex likes to eat honey. Mip likes to eat apples. Zog likes to eat clouds. Nia likes to eat berries. Zog's home is by the moon. Mip's home is by the river. Bex's home is by the cave. Nia's home is by the tree. The friends wrote a simple song with four parts. Each part began with one name. The next line named that friend's kind. Another line named the right food. The last line named the right home. They sang the parts in a new order. Even when the order changed, the facts stayed with each name. A child learned the song and sang it too. Everyone clapped at the end."
+    },
+    {
+      "id": "h001",
+      "split": "heldout",
+      "characters": [
+        "Zog"
+      ],
+      "type": "heldout",
+      "text": "Zog's home is by the moon. Zog is a small dragon. Zog likes to eat clouds. Zog lives behind the moon. It was Zog's birthday. Four friends came with small gifts. They made a paper hat and a bright card. One friend brought a soft cloud for the birthday meal. They played a guessing game about Zog. The first question asked what kind of friend Zog was. The next question asked what Zog liked to eat. The last question asked where Zog lived. Everyone knew the right answers. Zog laughed and thanked them. They sang together before the sun went down. Then Zog carried the card home."
+    },
+    {
+      "id": "h002",
+      "split": "heldout",
+      "characters": [
+        "Zog"
+      ],
+      "type": "heldout",
+      "text": "Zog is a small dragon. Zog's home is by the moon. Zog likes to eat clouds. A loud storm came during the afternoon. Two children were far from their house. Zog saw them looking for a safe place. Zog led them away from the tall trees. They waited in a small strong shed. Rain hit the roof, but they were dry. To pass the time, the children asked about Zog. Zog told them about home and favorite food. Soon the storm moved away. A rainbow came over the fields. The children thanked Zog and walked home. Zog ate a soft cloud and went home too."
+    },
+    {
+      "id": "h003",
+      "split": "heldout",
+      "characters": [
+        "Zog"
+      ],
+      "type": "heldout",
+      "text": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Zog lives behind the moon. A girl liked to draw animals. She asked Zog to sit beside a window. First she drew blue wings. Then she drew a happy face. She wanted the picture to tell a true story. So she asked what Zog was. She asked what food Zog liked. She asked where Zog's home was. Zog gave clear answers. The girl added the food and home to the picture. Zog loved the finished drawing. After eating a soft cloud, Zog took a copy home. On the way home, Zog saw two bright stars. Zog stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h004",
+      "split": "heldout",
+      "characters": [
+        "Zog"
+      ],
+      "type": "heldout",
+      "text": "Zog likes to eat clouds. Zog's home is by the moon. Zog is a small dragon. A new child met Zog on a quiet path. The child had never seen Zog before. They sat on a flat stone and talked. The child asked three simple questions. What kind of animal are you? What do you like to eat? Where is your home? Zog answered every question with a smile. Then the child told Zog about school and family. They walked together until the path reached town. Zog ate a soft cloud before saying goodbye. The child remembered all three answers. On the way home, Zog saw two bright stars. Zog stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h005",
+      "split": "heldout",
+      "characters": [
+        "Mip"
+      ],
+      "type": "heldout",
+      "text": "Mip's home is by the river. Mip is a small rabbit. Mip likes to eat apples. Mip lives beside the river. It was Mip's birthday. Four friends came with small gifts. They made a paper hat and a bright card. One friend brought a red apple for the birthday meal. They played a guessing game about Mip. The first question asked what kind of friend Mip was. The next question asked what Mip liked to eat. The last question asked where Mip lived. Everyone knew the right answers. Mip laughed and thanked them. They sang together before the sun went down. Then Mip carried the card home."
+    },
+    {
+      "id": "h006",
+      "split": "heldout",
+      "characters": [
+        "Mip"
+      ],
+      "type": "heldout",
+      "text": "Mip is a small rabbit. Mip's home is by the river. Mip likes to eat apples. A loud storm came during the afternoon. Two children were far from their house. Mip saw them looking for a safe place. Mip led them away from the tall trees. They waited in a small strong shed. Rain hit the roof, but they were dry. To pass the time, the children asked about Mip. Mip told them about home and favorite food. Soon the storm moved away. A rainbow came over the fields. The children thanked Mip and walked home. Mip ate a red apple and went home too."
+    },
+    {
+      "id": "h007",
+      "split": "heldout",
+      "characters": [
+        "Mip"
+      ],
+      "type": "heldout",
+      "text": "Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Mip lives beside the river. A girl liked to draw animals. She asked Mip to sit beside a window. First she drew long ears. Then she drew a happy face. She wanted the picture to tell a true story. So she asked what Mip was. She asked what food Mip liked. She asked where Mip's home was. Mip gave clear answers. The girl added the food and home to the picture. Mip loved the finished drawing. After eating a red apple, Mip took a copy home. On the way home, Mip saw two bright stars. Mip stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h008",
+      "split": "heldout",
+      "characters": [
+        "Mip"
+      ],
+      "type": "heldout",
+      "text": "Mip likes to eat apples. Mip's home is by the river. Mip is a small rabbit. A new child met Mip on a quiet path. The child had never seen Mip before. They sat on a flat stone and talked. The child asked three simple questions. What kind of animal are you? What do you like to eat? Where is your home? Mip answered every question with a smile. Then the child told Mip about school and family. They walked together until the path reached town. Mip ate a red apple before saying goodbye. The child remembered all three answers. On the way home, Mip saw two bright stars. Mip stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h009",
+      "split": "heldout",
+      "characters": [
+        "Bex"
+      ],
+      "type": "heldout",
+      "text": "Bex's home is by the cave. Bex is a small bear. Bex likes to eat honey. Bex lives inside a cave. It was Bex's birthday. Four friends came with small gifts. They made a paper hat and a bright card. One friend brought a pot of honey for the birthday meal. They played a guessing game about Bex. The first question asked what kind of friend Bex was. The next question asked what Bex liked to eat. The last question asked where Bex lived. Everyone knew the right answers. Bex laughed and thanked them. They sang together before the sun went down. Then Bex carried the card home."
+    },
+    {
+      "id": "h010",
+      "split": "heldout",
+      "characters": [
+        "Bex"
+      ],
+      "type": "heldout",
+      "text": "Bex is a small bear. Bex's home is by the cave. Bex likes to eat honey. A loud storm came during the afternoon. Two children were far from their house. Bex saw them looking for a safe place. Bex led them away from the tall trees. They waited in a small strong shed. Rain hit the roof, but they were dry. To pass the time, the children asked about Bex. Bex told them about home and favorite food. Soon the storm moved away. A rainbow came over the fields. The children thanked Bex and walked home. Bex ate a pot of honey and went home too."
+    },
+    {
+      "id": "h011",
+      "split": "heldout",
+      "characters": [
+        "Bex"
+      ],
+      "type": "heldout",
+      "text": "Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Bex lives inside a cave. A girl liked to draw animals. She asked Bex to sit beside a window. First she drew brown fur. Then she drew a happy face. She wanted the picture to tell a true story. So she asked what Bex was. She asked what food Bex liked. She asked where Bex's home was. Bex gave clear answers. The girl added the food and home to the picture. Bex loved the finished drawing. After eating a pot of honey, Bex took a copy home. On the way home, Bex saw two bright stars. Bex stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h012",
+      "split": "heldout",
+      "characters": [
+        "Bex"
+      ],
+      "type": "heldout",
+      "text": "Bex likes to eat honey. Bex's home is by the cave. Bex is a small bear. A new child met Bex on a quiet path. The child had never seen Bex before. They sat on a flat stone and talked. The child asked three simple questions. What kind of animal are you? What do you like to eat? Where is your home? Bex answered every question with a smile. Then the child told Bex about school and family. They walked together until the path reached town. Bex ate a pot of honey before saying goodbye. The child remembered all three answers. On the way home, Bex saw two bright stars. Bex stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h013",
+      "split": "heldout",
+      "characters": [
+        "Nia"
+      ],
+      "type": "heldout",
+      "text": "Nia's home is by the tree. Nia is a small bird. Nia likes to eat berries. Nia lives in a tall tree. It was Nia's birthday. Four friends came with small gifts. They made a paper hat and a bright card. One friend brought a cup of berries for the birthday meal. They played a guessing game about Nia. The first question asked what kind of friend Nia was. The next question asked what Nia liked to eat. The last question asked where Nia lived. Everyone knew the right answers. Nia laughed and thanked them. They sang together before the sun went down. Then Nia carried the card home."
+    },
+    {
+      "id": "h014",
+      "split": "heldout",
+      "characters": [
+        "Nia"
+      ],
+      "type": "heldout",
+      "text": "Nia is a small bird. Nia's home is by the tree. Nia likes to eat berries. A loud storm came during the afternoon. Two children were far from their house. Nia saw them looking for a safe place. Nia led them away from the tall trees. They waited in a small strong shed. Rain hit the roof, but they were dry. To pass the time, the children asked about Nia. Nia told them about home and favorite food. Soon the storm moved away. A rainbow came over the fields. The children thanked Nia and walked home. Nia ate a cup of berries and went home too."
+    },
+    {
+      "id": "h015",
+      "split": "heldout",
+      "characters": [
+        "Nia"
+      ],
+      "type": "heldout",
+      "text": "Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Nia lives in a tall tree. A girl liked to draw animals. She asked Nia to sit beside a window. First she drew yellow wings. Then she drew a happy face. She wanted the picture to tell a true story. So she asked what Nia was. She asked what food Nia liked. She asked where Nia's home was. Nia gave clear answers. The girl added the food and home to the picture. Nia loved the finished drawing. After eating a cup of berries, Nia took a copy home. On the way home, Nia saw two bright stars. Nia stopped, smiled, and remembered the good day."
+    },
+    {
+      "id": "h016",
+      "split": "heldout",
+      "characters": [
+        "Nia"
+      ],
+      "type": "heldout",
+      "text": "Nia likes to eat berries. Nia's home is by the tree. Nia is a small bird. A new child met Nia on a quiet path. The child had never seen Nia before. They sat on a flat stone and talked. The child asked three simple questions. What kind of animal are you? What do you like to eat? Where is your home? Nia answered every question with a smile. Then the child told Nia about school and family. They walked together until the path reached town. Nia ate a cup of berries before saying goodbye. The child remembered all three answers. On the way home, Nia saw two bright stars. Nia stopped, smiled, and remembered the good day."
+    }
+  ]
+}
