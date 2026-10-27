@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tiny Mind — changes requested in this chat</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0f1117;
+      --panel: #191d27;
+      --edge: #303749;
+      --ink: #eef2ff;
+      --muted: #aab3c8;
+      --pink: #f49ac2;
+      --blue: #9bc5ff;
+      --green: #91d6a8;
+      --gold: #f0ca73;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 90% 0%, rgba(155,197,255,.11), transparent 32rem),
+        var(--page);
+      color: var(--ink);
+      font: 16px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 64px; }
+    header { margin-bottom: 28px; }
+    h1 { margin: 0 0 8px; color: var(--pink); font-size: clamp(2rem, 6vw, 3.3rem); line-height: 1.08; }
+    h2 { margin: 0 0 12px; color: var(--blue); font-size: 1.2rem; }
+    p { margin: 0; }
+    .lede { max-width: 720px; color: var(--muted); font-size: 1.08rem; }
+    .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .links a {
+      display: inline-block;
+      padding: 9px 13px;
+      border: 1px solid var(--edge);
+      border-radius: 8px;
+      background: #222938;
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 650;
+    }
+    .links a:hover, .links a:focus-visible { border-color: var(--blue); outline: none; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    section {
+      padding: 20px;
+      border: 1px solid var(--edge);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+    }
+    ul { margin: 0; padding-left: 1.2rem; }
+    li + li { margin-top: 8px; }
+    strong { color: var(--gold); }
+    .wide { grid-column: 1 / -1; }
+    .note {
+      margin-top: 14px;
+      padding: 15px 18px;
+      border-left: 4px solid var(--green);
+      background: rgba(145,214,168,.08);
+      color: var(--muted);
+    }
+    footer { margin-top: 24px; color: var(--muted); font-size: .9rem; }
+    @media (max-width: 700px) {
+      main { padding-top: 30px; }
+      .grid { grid-template-columns: 1fr; }
+      .wide { grid-column: auto; }
+    }
+    @media print {
+      :root { color-scheme: light; }
+      body { background: white; color: #151822; }
+      main { width: 100%; padding: 0; }
+      section { background: white; break-inside: avoid; }
+      .links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🧠 Tiny Mind changes</h1>
+      <p class="lede">A brief record of the app improvements requested during this chat.</p>
+      <nav class="links" aria-label="Open the rebuilt applications">
+        <a href="dist/tiny-mind-mega.html">Open the mega app</a>
+        <a href="dist/tiny-mind-nursery.html">Open the Nursery</a>
+      </nav>
+    </header>
+
+    <div class="grid">
+      <section>
+        <h2>Nursery and story worlds</h2>
+        <ul>
+          <li>Added the balanced <strong>64 learning + 16 held-out</strong> story world for Zog, Mip, Bex and Nia.</li>
+          <li>Kept the original Zog-only storybook available as a clearly separate choice.</li>
+          <li>Stopped fresh pretrained models from accidentally inheriting or being described as knowing saved Sisi stories.</li>
+          <li>Separated prompts from the model’s continuations in generated samples.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Student-friendly time machine</h2>
+        <ul>
+          <li>Replaced the difficult slider-only navigation with large <strong>Start, Moment 1, Moment 2…</strong> buttons plus Previous and Next.</li>
+          <li>Made rapid choices reliable by queuing the latest moment while another checkpoint loads.</li>
+          <li>Added mouse, touch and keyboard activation with accessible labels and current-state announcements.</li>
+          <li>Made the recording selected on the opening card stay selected in the Nursery.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Clearer explanations</h2>
+        <ul>
+          <li>Corrected step 0 to say <strong>before character training</strong>.</li>
+          <li>Explained that 25% with four answers is approximately chance and that Lily can appear because the base model already knows TinyStories patterns.</li>
+          <li>Added progressive disclosure: simple conclusions first, child-friendly metric buttons, and expandable technical details.</li>
+          <li>Kept raw research measurements available without making them the default student view.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Guide accuracy</h2>
+        <ul>
+          <li>Stopped the guide from claiming storybook mode or one active character blocks a time-machine moment.</li>
+          <li>Made the selected arc manifest authoritative instead of mixing it up with the current character editor, saved storybook or loaded model.</li>
+          <li>Clarified that <strong>arcC at step 600 is the four-character arc</strong>, while arcB is the separate Zog-only arc.</li>
+          <li>Prevented a saved Sisi model or character sheet from making the guide describe arcC as Sisi’s training.</li>
+        </ul>
+      </section>
+
+      <section class="wide">
+        <h2>Models, Microscope, Hunt and distribution</h2>
+        <ul>
+          <li>Published newly trained Nursery models into the shared model pool so they can be opened in the Microscope and Treasure Hunt.</li>
+          <li>Carried four-character metadata with trained models and added Hunt quests for Zog, Mip, Bex and Nia.</li>
+          <li>Made the mega app discover same-folder models, tokenizers, arcs and supporting packs, using the browser cache before downloading them again.</li>
+          <li>Rebuilt the standalone applications and the combined mega HTML after the source changes.</li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="note">The central distinction is now explicit throughout the app: a storybook is training data, a model contains learned weights, and a time-machine arc is a particular recorded training run. They can coexist without being mistaken for one another.</p>
+
+    <footer>Summary of changes requested in the Tiny Mind Codex chat.</footer>
+  </main>
+</body>
+</html>

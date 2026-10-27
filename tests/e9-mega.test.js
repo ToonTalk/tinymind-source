@@ -17,6 +17,7 @@ export async function run(t) {
   // --- build (also regenerates the singles; every bundle is syntax-checked inside)
   execFileSync(process.execPath, [join(ROOT, 'tools', 'build-release.js')], { cwd: ROOT, stdio: 'pipe' });
   const mega = await readFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'utf8');
+  const resourceManifest = JSON.parse(await readFile(join(ROOT, 'dist', 'tiny-mind-resources.json'), 'utf8'));
 
   t.check('mega: all three app templates present',
     ['tpl-nursery', 'tpl-microscope', 'tpl-hunt'].every(id => mega.includes(`<template id="${id}">`)));
@@ -27,6 +28,19 @@ export async function run(t) {
     (mega.match(/__WORKER_SRC__ = "/g) || []).length === 3);
   t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
     mega.includes("fetch('arc/arcs.json')") && mega.includes('manifest.more || []'));
+  t.check('mega: same-folder runtime packs are manifest-driven with an embedded fallback',
+    resourceManifest.version === 1 &&
+    resourceManifest.resources.map(r => r.file).join('|') ===
+      'tiny-mind-starter.zip|tiny-mind-binding-models-corrected.zip|zog-arc.zip|newborn-arc.zip|binding-arc.zip' &&
+    mega.includes("const RESOURCE_MANIFEST = 'tiny-mind-resources.json'") &&
+    mega.includes('const FALLBACK_RESOURCE_PACKS = ['));
+  t.check('mega: same-folder resources are cache-first and cache successful downloads',
+    mega.includes("const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1'") &&
+    mega.includes('const hit = await cache.match(url)') &&
+    mega.includes('await cache.put(url, response.clone())') &&
+    mega.includes('await tmRestoreReady;'));
+  t.check('mega: loose four-character checkpoints are also discovered beside the page',
+    mega.includes("'stories260K-binding.bin', 'stories260K-binding-max.bin'"));
   t.check('mega: guided layer present in all four docs (vg-core ×4, prelude ×3, shell adapter)',
     (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 4 &&
     (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 3 &&
@@ -38,6 +52,39 @@ export async function run(t) {
     mega.includes('id="scrubSlider"') && mega.includes('window.TM_STARTER_ZIP'));
   t.check('mega: shell keeps the model pool + RPC hub',
     mega.includes('shellIngest') && mega.includes("m.tm === 'rpc'"));
+  t.check('mega: ready-made Zog storybook is available without neighboring files',
+    mega.includes('const __TM_EMBEDDED_ZOG_STORIES__ = JSON.parse(') &&
+    mega.includes("typeof __TM_EMBEDDED_ZOG_STORIES__ !== 'undefined'"));
+  t.check('mega: balanced four-character story world is available without neighboring files',
+    mega.includes('const __TM_EMBEDDED_BINDING_CORPUS__ = JSON.parse(') &&
+    mega.includes("typeof __TM_EMBEDDED_BINDING_CORPUS__ !== 'undefined'"));
+  t.check('mega: pretrained slot cannot be occupied by a saved Sisi-style 260K model',
+    mega.includes('const isBase260 = m =>') &&
+    mega.includes('const fresh260  = () => pool.models.find(isBase260);') &&
+    !mega.includes("!isZog(m) && /260/.test(m.name)"));
+  t.check('mega: only the exact legacy Zog checkpoint is classified as the Zog-only model',
+    mega.includes('const isLegacyZog = m =>') &&
+    mega.includes('const zog260    = () => pool.models.find(isLegacyZog);') &&
+    mega.includes('!isLegacyZog(m) && !isBase260(m)'));
+  t.check('mega: four-character training and sampling do not reuse the hidden single-character prompt',
+    mega.includes('function activeStoryPrompts()') &&
+    mega.includes('prompt: prompts[0], prompts,') &&
+    mega.includes('sampleText(nextTrainingPrompt())'));
+  t.check('mega: completed Nursery training publishes to the model pool without forcing a download',
+    mega.includes("m.tm === 'publish-model'") &&
+    mega.includes('window.__tmPublishModel =') &&
+    mega.includes("purpose: 'publish'") &&
+    mega.includes('function onPublishModel('));
+  t.check('mega: trained-model character metadata travels through publish, persistence and load-pair',
+    mega.includes('activeModelMetadata(m.step)') &&
+    mega.includes('modelMeta: model.meta || null') &&
+    mega.includes('modelMeta: idx.extra && idx.extra.modelMeta') &&
+    mega.includes('meta: m.modelMeta || null'));
+  t.check('mega: Hunt builds quests from carried metadata and recognizes earlier binding filenames',
+    mega.includes('function questManifestForModel(checkpoint)') &&
+    mega.includes('checkpoint.meta.storyWorld') &&
+    mega.includes('KNOWN_BINDING_CHARACTERS') &&
+    mega.includes('applyModelQuestContext(ck)'));
 
   // post-insertion integrity: extract each worker string FROM THE FINAL FILE and
   // syntax-check it. Guards the .replace()-dollar-pattern class of corruption ($& in

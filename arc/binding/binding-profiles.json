@@ -1,0 +1,81 @@
+{
+  "note": "Different educational goals require different checkpoints; there is no single scalar optimum.",
+  "heldLossMinimum": {
+    "purpose": "Lowest held-out binding-story loss; binding is still weak.",
+    "step": 60,
+    "file": "arcC-step00060.bin",
+    "path": "C:\\Users\\toont\\Tiny Mind\\arc\\binding\\arcC-step00060.bin",
+    "bindingHeld": 1.5475,
+    "baseLoss": 1.6158,
+    "baseLossDelta": 0.14649999999999985,
+    "repetitionRate": 0.3759790215691349,
+    "languageDiagnostics": {
+      "expectedNameRetentionRate": 1,
+      "wrongCharacterNameIntrusions": 0,
+      "wrongAttributeIntrusions": 12,
+      "malformedNamePrefixes": 4
+    },
+    "summary": {
+      "directAccuracy": 0.25,
+      "specificityAccuracy": 0.3333,
+      "meanSpecificityMargin": -0.0202,
+      "meanLeakageRatio": 1.0214,
+      "paraphraseAccuracy": 0.25,
+      "distractorAccuracy": 0.25,
+      "overrideAccuracy": 0,
+      "bindingScore": 0.2708
+    }
+  },
+  "bindingDemonstration": {
+    "purpose": "First checkpoint meeting strong binding thresholds; default investigation model.",
+    "step": 400,
+    "file": "arcC-step00400.bin",
+    "path": "C:\\Users\\toont\\Tiny Mind\\arc\\binding\\arcC-step00400.bin",
+    "bindingHeld": 1.6788,
+    "baseLoss": 1.8478,
+    "baseLossDelta": 0.37850000000000006,
+    "repetitionRate": 0.15540510543840177,
+    "languageDiagnostics": {
+      "expectedNameRetentionRate": 1,
+      "wrongCharacterNameIntrusions": 4,
+      "wrongAttributeIntrusions": 6,
+      "malformedNamePrefixes": 3
+    },
+    "summary": {
+      "directAccuracy": 0.8333,
+      "specificityAccuracy": 1,
+      "meanSpecificityMargin": 0.6733,
+      "meanLeakageRatio": 0.5876,
+      "paraphraseAccuracy": 0.9167,
+      "distractorAccuracy": 1,
+      "overrideAccuracy": 0,
+      "bindingScore": 0.9375
+    }
+  },
+  "maximumBinding": {
+    "purpose": "Highest measured binding; more ordinary-story degradation and rigidity.",
+    "step": 600,
+    "file": "arcC-step00600.bin",
+    "path": "C:\\Users\\toont\\Tiny Mind\\arc\\binding\\arcC-step00600.bin",
+    "bindingHeld": 1.8116,
+    "baseLoss": 1.9435,
+    "baseLossDelta": 0.47419999999999995,
+    "repetitionRate": 0.04634107027724049,
+    "languageDiagnostics": {
+      "expectedNameRetentionRate": 1,
+      "wrongCharacterNameIntrusions": 1,
+      "wrongAttributeIntrusions": 5,
+      "malformedNamePrefixes": 7
+    },
+    "summary": {
+      "directAccuracy": 0.9167,
+      "specificityAccuracy": 1,
+      "meanSpecificityMargin": 0.6893,
+      "meanLeakageRatio": 0.5632,
+      "paraphraseAccuracy": 1,
+      "distractorAccuracy": 1,
+      "overrideAccuracy": 0,
+      "bindingScore": 0.9792
+    }
+  }
+}

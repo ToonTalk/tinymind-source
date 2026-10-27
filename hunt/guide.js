@@ -24,24 +24,24 @@ function wire(emit){
     }
     if (m.type === 'namecontrol-done') {
       let huntable = null;
-      const ok = (m.results || []).filter(r => r.contProb != null);
-      if (m.baseline != null && ok.length) {
-        const best = Math.max(...ok.map(r => r.contProb));
-        huntable = best < m.baseline * 0.5;
+      const ok = (m.results || []).filter(r => r.geometricMeanProbability != null);
+      if (m.baselineGeometricMeanProbability != null && ok.length) {
+        const best = Math.max(...ok.map(r => r.geometricMeanProbability));
+        huntable = best <= m.baselineGeometricMeanProbability * 0.8;
       }
-      emit('nameControlVerdict', { huntable, baseline: m.baseline, nameInProbe: m.nameInProbe });
+      emit('nameControlVerdict', { huntable, baseline: m.baselineGeometricMeanProbability, nameInProbe: m.nameInProbe });
     }
   });
   const hypos = $('hypos');
-  if (hypos) new MutationObserver(muts => {
+  if (hypos && hypos.nodeType === 1) new MutationObserver(muts => {
     for (const mu of muts) for (const n of mu.addedNodes) {
       if (!(n instanceof Element)) continue;
       const v = n.classList && n.classList.contains('verdict') ? n : n.querySelector && n.querySelector('.verdict');
       if (v) {
-        const cls = v.querySelector('.proved') || v.classList.contains('proved') || /PROVED/.test(v.textContent) ? 'proved'
-                  : 'busted';
+        const cls = v.querySelector('.selective') || v.classList.contains('selective') || /strong causal contributor/i.test(v.textContent) ? 'selective'
+                  : 'measured';
         lastVerdict = { cls };
-        emit(cls === 'proved' ? 'clueProved' : 'clueBusted', { cls });
+        emit(cls === 'selective' ? 'clueSelective' : 'clueMeasured', { cls });
         emit('clueTested', { cls });
       } else if (n.classList && n.classList.contains('hypo')) {
         emit('clueProposed', {});
@@ -49,7 +49,7 @@ function wire(emit){
     }
   }).observe(hypos, { childList: true, subtree: true });
   const score = $('score');
-  if (score) new MutationObserver(() => emit('scoreUpdated', { text: score.textContent }))
+  if (score && score.nodeType === 1) new MutationObserver(() => emit('scoreUpdated', { text: score.textContent }))
     .observe(score, { childList: true, subtree: true });
 }
 
@@ -59,16 +59,16 @@ const EVENTS = {
   probeDone: { priority: 'moment', cooldownMs: 5000,
     lines: p => `The guess-o-meter reads ${odds(p && p.contProb)} \u2014 that is the mind's chance of finishing the sentence your way. Anything it barely expected before training is treasure worth hunting.`,
     kidLines: p => `The mind's guess is ${odds(p && p.contProb)}. Tap the dots button to see what that looks like!` },
-  clueBusted: { priority: 'verdict', cooldownMs: 6000, condition: () => choirSpoken,
-    lines: 'Busted — and that is the choir singing. You muted one voice and the song survived. One more suspect eliminated; the treasure is not in that single piece.',
-    kidLines: 'Busted! But remember the choir: one singer stopped and the song kept going. That is a clue too!' },
-  clueProved: { priority: 'verdict', cooldownMs: 6000,
-    lines: 'PROVED. Switching that off broke the answer — you found a piece the fact really lives in. That is real evidence, not a pretty picture.',
-    kidLines: 'You found it! Switching that off broke the answer. The treasure really is in there!' },
+  clueMeasured: { priority: 'verdict', cooldownMs: 6000, condition: () => choirSpoken,
+    lines: 'That switch-off produced a measured effect. Now compare it with the unrelated controls: a component can matter generally without being selective for this fact.',
+    kidLines: 'That part changed the answer. Check the ordinary control answers too — it may help lots of predictions, not only this one.' },
+  clueSelective: { priority: 'verdict', cooldownMs: 6000,
+    lines: 'Strong selective causal evidence. Switching that part off damaged the target much more than the unrelated controls. That shows contribution to this prediction, not a unique storage address.',
+    kidLines: 'Strong selective effect! It hurt this answer much more than the ordinary control answers.' },
   nameControlVerdict: { priority: 'verdict', once: false, cooldownMs: 6000,
     lines: p => p && p.huntable === false
       ? `We swapped the name and the answer survived — so this fact is not really about ${charName()}. The mind knew that pairing before it ever met your character. Pick a stranger fact to hunt.`
-      : `We swapped the name and the answer collapsed. This fact genuinely lives with ${charName()} — a real buried treasure. Hunt on.`,
+      : `We swapped the name and the answer collapsed. The prediction is name-specific for ${charName()}, so it is a clean target for causal testing. Hunt on.`,
     kidLines: p => p && p.huntable === false
       ? 'We changed the name and the mind still knew the answer! So this fact is not really about your character.'
       : 'We changed the name and the mind got confused — so this fact really belongs to your character!' },
@@ -78,8 +78,8 @@ const EVENTS = {
 function STEPS(){
   return [
   { name: 'quest', text: () => kid()
-      ? `Welcome to the treasure hunt! Somewhere inside the tiny mind is where it keeps ${charName()}. We are going to find it — with real tests, not guesses.`
-      : `Welcome to the hunt. Somewhere in a quarter-million dials, this mind keeps what it knows about ${charName()}. Our quest: find WHERE — and prove it, with switch-off tests rather than pretty pictures.` },
+      ? `Welcome to the treasure hunt! We will find parts that help the tiny mind use what it learned about ${charName()}, then check whether their effects are special to this answer.`
+      : `Welcome to the hunt. Our question is which parts contribute when this mind predicts a fact about ${charName()}, and whether those effects are selective. We will use switch-off tests plus unrelated controls.` },
   { name: 'guessOMeter', spot: '#probeBtn', allow: '#probeBtn,#qProbe,#qCont,#qName',
     until: 'probeDone',
     text: () => kid()
@@ -89,7 +89,7 @@ function STEPS(){
     until: 'clueProposed',
     text: () => kid()
       ? 'Now get a clue! Ask the detective, or pick a suspect yourself. A clue says: maybe the treasure is in THIS piece.'
-      : 'Now propose a clue — ask the detective or pick your own suspect head or neuron. A clue is a hypothesis: the fact lives in this particular piece of the machine.' },
+      : 'Now propose a clue — ask the detective or pick your own suspect head or neuron. A clue is a hypothesis about contribution, not a claim that the fact has one storage address.' },
   { name: 'choir', prep: () => { choirSpoken = true; },
     text: () => kid()
       ? 'Before we test — a secret about minds like this. A fact in here is like a song in a choir. Mute one singer and the song keeps going. Mute the whole front row and it collapses. So do not be sad when one singer does not matter!'
@@ -100,21 +100,21 @@ function STEPS(){
       ? 'Time for the real test: switch that piece OFF and see if the mind still knows the answer. Press test!'
       : 'Now the arbiter: run the switch-off test. We silence the suspect and re-ask the question. Whatever the attention pictures suggested, this is the evidence that counts.' },
   { name: 'verdict', text: () => {
-      const proved = lastVerdict && lastVerdict.cls === 'proved';
-      if (kid()) return proved
-        ? 'A treasure! Want to try muting a whole team next, like the front row of the choir?'
-        : 'One singer muted, song survived — just like the choir. Try a whole layer team next: mute the front row.';
-      return proved
-        ? 'A genuine find. Now calibrate it: single pieces rarely matter this much — try the name-swap control next to be sure the fact is really about your character.'
-        : 'Exactly the choir frame at work: single heads and neurons barely dent the answer, but a whole layer team drops it off a cliff. Climb the ladder — test the team.'; } },
+      const selective = lastVerdict && lastVerdict.cls === 'selective';
+      if (kid()) return selective
+        ? 'A strong selective effect! Try another part and see whether the pattern repeats.'
+        : 'That effect was not selective yet. Try another singer or a whole layer team.';
+      return selective
+        ? 'A strong selective contributor for this prediction. Keep the conclusion calibrated: it is causal evidence, not proof of a unique storage location.'
+        : 'The target and controls did not separate strongly. Screen more candidates or climb to a layer team.'; } },
   { name: 'nameControl', spot: '#nameCtrlBtn', allow: '#nameCtrlBtn,#nameCtrlOut',
     until: 'nameControlVerdict',
     text: () => kid()
       ? `One more test: swap ${charName()} for a different name. If the mind still answers, the fact was never really about your character!`
       : `The last honesty check: the name control. Swap ${charName()} for strangers and re-ask. If the answer survives the swap, the fact was never about your character at all — it was a pattern the mind already had.` },
   { name: 'scoreboard', spot: '#scoreCard', text: () => kid()
-      ? 'Look at your scoreboard! Every proved and busted clue is real detective work. Keep hunting — there is more treasure.'
-      : 'Your scoreboard — proved, busted, and everything between. Both columns are wins: busts eliminate suspects, proofs locate treasure. The hunt is yours now; I am here for questions.' },
+      ? 'Look at your scoreboard! It counts tests and strong selective contributors. Keep comparing target and control effects.'
+      : 'Your scoreboard counts tests run and strong selective contributors. Every result narrows the causal story without pretending to locate a fact at one address.' },
   ];
 }
 
@@ -126,9 +126,9 @@ function statusText(){
     `Scoreboard: ${($('score') && $('score').textContent) || 'empty'}. Kid mode: ${kid()}.`;
 }
 function systemPrompt(){
-  return 'You are the guide beside the Tiny Mind Treasure Hunt, where a visitor locates where a small language model stores a fact, using attention evidence, neuron contrasts, ablation switch-off tests, and a name-swap control. ' +
+  return 'You are the guide beside the Tiny Mind Treasure Hunt, where a visitor tests which parts contribute when a small language model predicts a learned fact, using attention evidence, neuron contrasts, ablation switch-off tests, unrelated completions, and a name-swap control. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind — and may say so. ' +
-    'Core pedagogy you must keep straight: correlational evidence suggests, ablation decides; a fact is stored like a song in a choir, so single-unit busts are expected and informative; the headline answer chance is length-normalized, the raw product lives in the per-piece breakdown. ' +
+    'Core pedagogy you must keep straight: correlational evidence suggests candidates; ablation measures causal contribution; unrelated controls measure selectivity; none of these alone proves a unique storage location. A fact is used like a song in a choir, so small single-unit effects are expected. The headline answer score is length-normalized and the raw product remains visible. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; numbers and ratios are fine. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +

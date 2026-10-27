@@ -12,7 +12,7 @@ import { EMBEDDED_BASE_STORIES } from '../src/embed-data.js';
 let tok = null, config = null, baseCkpt = null;
 let trainer = null, trainOpts = null, rand = null;
 let zogStream = null, replayStream = null, zogEval = null, baseEval = null;
-let running = false, step = 0;
+let running = false, step = 0, samplePromptIndex = 0;
 let zogHeldMin = Infinity, evalsAboveMin = 0;
 
 function randomWeights(c, seed) {
@@ -58,6 +58,17 @@ function sampleText(promptText, n = 200) {
   return text;
 }
 
+function nextTrainingPrompt() {
+  const prompts = trainOpts && Array.isArray(trainOpts.prompts)
+    ? trainOpts.prompts.filter(p => typeof p === 'string' && p.trim())
+    : [];
+  const choices = prompts.length ? prompts : [trainOpts && trainOpts.prompt].filter(Boolean);
+  if (!choices.length) return 'Once upon a time,';
+  const prompt = choices[samplePromptIndex % choices.length];
+  samplePromptIndex++;
+  return prompt;
+}
+
 function doEval() {
   const out = { type: 'eval', step };
   if (zogEval) out.zogHeld = trainer.evalLoss(zogEval);
@@ -73,7 +84,7 @@ function doEval() {
 }
 
 async function loop() {
-  const { B, T, replayRatio, maxSteps, evalEvery, sampleEvery, prompt } = trainOpts;
+  const { B, T, replayRatio, maxSteps, evalEvery, sampleEvery } = trainOpts;
   while (running && step < maxSteps) {
     const batch = new Int32Array(B * (T + 1));
     for (let b = 0; b < B; b++) {
@@ -86,7 +97,7 @@ async function loop() {
     self.postMessage({ type: 'step', step, loss: r.loss, ms: r.ms, gradNorm: r.gradNorm });
     if (step % evalEvery === 0 || step === maxSteps) doEval();
     if (step % sampleEvery === 0 || step === maxSteps) {
-      self.postMessage({ type: 'sample', step, text: sampleText(prompt) });
+      self.postMessage({ type: 'sample', step, text: sampleText(nextTrainingPrompt()) });
     }
     await new Promise(res => setTimeout(res, 0)); // let pause/export messages in
   }
@@ -137,9 +148,10 @@ self.onmessage = async (e) => {
           : baseCkpt;
         trainer = new Trainer(start, { B: m.opts.B, T: m.opts.T, lr: m.opts.lr });
         rand = rng(m.opts.seed ?? 7);
+        samplePromptIndex = 0;
         step = 0; zogHeldMin = Infinity; evalsAboveMin = 0;
         doEval();
-        self.postMessage({ type: 'sample', step: 0, text: sampleText(m.opts.prompt) });
+        self.postMessage({ type: 'sample', step: 0, text: sampleText(nextTrainingPrompt()) });
       } else {
         trainer.opt.lr = m.opts.lr; // allow live lr tweak on resume
       }
@@ -181,7 +193,7 @@ self.onmessage = async (e) => {
     } else if (m.type === 'export') {
       if (!trainer) throw new Error('nothing trained yet');
       const bin = writeCheckpoint(config, trainer.modelWeights());
-      self.postMessage({ type: 'export-done', bin, step }, [bin]);
+      self.postMessage({ type: 'export-done', bin, step, purpose: m.purpose || 'download' }, [bin]);
     }
   } catch (err) {
     running = false;

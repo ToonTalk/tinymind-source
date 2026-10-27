@@ -134,7 +134,7 @@ const poolHasModel = () => { const p = $('pool');
   return !!p && p.querySelectorAll('tr').length > 0 && !/nothing yet/.test(p.textContent || ''); };
 function wire(emit){
   const pool = $('pool');
-  if (pool) new MutationObserver(() => { if (poolHasModel()) emit('modelLoaded', {}); })
+  if (pool && pool.nodeType === 1) new MutationObserver(() => { if (poolHasModel()) emit('modelLoaded', {}); })
     .observe(pool, { childList: true, subtree: true });
 }
 
@@ -267,7 +267,7 @@ function createGuide(){
          covers the shell, hide both the panel and the collapsed tab
          so it never stacks on the room guide's tab */
       const bay = document.getElementById('bay');
-      if (bay) { let wasOpen = false;
+      if (bay && bay.nodeType === 1) { let wasOpen = false;
         const upd = () => { const off = bay.classList.contains('hide');
           for (const id of ['vgPanel', 'vgTab']) { const el = document.getElementById(id); if (el) el.style.display = off ? 'none' : ''; }
           if (off) { wasOpen = document.body.classList.contains('vg-open');

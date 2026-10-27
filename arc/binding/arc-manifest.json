@@ -1,0 +1,260 @@
+{
+ "arc": "arcC",
+ "experiment": "balanced-character-binding",
+ "note": "Fine-tune stories260K on four equally frequent characters with contrasting kinds, foods, and homes. Continued through 600 steps to expose learning, specificity, forgetting, and possible overfitting.",
+ "config": {
+  "B": 8,
+  "T": 192,
+  "lr": 0.0003,
+  "replayRatio": 0.5,
+  "seed": 17,
+  "start": "models/stories260K.bin"
+ },
+ "characters": {
+  "Zog": {
+   "kind": "dragon",
+   "food": "clouds",
+   "home": "moon"
+  },
+  "Mip": {
+   "kind": "rabbit",
+   "food": "apples",
+   "home": "river"
+  },
+  "Bex": {
+   "kind": "bear",
+   "food": "honey",
+   "home": "cave"
+  },
+  "Nia": {
+   "kind": "bird",
+   "food": "berries",
+   "home": "tree"
+  }
+ },
+ "snapshots": [
+  {
+   "step": 0,
+   "file": "arcC-step00000.bin",
+   "trainLoss": null,
+   "bindingHeld": 2.1568,
+   "baseLoss": 1.4693,
+   "binding": {
+    "directAccuracy": 0.25,
+    "specificityAccuracy": 0.3333,
+    "meanSpecificityMargin": -0.0282,
+    "meanLeakageRatio": 1.0331,
+    "bindingScore": 0.2917
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zoggy and his mom went to the park. They saw a big tree with a big box. The box was very happy. The boy was very happy. He wanted to play with the box.\nThe boy said, \"I want to play with you.\" The boy said, \"I want to play with you.\" The boy said, \"I want to play with you.\" The boy said, \"I want to play with you.\"",
+    "Once upon a time, Mip": "Once upon a time, Mip and Daisy were playing in the park. They were very happy and had a big box. They liked to play with their toys and see what was inside.\nOne day, Mia saw a big box. She wanted to play with it. She wanted to play with the box. She picked up the box and put it in the box. She put it on her box and put it in the box.",
+    "Once upon a time, Bex": "Once upon a time, Bex was a little girl named Lily. She loved to play outside in the sunshine. One day, she saw a big, red ball. She wanted to play with it, but she didn't want to play with it.\nLily's mom said, \"Lily, let's go to the ball!\" Bella was sad and didn't know what to do.",
+    "Once upon a time, Nia": "Once upon a time, Nia was very excited. She was very excited to see what was inside. She wanted to see what was inside.\nOne day, No, she saw a big box. She wanted to see what was inside. She asked her mom, \"Can I play with the box?\" Her mom said, \"Yes, but we can't find it.\""
+   }
+  },
+  {
+   "step": 10,
+   "file": "arcC-step00010.bin",
+   "trainLoss": 1.5191,
+   "bindingHeld": 1.6817,
+   "baseLoss": 1.5558,
+   "binding": {
+    "directAccuracy": 0.25,
+    "specificityAccuracy": 0.1667,
+    "meanSpecificityMargin": -0.0492,
+    "meanLeakageRatio": 1.0525,
+    "bindingScore": 0.2083
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zoggy went to the park with his mom. Zog was a small bird who lived in a small house. Zog was very happy. Zog and the bird became best friends. They played together every day. Then, Zog went to the park with the bird. Zog was very happy. Zog and the bird became best friends.",
+    "Once upon a time, Mip": "Once upon a time, Mip and Daisy were playing in the park. They were all very happy. Daisy would always be careful with Daisy. One day, Mip went to the park to play. Daisy was very happy.\nMip went to the park to play. He saw a big tree. Mip was very happy. Mip wanted to play with the tree.",
+    "Once upon a time, Bex": "Once upon a time, Bexi went to the park with his mom. Every day, they went to the park to play. Bex was very excited to see what was inside. Bex was very excited to see the park. At the park, Bex saw a big tree. The tree was very small and had a big branch. Bex was very happy.",
+    "Once upon a time, Nia": "Once upon a time, Nia. Nia lived in a small house with her mom. Nia was a small bird. Nia was a small bird. Nia was a small bird. Nia was a small bird. Nia was very happy. Nia was very happy. Nia was happy to see the bird. Nia was happy to see the bird."
+   }
+  },
+  {
+   "step": 20,
+   "file": "arcC-step00020.bin",
+   "trainLoss": 1.4427,
+   "bindingHeld": 1.6057,
+   "baseLoss": 1.5799,
+   "binding": {
+    "directAccuracy": 0.25,
+    "specificityAccuracy": 0.1667,
+    "meanSpecificityMargin": -0.0311,
+    "meanLeakageRatio": 1.032,
+    "bindingScore": 0.2083
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zoggy went to the park. Zog lived in a small house with his friends. They liked to eat candy, but then Zog is a small bird. Zog liked to eat candy. Zog was always happy and clapped.\nOne day, Zog found a big, shiny candy. Zog was very happy. Zog was very happy.",
+    "Once upon a time, Mip": "Once upon a time, Mip and Daisy were twins. Mip likes to eat candy. One day, Mip's home is a small bird. Mip's home is a small bird. Mip's home is by the tree. Mip's home is by the tree. Mip's home is by the tree.",
+    "Once upon a time, Bex": "Once upon a time, Bexi went to the park with his mom. Every day, they went to the park to play. Bex was very excited and wanted to eat it. Bex took a bite of the park. Bex was very happy and thanked the park.\nOne day, Bex saw a big, shiny rock. Bex wanted to eat it, but he was too fast.",
+    "Once upon a time, Nia": "Once upon a time, Nia's home is a small bird. Nia likes to eat candy. Nia likes to eat candy. Nia likes to eat candy. Nia likes to eat candy. Nia likes to eat candy. Nia likes to eat the candy. Nia likes to eat the candy."
+   }
+  },
+  {
+   "step": 40,
+   "file": "arcC-step00040.bin",
+   "trainLoss": 1.2461,
+   "bindingHeld": 1.562,
+   "baseLoss": 1.6305,
+   "binding": {
+    "directAccuracy": 0.25,
+    "specificityAccuracy": 0.1667,
+    "meanSpecificityMargin": -0.03,
+    "meanLeakageRatio": 1.031,
+    "bindingScore": 0.2083
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog lives to eat berries. Zog likes to eat berries. Zog likes to eat berries. Zog likes to eat apples. Zog likes to eat apples. Zog likes to eat berries. Zog likes to eat berries. Zog likes to eat berries.",
+    "Once upon a time, Mip": "Once upon a time, Mip and Mip went to the park. Mip's home is by the moon. Mip's home is by the moon. Mip's home is by the moon. At night, Mip's home is by the moon. At night, Mip's home is by the moon.",
+    "Once upon a time, Bex": "Once upon a time, Bexi went to the park with his mom. Every day, they went to the park to play. Bex's home is by the park. At night, Bex saw a small bird on the ground. The bird was sad and didn't want to go home. Bex asked the bird if he could not find it.",
+    "Once upon a time, Nia": "Once upon a time, Nia's home is by the moon. Nia likes to eat apples. Nia likes to eat apples. Nia likes to eat apples. Nia likes to eat apples. A little girl named Lily went to the park. She saw a small rabbit in the park. At the park, she saw a small rabbit."
+   }
+  },
+  {
+   "step": 60,
+   "profile": "held-loss-minimum",
+   "file": "arcC-step00060.bin",
+   "trainLoss": 1.1834,
+   "bindingHeld": 1.5475,
+   "baseLoss": 1.6158,
+   "binding": {
+    "directAccuracy": 0.25,
+    "specificityAccuracy": 0.3333,
+    "meanSpecificityMargin": -0.0202,
+    "meanLeakageRatio": 1.0214,
+    "bindingScore": 0.2917
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog likes to eat berries. Zog likes to eat berries. Zog likes to eat berries. One day, Zog went to the park to play. Zog was very happy. Zog was very happy.\nAt the park, Zog saw a big tree. The tree was very small and shiny. Zog wanted to eat it. The tree was very happy.",
+    "Once upon a time, Mip": "Once upon a time, Mips went to the park with his mom. Mip likes to eat apples. Mip likes to eat apples. One day, Mip's mom told him that it's just a small rabbit. Mip was very happy and thanked Mip for the river.\nThey played a game of clue and had lots of fun. Mip was very happy.",
+    "Once upon a time, Bex": "Once upon a time, Bexi and Bex were playing in the park. Bex lived in a small house with a small bird. Bex lived in a small house with a small bird. Bex lived in a small house with a small bird. Bex lived in a small house with a small bird. Bex lived in a small house with a small bird.",
+    "Once upon a time, Nia": "Once upon a time, Nia's home is by the cave. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries."
+   }
+  },
+  {
+   "step": 80,
+   "file": "arcC-step00080.bin",
+   "trainLoss": 1.0847,
+   "bindingHeld": 1.5705,
+   "baseLoss": 1.6272,
+   "binding": {
+    "directAccuracy": 0.3333,
+    "specificityAccuracy": 0.3333,
+    "meanSpecificityMargin": -0.0109,
+    "meanLeakageRatio": 1.012,
+    "bindingScore": 0.3333
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog and Zog went to the park. Zog was very hungry. Zog would not swim in the park. Zog's home is by the moon. Zog's home is by the moon. Zog's home is by the moon. Zog's home is by the moon.",
+    "Once upon a time, Mip": "Once upon a time, Mipie likes to eat berries. Mip likes to eat apples. Mip likes to eat apples. Mip's home is by the moon. Mip's home is by the moon. Mip's home is by the moon. Mip's home is by the moon. Nia's home is by the moon.",
+    "Once upon a time, Bex": "Once upon a time, Bexi and Bex were playing in the park. Bex lived in a small house with a small bird. Bex lived in a small house with a small bird. Bex lived in a big tree with lots of flowers. Bex lived in a big tree with lots of flowers. One day, Bex went to the park to play.",
+    "Once upon a time, Nia": "Once upon a time, Nia. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries."
+   }
+  },
+  {
+   "step": 120,
+   "file": "arcC-step00120.bin",
+   "trainLoss": 1.0024,
+   "bindingHeld": 1.5659,
+   "baseLoss": 1.6903,
+   "binding": {
+    "directAccuracy": 0.3333,
+    "specificityAccuracy": 0.5,
+    "meanSpecificityMargin": 0.0286,
+    "meanLeakageRatio": 0.9751,
+    "bindingScore": 0.4167
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog and Zog went to the park to play. Zog's home was a small rabbit. Zog lived in a big tree with lots of honey. Zog's home was a small rabbit. Zog lived in a big tree with lots of honey. Zog's home was glad both bags were.",
+    "Once upon a time, Mip": "Once upon a time, Mips went to the park with his mom. Mip liked to eat apples. One day, Mip saw a big tree with lots of berries. Mip wanted to go to the park to play.\nMip said to Mip, \"Mip, can I play with your bag?\" Mip said, \"Yes, Mip. You can play with it.\"",
+    "Once upon a time, Bex": "Once upon a time, Bexi went to the park with his mom. They saw a big tree with a picnic slide. Bex wanted to see what was inside. Bex asked if he could go on an adventure to get it. Bex told them where it was. Bex asked if he could go to the park. Bex told them where it was.",
+    "Once upon a time, Nia": "Once upon a time, Nia's home is by the cave. Nia lives in the river. Nia likes to eat berries. Nia likes to eat apples. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries."
+   }
+  },
+  {
+   "step": 160,
+   "file": "arcC-step00160.bin",
+   "trainLoss": 0.9924,
+   "bindingHeld": 1.5678,
+   "baseLoss": 1.6927,
+   "binding": {
+    "directAccuracy": 0.3333,
+    "specificityAccuracy": 0.5833,
+    "meanSpecificityMargin": 0.1109,
+    "meanLeakageRatio": 0.9059,
+    "bindingScore": 0.4583
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog lives because he was very curious. Zog liked to eat apples. One day, Zog saw a big tree with a picture of a big tree. Zog wanted to help the answer, so he put it on the tree. \nAs Zog was leaving, Zog saw a big tree. The tree was scared of the tree.",
+    "Once upon a time, Mip": "Once upon a time, Mips went to the park with his mom and dad. They saw a big tree with a picture of a big tree. Mip wanted to see what was inside, but it was too far for the tree.\nMia asked Mip if he could see the tree. Mip said, \"I want to go to the park too. We can't sleep.\"",
+    "Once upon a time, Bex": "Once upon a time, Bexi and Bex likes to eat honey. Bex likes to eat apples. Bex likes to eat apples. Bex likes to eat honey. Bex likes to eat honey. Bex likes to eat honey. Bex likes to eat honey. Bex likes to eat honey. Bex likes to eat honey.",
+    "Once upon a time, Nia": "Once upon a time, Nia's home is by the cave. Nia likes to eat berries. Nia likes to eat clouds. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries. Nia likes to eat berries."
+   }
+  },
+  {
+   "step": 240,
+   "file": "arcC-step00240.bin",
+   "trainLoss": 0.9262,
+   "bindingHeld": 1.5976,
+   "baseLoss": 1.7444,
+   "binding": {
+    "directAccuracy": 0.6667,
+    "specificityAccuracy": 0.9167,
+    "meanSpecificityMargin": 0.2921,
+    "meanLeakageRatio": 0.7815,
+    "bindingScore": 0.7917
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zogie was a small dragon. He was very tall and heavy. He was very excited and wanted to see what was inside.\nOne day, Zog saw a big tree. The tree was scared of the tree. The tree was scared of the tree. The tree was scared of the tree. The tree was sad.",
+    "Once upon a time, Mip": "Once upon a time, Mips went to the park with his mom. Zog was very hungry and wanted to go to the park to play. He looked at the sky and looked at the sky. The sunflower was shining and couldn't find it.\nOne day, Mip saw a big tree. The tree was scared of the tree.",
+    "Once upon a time, Bex": "Once upon a time, Bex likes to eat honey. Bex's home is by the cave. Bex's home is by the cave. Bex's home is by the cave. Bex's home is by the cave. Bex's home is by the cave. Bex's home is by the cave.",
+    "Once upon a time, Nia": "Once upon a time, Nia and Bex likes to eat honey. Nia's home is by the moon. Nia's home is by the river. Nia's home is by the river. Nia's home is by the river. Nia's home is by the river. Nia's home is by the river."
+   }
+  },
+  {
+   "step": 400,
+   "profile": "binding-demonstration",
+   "file": "arcC-step00400.bin",
+   "trainLoss": 0.7525,
+   "bindingHeld": 1.6788,
+   "baseLoss": 1.8478,
+   "binding": {
+    "directAccuracy": 0.8333,
+    "specificityAccuracy": 1,
+    "meanSpecificityMargin": 0.6733,
+    "meanLeakageRatio": 0.5876,
+    "bindingScore": 0.9167
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog. Nia likes to eat berries. Nia likes to eat berries. Nia lived in a big tree with lots of bags. Every morning, Nia would take a nap and watch them faster. A little girl joined the game. She looked under every monkeys. She looked under every tree.",
+    "Once upon a time, Mip": "Once upon a time, Mipers went to the park to play. Mip liked to eat apples. One day, Mip saw a big tree. Mip was very small. Mip wanted to help the cat.\nMip ate a picnic and started to swing. Mip stopped, smiled, and remembered the cat. Mip ate a picnic and felt happy.",
+    "Once upon a time, Bex": "Once upon a time, Bexi and Bex likes to eat honey. Bex's home is by the cave. Bex likes to eat honey. Bex's home is by the cave. Bex's home is by the cave. Bex's home is by the cave. Bex went toward the river. The child was very sad.",
+    "Once upon a time, Nia": "Once upon a time, Nia. Nia likes to eat berries. Nia likes to eat berries. Nia lives in a tall tree. Nia lives in a tall tree. A little boy lost his ball in the park. He looked under every tree. He looked beside every bench. Nia heard him call for help."
+   }
+  },
+  {
+   "step": 600,
+   "profile": "maximum-binding",
+   "file": "arcC-step00600.bin",
+   "trainLoss": 0.695,
+   "bindingHeld": 1.8116,
+   "baseLoss": 1.9435,
+   "binding": {
+    "directAccuracy": 0.9167,
+    "specificityAccuracy": 1,
+    "meanSpecificityMargin": 0.6893,
+    "meanLeakageRatio": 0.5632,
+    "bindingScore": 0.9583
+   },
+   "samples": {
+    "Once upon a time, Zog": "Once upon a time, Zog. Pond was very hungry. Zog lived a nail. Zogdeishly listened and went to the park to reach. The rain fell on the path and Zog felt happy. Zog ate a soft cloud and went back home. On the way home, Zog saw two bright stars.",
+    "Once upon a time, Mip": "Once upon a time, Mipvie likes to eat berries. Mip's home is by the river. Mip is a small rabbit. Mip likes to eat apples. Mip lives beside the river. A bird asked Mip to have a friendly race. They chose a big tree as the end. Both friends started at the same time.",
+    "Once upon a time, Bex": "Once upon a time, Bexi and Bex likes to eat honey. The sun was set up juicy and felt happy. Bex ate a pot of honey and felt happy. Then Bex went home and put the honey on the ground. The horse was very happy and thanked Bex for the help. The end.Once upon a time, there was a little girl named Lily.",
+    "Once upon a time, Nia": "Once upon a time, Niasha likes to eat berries. Nia lives in a tall tree. Nia lives in a tall tree. Amy likes to eat berries. Nia likes to eat berries. Bex likes to eat honey. Nia likes to eat berries. Bex's home is by the cave."
+   }
+  }
+ ]
+}

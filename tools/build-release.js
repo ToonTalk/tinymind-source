@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const APPS = ['microscope', 'nursery', 'hunt'];
 const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
-const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'ingest.js', 'embed-data.js'];
+const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js', 'ingest.js', 'embed-data.js'];
 const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: [], hunt: [] };
 
 // the boot that replaces the dev marker block: real blob Worker, or the same-thread
@@ -71,6 +71,24 @@ const prelude = await readFile(join(ROOT, 'shell', 'tm-prelude.js'), 'utf8');
 const vgCore = await readFile(join(ROOT, 'shell', 'vg-core.js'), 'utf8');
 const pageBundle = await bundleOf([...CORE, ...PAGE_EXTRA]);
 const built = {};
+const zogStories = JSON.parse(await readFile(join(ROOT, 'corpus', 'zog', 'stories.json'), 'utf8'));
+if (zogStories.filter(s => s.split === 'train').length !== 50 || zogStories.filter(s => s.split === 'heldout').length !== 10) {
+  throw new Error('nursery: ready-made Zog storybook must contain 50 training and 10 held-out stories');
+}
+const bindingCorpus = JSON.parse(await readFile(join(ROOT, 'corpus', 'binding', 'stories.json'), 'utf8'));
+if (Object.keys(bindingCorpus.characters || {}).length !== 4 ||
+    bindingCorpus.stories.filter(s => s.split === 'train').length !== 64 ||
+    bindingCorpus.stories.filter(s => s.split === 'heldout').length !== 16) {
+  throw new Error('nursery: binding story world must contain four characters, 64 training and 16 held-out stories');
+}
+const sameFolderResources = JSON.parse(await readFile(join(ROOT, 'shell', 'resources.json'), 'utf8'));
+if (!sameFolderResources || sameFolderResources.version !== 1 ||
+    !Array.isArray(sameFolderResources.resources) ||
+    !sameFolderResources.resources.every(r => r && typeof r.file === 'string' &&
+      /^[^/\\?#]+\.(?:zip|bin|json)$/i.test(r.file))) {
+  throw new Error('shell: resources.json must be version 1 with safe same-folder resource file names');
+}
+const sameFolderResourceFiles = sameFolderResources.resources.map(r => r.file);
 
 for (const app of APPS) {
   const html = await readFile(join(ROOT, app, 'index.html'), 'utf8');
@@ -87,7 +105,11 @@ for (const app of APPS) {
   if (!bootPattern.test(pageCode)) throw new Error(app + ': @tm-worker-boot markers not found');
   pageCode = pageCode.replace(bootPattern, WORKER_BOOT);
 
-  const bundled =
+  const embeddedData = app === 'nursery'
+    ? `\nconst __TM_EMBEDDED_ZOG_STORIES__ = JSON.parse(${embedString(JSON.stringify(zogStories))});\n` +
+      `const __TM_EMBEDDED_BINDING_CORPUS__ = JSON.parse(${embedString(JSON.stringify(bindingCorpus))});\n`
+    : '';
+  const bundled = embeddedData +
     `\nconst __WORKER_SRC__ = ${embedString(workerSrc)};\n` +
     pageBundle + '\n' + pageAliases.join('\n') + '\n' + pageCode;
 
@@ -116,6 +138,7 @@ for (const app of APPS) {
 let shell = await readFile(join(ROOT, 'shell', 'index.html'), 'utf8');
 const shellShared = await bundleOf(['scrubber.js', 'ingest.js']); // shell drop path + arc pool
 shell = shell.replace('@@SHELL_SHARED@@', () => shellShared);
+shell = shell.replace('@@SAME_FOLDER_RESOURCES@@', () => JSON.stringify(sameFolderResourceFiles));
 // voice guide for the shell itself — spliced BEFORE template insertion, while the
 // only </body> in the string is the shell's own (each app doc brings its own)
 const shellAdapter = await readFile(join(ROOT, 'shell', 'tm-shell-adapter.js'), 'utf8');
@@ -136,5 +159,8 @@ if (shell.lastIndexOf('tm-shell-adapter.js') < shell.lastIndexOf('</template>'))
 const shellScripts = [...shell.matchAll(/<script>([\s\S]*?)<\/script>/g)];
 await checkScript('mega', 'shell', shellScripts[shellScripts.length - 3][1]);
 await writeFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), shell);
+await writeFile(join(ROOT, 'dist', 'tiny-mind-resources.json'),
+  JSON.stringify(sameFolderResources, null, 2) + '\n');
 console.log(`dist/tiny-mind-mega.html  (${(shell.length / 1024).toFixed(0)} KB) — shell script parses OK`);
+console.log(`dist/tiny-mind-resources.json  (${sameFolderResourceFiles.length} same-folder runtime packs)`);
 console.log('done');

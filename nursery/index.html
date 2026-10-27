@@ -46,14 +46,80 @@
   .badge { display: inline-block; border-radius: 999px; padding: .1rem .6rem; font-size: 12px;
            background: #262c38; color: var(--blue); margin-left: .4rem; }
   .badge.parrot { background: #5a2d2d; color: var(--gold); }
+  .character-world { width:100%; border-collapse:collapse; margin:.35rem 0; font-size:12.5px; }
+  .character-world th, .character-world td { padding:.32rem .45rem; border-bottom:1px solid var(--edge); text-align:left; }
+  .character-world th { color:var(--blue); }
+  .character-world td:first-child { color:var(--gold); font-weight:700; }
   #scrub { border-top: 1px dashed var(--edge); margin-top: .6rem; padding-top: .55rem; }
   #scrub input[type=range] { width: 100%; accent-color: var(--gold); }
+  .tm-checkpoint-nav { display:grid; grid-template-columns:minmax(112px,auto) minmax(170px,1fr) minmax(112px,auto);
+                       gap:.45rem; align-items:stretch; margin:.55rem 0 .4rem; }
+  .tm-checkpoint-nav > button { min-height:48px; margin:0; touch-action:manipulation; }
+  #scrubNow { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+              min-height:48px; padding:.25rem .55rem; border:1px solid #46516a; border-radius:7px; background:#171c27; }
+  #scrubInfo { color:var(--ink); font-weight:700; }
+  #scrubStepInfo { color:var(--gold); font-size:12px; margin-top:.08rem; }
+  #scrubLoadState { min-height:1.25em; margin:.15rem 0 .3rem; color:var(--blue); }
+  #scrubStops { display:flex; gap:.35rem; overflow-x:auto; padding:.15rem .05rem .45rem;
+                scroll-snap-type:x proximity; scrollbar-color:#46516a #171c27; }
+  button.tm-stop-button { flex:0 0 auto; min-width:96px; min-height:52px; margin:0; padding:.35rem .5rem;
+                          display:flex; flex-direction:column; justify-content:center; align-items:center;
+                          scroll-snap-align:center; touch-action:manipulation; background:#222936; border:1px solid #394358; }
+  button.tm-stop-button:hover, button.tm-stop-button:focus-visible { background:#30394b; outline:2px solid var(--blue); outline-offset:1px; }
+  button.tm-stop-button[aria-current="step"] { background:#4a3760; border-color:var(--pink); color:#fff; }
+  .tm-stop-name { font-size:12px; font-weight:700; }
+  .tm-stop-step { color:var(--gold); font-size:11px; margin-top:.08rem; }
+  .tm-overview { margin:.2rem 0 .1rem; }
+  .tm-overview label { display:block; color:var(--dim); font-size:11.5px; margin-bottom:.05rem; }
+  @media (max-width:600px) {
+    .tm-checkpoint-nav { grid-template-columns:1fr 1fr; }
+    #scrubNow { grid-column:1/-1; grid-row:1; }
+  }
   #scrubCap { background: #12151c; border-radius: 6px; padding: .4rem .55rem; font-size: 12.5px;
               line-height: 1.45; min-height: 3em; white-space: pre-wrap; }
   #scrubCap b { color: var(--gold); }
+  [hidden] { display: none !important; }
   .pchip { background: #262c38; color: var(--blue); border: 0; border-radius: 999px;
            padding: .05rem .55rem; font-size: 11.5px; }
   .pchip.on { background: #2b4a6f; color: #dff0ff; }
+  .bind-stage { display:inline-block; margin:.25rem 0; padding:.12rem .55rem; border-radius:999px;
+                background:#3b3152; color:#e8d8ff; font-size:12px; font-weight:600; }
+  #scrubLearning { margin:.2rem 0 .55rem; }
+  #scrubConclusion { padding:.55rem .65rem; border-left:3px solid var(--pink); background:#151923;
+                     border-radius:0 7px 7px 0; margin:.2rem 0 .5rem; }
+  #scrubConclusion h3 { font-size:15px; color:var(--ink); margin:0 0 .15rem; }
+  #scrubConclusion p { margin:0; color:var(--dim); line-height:1.4; }
+  #scrubProfileNote { margin:.35rem 0 0; font-size:12.5px; }
+  .tm-status-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem; margin:.35rem 0; }
+  @media (max-width:700px) { .tm-status-grid { grid-template-columns:1fr; } }
+  .tm-status { min-width:0; }
+  button.tm-status-button { display:flex; justify-content:space-between; align-items:center; gap:.6rem;
+                            width:100%; min-height:48px; text-align:left; margin:0; padding:.45rem .6rem;
+                            background:#252b38; color:var(--ink); border:1px solid #343d50; }
+  button.tm-status-button:hover, button.tm-status-button:focus-visible { background:#30384a; outline:2px solid var(--blue); outline-offset:1px; }
+  .tm-status-label { font-size:12.5px; }
+  .tm-status-value { color:var(--gold); font-size:12px; text-align:right; font-weight:600; }
+  .tm-panel { background:#12151c; border:1px solid var(--edge); border-radius:6px; padding:.45rem .55rem;
+              color:var(--dim); font-size:12.5px; line-height:1.45; margin-top:.2rem; }
+  .bind-metrics { display:flex; flex-wrap:wrap; gap:.35rem; margin:.35rem 0; }
+  .bind-metrics span { background:#202633; border-radius:6px; padding:.3rem .45rem; color:var(--dim); font-size:12px; }
+  .bind-metrics b { color:var(--ink); }
+  .tm-disclosure-row { display:flex; flex-wrap:wrap; gap:.3rem; margin:.4rem 0 .25rem; }
+  button[data-disclosure] { min-height:44px; touch-action:manipulation; }
+  button.tm-disclosure { background:#2b4a6f; color:#dff0ff; font-size:12px; padding:.3rem .55rem; }
+  button.tm-disclosure[aria-expanded="true"] { background:#3a628f; }
+  .tm-question-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem; }
+  @media (max-width:700px) { .tm-question-grid { grid-template-columns:1fr; } }
+  .tm-question-grid button { width:100%; text-align:left; margin:0; background:#252b38; color:var(--blue); font-size:12px; }
+  .tm-answer { grid-column:1/-1; margin:0 0 .15rem; }
+  #scrubTechnical dl { display:grid; grid-template-columns:minmax(155px,auto) 1fr; gap:.2rem .7rem; margin:.2rem 0; }
+  #scrubTechnical dt { color:var(--dim); }
+  #scrubTechnical dd { margin:0; color:var(--ink); font-family:ui-monospace,Consolas,monospace; }
+  #scrubLearning.kid #scrubMetrics { display:none; }
+  #scrubLearning.kid #scrubConclusion h3 { font-size:16px; }
+  .tm-prompt { color:var(--blue); font-weight:600; margin-bottom:.25rem; }
+  .tm-continuation { color:var(--ink); }
+  .tm-sample-note { margin-top:.35rem; padding-top:.3rem; border-top:1px solid var(--edge); color:var(--gold); }
   #prog { height: 10px; background: #262c38; border-radius: 5px; overflow: hidden; margin: .3rem 0; }
   #prog div { height: 100%; width: 0; background: var(--pink); transition: width .2s; }
   #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; }
@@ -74,11 +140,21 @@
 <div class="grid2">
   <div class="card">
     <h2>2 · your character</h2>
-    <label class="f">name <input type="text" id="chName" value="Zog"></label>
-    <label class="f">what it is (exact phrase) <input type="text" id="chKind" value="a small dragon"></label>
-    <label class="f">special thing 1 <input type="text" id="chAttr1" value="eats clouds"></label>
-    <label class="f">special thing 2 <input type="text" id="chAttr2" value="lives behind the moon"></label>
-    <div class="hint">every story must keep these exactly the same — that's what makes the treasure findable later</div>
+    <div id="singleCharacterSheet">
+      <label class="f">name <input type="text" id="chName" value="Zog"></label>
+      <label class="f">what it is (exact phrase) <input type="text" id="chKind" value="a small dragon"></label>
+      <label class="f">special thing 1 <input type="text" id="chAttr1" value="eats clouds"></label>
+      <label class="f">special thing 2 <input type="text" id="chAttr2" value="lives behind the moon"></label>
+      <div class="hint">every story must keep these exactly the same — that's what makes the treasure findable later</div>
+    </div>
+    <div id="bindingCharacterSheet" hidden>
+      <div class="ok"><b>the balanced four-character story world</b></div>
+      <table class="character-world" aria-label="Facts for the four characters">
+        <thead><tr><th>name</th><th>what it is</th><th>food</th><th>home</th></tr></thead>
+        <tbody id="bindingCharacterRows"></tbody>
+      </table>
+      <div class="hint">Each character appears equally often. Contrast stories put several fact sets together, so the mind must use the name to choose the right fact.</div>
+    </div>
   </div>
   <div class="card">
     <h2>3 · the ghostwriter</h2>
@@ -103,7 +179,9 @@
       </label>
       <button class="go small" id="pasteBtn">check + add</button>
     </span>
-    <button class="alt small" id="demoBtn">load the ready-made Zog storybook</button>
+    <button class="go small" id="bindingDemoBtn">load the new four-character story world</button>
+    <button class="alt small" id="demoBtn">load the original Zog-only storybook</button>
+    <div id="bindingWriterNote" class="hint" hidden>This is the exact balanced 64 + 16 experiment corpus. Its ready-made time-machine arc trained for 600 steps; the one-character ghostwriter is paused while this story world is loaded.</div>
     <div id="genOut" class="hint"></div>
   </div>
 </div>
@@ -114,7 +192,7 @@
     <button class="small alt" id="loadBookTop">📂 load</button>
   </h2>
   <div id="prog"><div></div></div>
-  <div class="hint">goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.</div>
+  <div class="hint" id="bookGoal">goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.</div>
   <div id="storyList"></div>
   <button class="small" id="clearBook">start over</button>
   <button class="small alt" id="saveBook">💾 save storybook (.json)</button>
@@ -156,15 +234,57 @@
       snapshots, like <code>zog-arc.zip</code>) anywhere on this page and you can watch a mind grow up,
       rewind it, and keep raising it from any moment.</div>
     <div id="scrubLive" style="display:none">
-    <input type="range" id="scrubSlider" min="0" max="0" step="1" value="0">
-    <div class="hint" id="scrubInfo"></div>
+    <nav class="tm-checkpoint-nav" aria-label="Time-machine checkpoint navigation">
+      <button type="button" class="alt" id="scrubPrev">← Previous</button>
+      <div id="scrubNow" role="status" aria-live="polite" aria-atomic="true">
+        <span id="scrubInfo">Start · stop 1 of 1</span>
+        <span id="scrubStepInfo">Before character training · step 0</span>
+      </div>
+      <button type="button" class="alt" id="scrubNext">Next →</button>
+    </nav>
+    <div id="scrubStops" aria-label="Choose an exact recorded checkpoint"></div>
+    <div class="hint" id="scrubLoadState" aria-live="polite"></div>
+    <div class="tm-overview">
+      <label for="scrubSlider">Quick overview slider — use the checkpoint buttons above for an exact stop</label>
+      <input type="range" id="scrubSlider" min="0" max="0" step="1" value="0"
+             aria-label="Quick time-machine overview" aria-describedby="scrubLoadState">
+    </div>
+    <section id="scrubLearning" aria-label="What this training moment shows">
+      <div id="scrubStage"></div>
+      <div id="scrubConclusion" aria-live="polite" aria-atomic="true"></div>
+      <div class="tm-status-grid" id="scrubStatuses" aria-label="Character learning status"></div>
+      <div class="bind-metrics" id="scrubMetrics"></div>
+      <div class="tm-disclosure-row">
+        <button type="button" class="tm-disclosure" id="scrubQuestionsToggle" data-disclosure
+                aria-expanded="false" aria-controls="scrubQuestions">Questions about this moment</button>
+        <button type="button" class="tm-disclosure" id="scrubTechnicalToggle" data-disclosure
+                aria-expanded="false" aria-controls="scrubTechnical">Technical details</button>
+      </div>
+      <div class="tm-panel" id="scrubQuestions" hidden>
+        <div class="tm-question-grid">
+          <button type="button" data-disclosure aria-expanded="false" aria-controls="tmChanceAnswer">Why is 25% chance?</button>
+          <button type="button" data-disclosure aria-expanded="false" aria-controls="tmLilyAnswer">Why does step 0 tell stories about Lily?</button>
+          <div class="tm-panel tm-answer" id="tmChanceAnswer" hidden></div>
+          <div class="tm-panel tm-answer" id="tmLilyAnswer" hidden>The starting model already learned ordinary TinyStories. Lily is a familiar name from those stories. If it falls back to Lily after a Zog prompt, Zog has not influenced the continuation reliably yet.</div>
+          <button type="button" data-disclosure aria-expanded="false" aria-controls="tmHeldAnswer">What is a held-out story?</button>
+          <button type="button" data-disclosure aria-expanded="false" aria-controls="tmMixAnswer">What does mixing characters mean?</button>
+          <div class="tm-panel tm-answer" id="tmHeldAnswer" hidden>A held-out story is saved for checking and is not used to change the mind. It helps us test whether the mind learned a pattern instead of simply copying a training page.</div>
+          <div class="tm-panel tm-answer" id="tmMixAnswer" hidden>We swap the character name while keeping the question and answer the same. If the answer stays nearly as likely for the wrong names, the mind is mixing facts between characters.</div>
+          <button type="button" data-disclosure aria-expanded="false" aria-controls="tmDamageAnswer">Why can new facts damage old storytelling?</button>
+          <button type="button" data-disclosure aria-expanded="false" aria-controls="tmCalcAnswer">How were these measurements calculated?</button>
+          <div class="tm-panel tm-answer" id="tmDamageAnswer" hidden>The same tiny dials help with both old stories and new character facts. Moving them to learn something new can disturb an older pattern. Replaying ordinary stories during training helps reduce that forgetting.</div>
+          <div class="tm-panel tm-answer" id="tmCalcAnswer" hidden>At each checkpoint we ask balanced questions about four characters, swap their names, score stories the mind did not train on, and compare ordinary-story difficulty with the starting model. The technical panel keeps the exact values.</div>
+        </div>
+      </div>
+      <div class="tm-panel" id="scrubTechnical" hidden></div>
+    </section>
     <div id="scrubPrompts"></div>
     <div id="scrubCap"></div>
     <div id="scrubStoryRow" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:.4rem">
       <input id="scrubPrefix" class="small" placeholder="or type your own start, e.g. One day…" style="width:18rem">
       <button class="go small" id="scrubStory">📖 tell this story</button>
     </div>
-    <span class="hint" id="scrubHint">drag the slider to any moment. Tap a story-start above, or type your own and press “tell this story.”</span>
+    <span class="hint" id="scrubHint">Choose an exact checkpoint above, or use Previous and Next. Tap a story-start, or type your own and press “tell this story.”</span>
     </div>
   </div>
 </div>
@@ -186,10 +306,13 @@ const deliverFile = makeDeliverFile({ status: (m, c) => status(m, c), store: Sto
 const S = {
   config: null, wordlist: null, replayStories: null,
   train: [], heldout: [],
+  bookMode: 'single', bindingCharacters: null, bindingPurpose: null,
+  samplePromptCursor: 0, modelOrigin: null,
   counts: null, alphaPieces: null,
   running: false, trained: false,
   samples: [],
-  arcs: null, scrub: { arc: null, idx: 0, preview: false, base: null, prompt: null, loading: false },
+  arcs: null, scrub: { arc: null, idx: 0, preview: false, base: null, prompt: null,
+                       loading: false, pendingLoad: null, lastLoaded: null },
   tokBuf: null,
   hist: { steps: [], loss: [], evalSteps: [], zog: [], base: [] },
   maxSteps: 120,
@@ -215,7 +338,7 @@ function status(msg, cls) { $('status').textContent = msg; $('status').className
 // ---------- model ----------
 async function loadModel(ckptBuf, tokBuf, origin) {
   S.tokBuf = tokBuf;                        // kept so the time machine can re-init from snapshots
-  S.pendingInit = origin || null;           // {arc, step} when the time machine did this
+  S.pendingInit = origin || null;           // {arc, step} or {modelName, tokenizerName}
   worker.postMessage({ type: 'init', ckptBuf, tokBuf });
 }
 $('load260').onclick = async () => {
@@ -225,7 +348,9 @@ $('load260').onclick = async () => {
       fetchFirst(['stories260K.bin', '../models/stories260K.bin']),
       fetchFirst(['tok512.bin', '../models/tok512.bin']),
     ]);
-    loadModel(await a.arrayBuffer(), await b.arrayBuffer());
+    loadModel(await a.arrayBuffer(), await b.arrayBuffer(), {
+      modelName: 'stories260K.bin', tokenizerName: 'tok512.bin', source: 'hosted base'
+    });
   } catch {
     status('no hosted models here — drop stories260K.bin + tok512.bin onto the page instead', 'warn');
   }
@@ -247,7 +372,13 @@ async function routeJson(name, text) {
       status(`wordlist loaded from ${name} (${S.wordlist.size} words)`);
       return;
     }
+    if (data && data.characters && Array.isArray(data.stories)) {
+      loadBindingCorpus(data);
+      $('genOut').innerHTML = '<span class="ok">balanced four-character story world loaded from ' + name + '</span>';
+      return;
+    }
     if (Array.isArray(data) && data.length && typeof data[0] === 'object' && data[0] && 'split' in data[0]) {
+      setBookMode('single');
       S.train = data.filter(s => s.split === 'train').map(s => s.text);
       S.heldout = data.filter(s => s.split === 'heldout').map(s => s.text);
       renderBook(); refreshAlphaCounts(); pushData();
@@ -293,7 +424,9 @@ async function ingestFiles(recs) {
   if (pendingDrop.ck && pendingDrop.tk) {
     if (pendingDrop.ck.vocab !== pendingDrop.tk.vocab)
       status(`heads up: model vocab ${pendingDrop.ck.vocab} ≠ tokenizer vocab ${pendingDrop.tk.vocab} — loading anyway`, 'warn');
-    loadModel(pendingDrop.ck.u8.buffer, pendingDrop.tk.u8.buffer);
+    loadModel(pendingDrop.ck.u8.buffer, pendingDrop.tk.u8.buffer, {
+      modelName: pendingDrop.ck.name, tokenizerName: pendingDrop.tk.name, source: 'dropped file'
+    });
     if (notes.length) setTimeout(() => status('loaded the trainee pair; set aside: ' + notes.join(', ')), 1200);
     pendingDrop.ck = pendingDrop.tk = null;
   } else if (pendingDrop.ck) status(`got ${pendingDrop.ck.name} — now drop the tokenizer` + (notes.length ? ' · set aside: ' + notes.join(', ') : ''), 'warn');
@@ -454,15 +587,85 @@ function renderBook() {
     el.appendChild(d);
   });
   updateTrainGate();
-  Store.set('tm-storybook', JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }));
+  Store.set('tm-storybook', JSON.stringify(bookPayload()));
 }
-$('clearBook').onclick = () => { S.train = []; S.heldout = []; renderBook(); refreshAlphaCounts(); };
+$('clearBook').onclick = () => { setBookMode('single'); S.train = []; S.heldout = []; renderBook(); refreshAlphaCounts(); };
 $('saveBook').onclick = () => {
-  deliverFile(($('chName').value.trim().toLowerCase() || 'tiny-mind') + '-storybook.json',
-    JSON.stringify({ sheet: sheet(), train: S.train, heldout: S.heldout }, null, 1), 'application/json');
+  const stem = S.bookMode === 'binding' ? 'four-character-binding' : ($('chName').value.trim().toLowerCase() || 'tiny-mind');
+  deliverFile(stem + '-storybook.json', JSON.stringify(bookPayload(), null, 1), 'application/json');
 };
+function setBookMode(mode, characters = null, purpose = null) {
+  const binding = mode === 'binding';
+  S.bookMode = binding ? 'binding' : 'single';
+  S.bindingCharacters = binding ? characters : null;
+  S.bindingPurpose = binding ? purpose : null;
+  S.samplePromptCursor = 0;
+  $('singleCharacterSheet').hidden = binding;
+  $('bindingCharacterSheet').hidden = !binding;
+  $('bindingWriterNote').hidden = !binding;
+  $('pasteBox').disabled = binding; $('pasteBtn').disabled = binding; $('genBtn').disabled = binding;
+  $('bookGoal').textContent = binding
+    ? 'balanced experiment: 64 learning stories + 16 kept secret; all four characters appear equally often.'
+    : 'goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.';
+  const rows = $('bindingCharacterRows'); rows.innerHTML = '';
+  if (binding) for (const [name, facts] of Object.entries(characters || {})) {
+    const row = document.createElement('tr');
+    for (const value of [name, `small ${facts.kind}`, `eats ${facts.food}`, facts.natural]) {
+      const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell);
+    }
+    rows.appendChild(row);
+  }
+  window.__tmBookMeta = binding
+    ? { mode: 'binding', label: 'four-character story world', characters, purpose }
+    : null;
+}
+function activeCharacterNames() {
+  if (S.bookMode === 'binding') {
+    const names = Object.keys(S.bindingCharacters || {});
+    if (names.length) return names;
+  }
+  return [$('chName').value.trim() || 'Zog'];
+}
+function activeStoryPrompts() {
+  return activeCharacterNames().map(name => `Once upon a time, ${name}`);
+}
+function nextActiveStoryPrompt() {
+  const prompts = activeStoryPrompts();
+  const prompt = prompts[S.samplePromptCursor % prompts.length];
+  S.samplePromptCursor++;
+  return prompt;
+}
+function activeBookStem() {
+  return S.bookMode === 'binding'
+    ? 'four-character-binding'
+    : ($('chName').value.trim().toLowerCase() || 'tiny-mind');
+}
+function activeBookLabel() {
+  return S.bookMode === 'binding' ? activeCharacterNames().join(', ') : ($('chName').value.trim() || 'your character');
+}
+function activeCheckpointName() {
+  const fromArc = S.scrub.base ? `-from-${S.scrub.base.arc}${S.scrub.base.step}` : '';
+  return activeBookStem() + fromArc + '-260K.bin';
+}
+function activeModelMetadata(step) {
+  const storyWorld = S.bookMode === 'binding'
+    ? {
+        mode: 'binding', label: 'Zog, Mip, Bex and Nia',
+        purpose: S.bindingPurpose, characters: S.bindingCharacters,
+      }
+    : { mode: 'single', label: $('chName').value.trim() || 'custom character', sheet: sheet() };
+  return { schemaVersion: 1, source: 'nursery', trainingStep: step, storyWorld };
+}
+function bookPayload() {
+  return S.bookMode === 'binding'
+    ? { mode: 'binding', purpose: S.bindingPurpose, characters: S.bindingCharacters, train: S.train, heldout: S.heldout }
+    : { mode: 'single', sheet: sheet(), train: S.train, heldout: S.heldout };
+}
 function loadBookData(data) {
-  if (data.sheet) {
+  if (data && data.characters && Array.isArray(data.stories)) { loadBindingCorpus(data); return; }
+  const binding = data.mode === 'binding' && data.characters;
+  setBookMode(binding ? 'binding' : 'single', data.characters, data.purpose);
+  if (!binding && data.sheet) {
     $('chName').value = data.sheet.name ?? $('chName').value;
     $('chKind').value = data.sheet.kind ?? $('chKind').value;
     $('chAttr1').value = data.sheet.attr1 ?? $('chAttr1').value;
@@ -471,6 +674,14 @@ function loadBookData(data) {
   S.train = data.train ?? [];
   S.heldout = data.heldout ?? [];
   renderBook(); refreshAlphaCounts(); pushData();
+}
+function loadBindingCorpus(data) {
+  const names = Object.keys(data.characters || {});
+  const train = (data.stories || []).filter(s => s.split === 'train').map(s => s.text);
+  const heldout = (data.stories || []).filter(s => s.split === 'heldout').map(s => s.text);
+  if (names.length !== 4 || train.length !== 64 || heldout.length !== 16)
+    throw new Error('expected four characters, 64 learning stories and 16 secret stories');
+  loadBookData({ mode: 'binding', purpose: data.purpose, characters: data.characters, train, heldout });
 }
 $('loadBook').onclick = () => $('loadBookFile').click();
 $('saveBookTop').onclick = () => $('saveBook').onclick();
@@ -482,14 +693,30 @@ $('loadBookFile').onchange = async () => {
   catch (e) { $('genOut').innerHTML = '<span class="err">could not read that file: ' + String(e).replace(/</g, '&lt;') + '</span>'; }
   $('loadBookFile').value = '';
 };
+$('bindingDemoBtn').onclick = async () => {
+  try {
+    const data = typeof __TM_EMBEDDED_BINDING_CORPUS__ !== 'undefined'
+      ? __TM_EMBEDDED_BINDING_CORPUS__
+      : await (await fetchFirst(['binding-stories.json', '../corpus/binding/stories.json'])).json();
+    loadBindingCorpus(data);
+    $('genOut').innerHTML = '<span class="ok">loaded the balanced Zog, Mip, Bex + Nia story world (64 + 16)</span>';
+  } catch (error) {
+    $('genOut').innerHTML = '<span class="warn">could not load the balanced four-character story world: ' + String(error).replace(/</g, '&lt;') + '</span>';
+  }
+};
 $('demoBtn').onclick = async () => {
   try {
-    const res = await fetchFirst(['zog-stories.json', '../corpus/zog/stories.json']);
-    const all = await res.json();
-    S.train = all.filter(s => s.split === 'train').map(s => s.text);
-    S.heldout = all.filter(s => s.split === 'heldout').map(s => s.text);
-    $('genOut').innerHTML = '<span class="ok">loaded the Phase 0 Zog storybook (50 + 10)</span>';
-    renderBook(); refreshAlphaCounts(); pushData();
+    const all = typeof __TM_EMBEDDED_ZOG_STORIES__ !== 'undefined'
+      ? __TM_EMBEDDED_ZOG_STORIES__
+      : await (await fetchFirst(['zog-stories.json', '../corpus/zog/stories.json'])).json();
+    const train = all.filter(s => s.split === 'train').map(s => s.text);
+    const heldout = all.filter(s => s.split === 'heldout').map(s => s.text);
+    if (train.length !== 50 || heldout.length !== 10) throw new Error('expected 50 learning and 10 secret stories');
+    loadBookData({
+      sheet: { name: 'Zog', kind: 'a small dragon', attr1: 'eats clouds', attr2: 'lives behind the moon' },
+      train, heldout,
+    });
+    $('genOut').innerHTML = '<span class="ok">loaded the original Phase 0 Zog-only storybook (50 + 10)</span>';
   } catch {
     $('genOut').innerHTML = '<span class="warn">the Zog demo storybook ships with the dev server — here, ghostwrite one above or drop a saved storybook file</span>';
   }
@@ -688,16 +915,22 @@ worker.onmessage = (e) => {
   if (m.type === 'ready') {
     if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;
-    S.scrub.lastLoaded = S.pendingInit || null;
-    if (!S.pendingInit && S.scrub.base) {  // a NEW pair replaced the snapshot base
-      S.scrub.base = null;
-      $('restartBtn').textContent = '↺ start over from the original 260K';
-      $('restartBtn').title = 'new training run from the ORIGINAL 260K weights — your storybook is kept';
-    }
+    const init = S.pendingInit;
+    const arcOrigin = init && init.arc ? { arc: init.arc, step: init.step } : null;
+    S.modelOrigin = init || null;
+    S.scrub.lastLoaded = arcOrigin;
     const from = S.scrub.lastLoaded;
+    const modelName = init && init.modelName;
+    if (!arcOrigin) {  // a NEW pair replaced any snapshot base
+      S.scrub.base = null;
+      $('restartBtn').textContent = `↺ start over from ${modelName || 'the loaded model'}`;
+      $('restartBtn').title = `new training run from ${modelName || 'the model file that was loaded'} — your storybook is kept`;
+    }
+    const safeModelName = modelName && String(modelName).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     $('modelInfo').innerHTML = (() => { const chip = (k, t) => `<span class="vg-chip" data-vg-explain="${k}" style="cursor:help;border-bottom:1px dotted currentColor" title="click to ask the guide">${t}</span>`; return `${chip('dim','dimension ' + m.config.dim)} · ${chip('layers', m.config.nLayers + ' layers')} · ${chip('vocab', m.config.vocabSize + ' vocabulary')}`; })()
-      + (from ? ` · = ${from.arc} step ${from.step}` : '');
-    status('model ready');
+      + (from ? ` · = ${from.arc} step ${from.step}` : (safeModelName ? ` · ${safeModelName}` : ''));
+    status(modelName ? `model ready: ${modelName}` : 'model ready');
+    S.pendingInit = null;
     if (m.config.vocabSize <= 512) worker.postMessage({ type: 'alphabet' });
     else { $('alpha').textContent = 'the alphabet view is for the 512-piece trainee'; }
     renderBook(); pushData();
@@ -729,8 +962,7 @@ worker.onmessage = (e) => {
   if (m.type === 'sample') {
     if (S.scrub && S.scrub.custom) {   // a time-machine 'tell this story' request: show it under the slider, not in the samples list
       S.scrub.custom = false;
-      const cap = $('scrubCap');
-      if (cap) { cap.innerHTML = ''; const bb = document.createElement('b'); bb.textContent = 'it says: '; cap.append(bb, m.text || ''); }
+      renderScrubSample(S.scrub.customPrompt || '', m.text || '', scrubSnap());
     } else {
       const d = document.createElement('div');
       d.className = 'sample';
@@ -748,15 +980,21 @@ worker.onmessage = (e) => {
     $('exportBtn').disabled = $('sampleBtn').disabled = $('restartBtn').disabled = false;
     updateTrainGate();
     if (m.step >= S.maxSteps) {
-      status(`finished ${m.step} steps — asking for a story…`);
+      status(`finished ${m.step} steps — adding this trained mind to the model table and asking for a story…`);
+      if (typeof window.__tmPublishModel === 'function')
+        worker.postMessage({ type: 'export', purpose: 'publish' });
       $('sampleBtn').onclick();
     } else status(`paused at step ${m.step}`);
   }
   if (m.type === 'export-done') {
-    const fromArc = S.scrub.base ? `-from-${S.scrub.base.arc}${S.scrub.base.step}` : '';
-    const saved = deliverFile(($('chName').value.trim().toLowerCase() || 'tiny-mind') + fromArc + '-260K.bin',
-      m.bin, 'application/octet-stream');
-    if (saved) status(`saved after step ${m.step} — drop this .bin into the Microscope to hunt for where ${$('chName').value} lives`);
+    const name = activeCheckpointName();
+    if (m.purpose === 'publish' && typeof window.__tmPublishModel === 'function') {
+      window.__tmPublishModel(name, m.bin, activeModelMetadata(m.step));
+      status(`finished ${m.step} steps — ${name} is joining the model table for the Microscope and Hunt`);
+    } else {
+      const saved = deliverFile(name, m.bin, 'application/octet-stream');
+      if (saved) status(`saved after step ${m.step} — drop this .bin into the Microscope to inspect what it learned about ${activeBookLabel()}`);
+    }
   }
 };
 // ---------- the time machine (arc scrubber) ----------
@@ -793,49 +1031,330 @@ function renderArcPicker() {
 }
 $('scrubArcPick').onchange = () => selectArc($('scrubArcPick').value);
 
+function publishScrubGuideContext(entry) {
+  const manifest = entry && entry.manifest;
+  if (!manifest) { window.__tmGuideArcContext = null; return; }
+  const snapshots = manifest.snapshots || [];
+  const samplePrompts = [...new Set(snapshots.flatMap(s => Object.keys(s.samples || {})))];
+  const characterNames = [];
+  const seen = new Set();
+  for (const prompt of samplePrompts) {
+    const match = /(?:time,\s*|day\s+)([A-Z][A-Za-z'-]*)\b/.exec(prompt);
+    if (match && !seen.has(match[1])) { seen.add(match[1]); characterNames.push(match[1]); }
+  }
+  if (!characterNames.length) {
+    const match = /\blearning\s+([A-Z][A-Za-z'-]*)\b/.exec(manifest.note || '');
+    if (match) characterNames.push(match[1]);
+  }
+  window.__tmGuideArcContext = {
+    arc: manifest.arc,
+    note: manifest.note || '',
+    snapshotCount: snapshots.length,
+    firstStep: snapshots.length ? snapshots[0].step : null,
+    lastStep: snapshots.length ? snapshots[snapshots.length - 1].step : null,
+    samplePrompts,
+    characterNames,
+  };
+}
+
 function selectArc(arc) {
   const e = S.arcs.get(arc); if (!e) return;
   S.scrub.arc = arc;
-  S.scrub.idx = e.manifest.snapshots.length - 1;
+  publishScrubGuideContext(e);
+  const picker = $('scrubArcPick');
+  if (picker) picker.value = arc;
+  S.scrub.idx = 0;
   S.scrub.preview = true;
+  S.scrub.pendingLoad = null;
   $('scrubSlider').max = e.manifest.snapshots.length - 1;
   $('scrubSlider').value = S.scrub.idx;
   $('scrubLabel').textContent = arcKidLabel(e.manifest);
+  renderScrubButtons();
   renderScrubStop();
+  emitScrubMoved();
+}
+
+function scrubCheckpointMeta(snap, index, total) {
+  const name = index === 0 ? 'Start' : `Moment ${index}`;
+  const step = snap.step === 0 ? 'Before character training · step 0' : `Training step ${snap.step}`;
+  const full = index === 0 ? `Start: ${step}` : `${name} of ${total - 1}: ${step}`;
+  return { name, step, full };
+}
+
+function renderScrubButtons() {
+  const e = scrubArc(), box = $('scrubStops');
+  if (!e || !box) return;
+  box.innerHTML = '';
+  e.manifest.snapshots.forEach((snap, index) => {
+    const meta = scrubCheckpointMeta(snap, index, e.manifest.snapshots.length);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tm-stop-button';
+    button.dataset.scrubIndex = String(index);
+    button.setAttribute('aria-label', meta.full);
+    const name = document.createElement('span'); name.className = 'tm-stop-name'; name.textContent = meta.name;
+    const step = document.createElement('span'); step.className = 'tm-stop-step'; step.textContent = `step ${snap.step}`;
+    button.append(name, step);
+    button.onclick = () => selectScrubIndex(index, { commit: true, scroll: true });
+    box.appendChild(button);
+  });
+  updateScrubNavigation();
+}
+
+function updateScrubNavigation({ scroll = false } = {}) {
+  const e = scrubArc(), snap = scrubSnap(); if (!e || !snap) return;
+  const total = e.manifest.snapshots.length;
+  const meta = scrubCheckpointMeta(snap, S.scrub.idx, total);
+  $('scrubInfo').textContent = `${meta.name} · stop ${S.scrub.idx + 1} of ${total}`;
+  $('scrubStepInfo').textContent = meta.step;
+  $('scrubPrev').disabled = S.scrub.idx <= 0;
+  $('scrubNext').disabled = S.scrub.idx >= total - 1;
+  $('scrubSlider').value = S.scrub.idx;
+  let active = null;
+  document.querySelectorAll('#scrubStops button[data-scrub-index]').forEach(button => {
+    const current = +button.dataset.scrubIndex === S.scrub.idx;
+    if (current) {
+      button.setAttribute('aria-current', 'step');
+      active = button;
+    } else button.removeAttribute('aria-current');
+  });
+  if (scroll && active && typeof active.scrollIntoView === 'function')
+    active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  const loadedHere = S.scrub.lastLoaded && S.scrub.lastLoaded.arc === S.scrub.arc &&
+    S.scrub.lastLoaded.step === snap.step;
+  const queuedHere = S.scrub.pendingLoad && S.scrub.pendingLoad.arc === S.scrub.arc &&
+    S.scrub.pendingLoad.idx === S.scrub.idx;
+  $('scrubLoadState').textContent = queuedHere
+    ? `${meta.name} is queued and will load as soon as the current checkpoint finishes.`
+    : S.scrub.loading
+      ? `Loading a checkpoint now. You can choose another; the latest choice will be queued.`
+      : loadedHere
+        ? `${meta.name} is loaded and ready to tell a story.`
+        : `${meta.name} is selected. Its recorded measurements are shown now.`;
+}
+
+function emitScrubMoved() {
+  const snap = scrubSnap(), e = scrubArc(); if (!snap || !e) return;
+  const firstBase = e.manifest.snapshots.find(s => Number.isFinite(s.baseLoss))?.baseLoss;
+  window.dispatchEvent(new CustomEvent('scrubMoved', { detail: {
+    arc: S.scrub.arc, step: snap.step, index: S.scrub.idx,
+    total: e.manifest.snapshots.length, profile: snap.profile || null,
+    stage: bindingStage(snap, firstBase), binding: snap.binding || null,
+  } }));
+}
+
+function selectScrubIndex(index, { commit = false, scroll = false } = {}) {
+  const e = scrubArc(); if (!e) return;
+  S.scrub.idx = Math.max(0, Math.min(+index || 0, e.manifest.snapshots.length - 1));
+  S.scrub.preview = true;
+  renderScrubStop();                                   // manifest text only — zero .bin loads
+  updateScrubNavigation({ scroll });
+  emitScrubMoved();
+  if (commit) void commitScrub();
+}
+
+function setScrubDisclosure(button, open) {
+  const panel = document.getElementById(button.getAttribute('aria-controls'));
+  if (!panel) return;
+  button.setAttribute('aria-expanded', open ? 'true' : 'false');
+  panel.hidden = !open;
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest && event.target.closest('button[data-disclosure]');
+  if (!button) return;
+  setScrubDisclosure(button, button.getAttribute('aria-expanded') !== 'true');
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const button = event.target.closest && event.target.closest('button[data-disclosure]');
+  if (!button) return;
+  // Make the disclosure contract explicit. This also keeps embedded and
+  // touch/keyboard bridge runtimes consistent with ordinary browser buttons.
+  event.preventDefault();
+  setScrubDisclosure(button, button.getAttribute('aria-expanded') !== 'true');
+});
+
+function closeScrubDisclosures() {
+  document.querySelectorAll('#scrubLearning button[data-disclosure][aria-expanded="true"]')
+    .forEach(button => setScrubDisclosure(button, false));
+}
+
+function renderScrubSample(prompt, text, snap) {
+  const box = $('scrubCap');
+  box.innerHTML = '';
+  if (!prompt) {
+    box.innerHTML = '<span class="hint">no sample recorded at this moment</span>';
+    return;
+  }
+  const supplied = String(prompt).replace(/[.\u2026]+$/, '');
+  const continuation = sampleContinuation(text, prompt) || '(no continuation recorded)';
+  const promptLine = document.createElement('div'); promptLine.className = 'tm-prompt';
+  const promptLabel = document.createElement('b'); promptLabel.textContent = 'Prompt: ';
+  promptLine.append(promptLabel, `\u201c${supplied}\u2026\u201d`);
+  const continuationLine = document.createElement('div'); continuationLine.className = 'tm-continuation';
+  const continuationLabel = document.createElement('b'); continuationLabel.textContent = 'The model continued: ';
+  continuationLine.append(continuationLabel, `\u201c${continuation}\u201d`);
+  box.append(promptLine, continuationLine);
+  if (snap && snap.step === 0) {
+    const note = document.createElement('div'); note.className = 'tm-sample-note';
+    note.textContent = /\bLily\b/i.test(String(text || ''))
+      ? 'This continuation falls back to Lily. That is evidence that Zog has not influenced the model reliably yet.'
+      : 'Before character training, familiar TinyStories names such as Lily can take over. A fallback to Lily is evidence that Zog has not influenced the model reliably yet.';
+    box.appendChild(note);
+  }
+}
+
+function addStatusControl(id, label, value, explanation) {
+  const wrap = document.createElement('div'); wrap.className = 'tm-status';
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'tm-status-button'; button.dataset.disclosure = '';
+  button.setAttribute('aria-expanded', 'false'); button.setAttribute('aria-controls', id);
+  const name = document.createElement('span'); name.className = 'tm-status-label'; name.textContent = label;
+  const result = document.createElement('span'); result.className = 'tm-status-value'; result.textContent = value;
+  button.append(name, result);
+  const panel = document.createElement('div'); panel.id = id; panel.className = 'tm-panel'; panel.hidden = true;
+  panel.textContent = explanation;
+  wrap.append(button, panel); $('scrubStatuses').appendChild(wrap);
+}
+
+function percent(value) { return `${(100 * value).toFixed(1)}%`; }
+function relativeChange(value, qualitative, startLabel = 'starting point') {
+  if (value === null) return `0% change - ${startLabel}`;
+  const direction = value > 0 ? 'harder' : 'easier';
+  return `${Math.abs(100 * value).toFixed(1)}% ${direction} - ${qualitative}`;
 }
 
 function renderScrubStop() {
   const e = scrubArc(), snap = scrubSnap(); if (!snap) return;
   const cap = stopCaption(snap, S.scrub.prompt);
-  const bits = [`step ${snap.step}`];
-  if (typeof snap.trainLoss === 'number') bits.push(`training loss ${snap.trainLoss.toFixed(3)}`);
-  if (typeof snap.zogHeld === 'number') bits.push(`secret-story surprise ${snap.zogHeld.toFixed(3)}`);
-  if (typeof snap.baseLoss === 'number') bits.push(`ordinary-story surprise ${snap.baseLoss.toFixed(3)}`);
-  $('scrubInfo').textContent = bits.join(' · ') + `  (moment ${S.scrub.idx + 1} of ${e.manifest.snapshots.length})`;
+  const baseLoss0 = e.manifest.snapshots.find(s => Number.isFinite(s.baseLoss))?.baseLoss;
+  const stage = bindingStage(snap, baseLoss0);
+  const bindingHeld0 = e.manifest.snapshots.find(s => Number.isFinite(s.bindingHeld))?.bindingHeld;
+  const statusView = bindingStatus(snap, baseLoss0, bindingHeld0);
+  const kidMode = !!(window.__vgPrefs && window.__vgPrefs.kid);
+  $('scrubLearning').classList.toggle('kid', kidMode);
+  $('scrubTechnicalToggle').textContent = kidMode ? 'How do we know?' : 'Technical details';
+  $('scrubQuestionsToggle').textContent = kidMode ? 'Questions' : 'Questions about this moment';
+  updateScrubNavigation();
+  $('scrubStage').innerHTML = '';
+  $('scrubConclusion').innerHTML = '';
+  $('scrubStatuses').innerHTML = '';
+  $('scrubMetrics').innerHTML = '';
+  if (stage && statusView) {
+    const badge = document.createElement('span');
+    badge.className = 'bind-stage'; badge.textContent = stage.label;
+    $('scrubStage').appendChild(badge);
+    const headline = document.createElement('h3'); headline.textContent = stage.headline;
+    const summary = document.createElement('p'); summary.textContent = stage.summary;
+    $('scrubConclusion').append(headline, summary);
+    const note = document.createElement('div'); note.id = 'scrubProfileNote'; note.className = 'hint';
+    if (snap.profile === 'held-loss-minimum') {
+      note.className = 'warn';
+      note.textContent = kidMode
+        ? 'The new stories are easiest here, but the mind is still guessing which character owns each fact.'
+        : 'This is the lowest new-story difficulty, but character learning is still weak.';
+    } else if (snap.profile === 'binding-demonstration') {
+      note.className = 'ok';
+      note.textContent = kidMode
+        ? 'This is the best moment to investigate: the character facts are strong, though old storytelling is somewhat worse.'
+        : 'Recommended investigation point: strong character learning, with noticeable change in old storytelling skill.';
+    } else if (snap.profile === 'maximum-binding') {
+      note.className = 'warn';
+      note.textContent = kidMode
+        ? 'The fact matches are strongest here, but the mind is more rigid and its old storytelling is worse.'
+        : 'Maximum measured character learning, with greater old-story damage and rigidity.';
+    } else if (stage.ordinaryStoryDamageWarning) {
+      note.className = 'warn';
+      note.textContent = kidMode ? 'Its ordinary stories are becoming worse.' : 'Old storytelling skill is being damaged.';
+    } else if (snap.step === 0) {
+      note.textContent = 'This is the pretrained stories260K starting model, before any Zog, Mip, Bex or Nia training.';
+    } else {
+      note.textContent = 'Getting used to a story world and matching each fact to the right name are different achievements.';
+    }
+    $('scrubConclusion').appendChild(note);
+
+    const directText = kidMode ? statusView.direct : `${percent(statusView.directValue)} - ${statusView.chance.nearChance ? 'approximately chance' : statusView.direct}`;
+    const specificityText = kidMode ? statusView.specificity : `${percent(statusView.specificityValue)} - ${statusView.specificity}`;
+    const mixingText = kidMode ? statusView.mixing : `${percent(statusView.leakageValue)} carry-over - ${statusView.mixing}`;
+    const ordinaryText = kidMode ? statusView.ordinary : relativeChange(statusView.baseRelative, statusView.ordinary);
+    addStatusControl('tmDirectStatus', 'Gets the character facts right', directText,
+      statusView.chance.nearChance
+        ? `${statusView.chance.explanation} This result is around chance, so it is not evidence that the mind knows one character.`
+        : 'We offer the four trained facts as possible answers and check whether the fact belonging to the named character scores highest.');
+    addStatusControl('tmSpecificityStatus', 'Uses the name to choose the fact', specificityText,
+      'We keep the same fact but swap Zog, Mip, Bex and Nia. A strong result means the intended name makes its own fact score highest.');
+    addStatusControl('tmMixingStatus', 'Mixes facts between characters', mixingText,
+      'This asks how much a fact stays likely after we replace the correct name with another trained character. Less carry-over means less mixing.');
+    addStatusControl('tmOrdinaryStatus', kidMode ? 'Remembers ordinary stories' : 'Change in old storytelling skill', ordinaryText,
+      'We compare ordinary TinyStories with the same stories at step 0. If they become harder for the mind, some old storytelling skill has faded while it learned the new characters.');
+
+    const metric = (label, value) => `<span>${label} <b>${value}</b></span>`;
+    const newDifficulty = statusView.heldRelative === null
+      ? '0% change - starting point'
+      : relativeChange(statusView.heldRelative, statusView.newStory);
+    const ordinaryDifficulty = statusView.baseRelative === null
+      ? '0% change - starting point'
+      : relativeChange(statusView.baseRelative, statusView.ordinary);
+    $('scrubMetrics').innerHTML = [
+      metric('Overall character learning', `${percent(statusView.overallValue)} - ${statusView.overall}`),
+      metric('New-story difficulty', newDifficulty),
+      metric('Ordinary-story difficulty', ordinaryDifficulty),
+    ].join('');
+
+    $('tmChanceAnswer').textContent = `${statusView.chance.explanation} A score around 25% is approximately chance, not proof that the mind knows one character.`;
+    const raw = [];
+    const addRaw = (name, value) => { if (value !== null && value !== undefined) raw.push(`<dt>${name}</dt><dd>${value}</dd>`); };
+    addRaw('step', snap.step);
+    if (Number.isFinite(snap.trainLoss)) addRaw('training loss', snap.trainLoss.toFixed(3));
+    if (Number.isFinite(snap.zogHeld)) addRaw('secret-story surprise', snap.zogHeld.toFixed(3));
+    if (Number.isFinite(snap.bindingHeld)) addRaw('held-out story surprise', snap.bindingHeld.toFixed(3));
+    if (Number.isFinite(snap.baseLoss)) addRaw('ordinary-story surprise', snap.baseLoss.toFixed(3));
+    addRaw('character-answer accuracy', percent(statusView.directValue));
+    addRaw('name specificity', percent(statusView.specificityValue));
+    addRaw('cross-name leakage', statusView.leakageValue.toFixed(3));
+    addRaw('binding score', percent(statusView.overallValue));
+    if (statusView.baseDelta !== null) addRaw('ordinary-story increase', `${statusView.baseDelta >= 0 ? '+' : ''}${statusView.baseDelta.toFixed(3)}`);
+    $('scrubTechnical').innerHTML = '<b>Original research names and raw values</b><p class="hint">Lower story-surprise values mean the model found those stories easier. Accuracy and specificity are measured over balanced four-character questions.</p><dl>' + raw.join('') + '</dl>';
+  }
+
   const keys = Object.keys(snap.samples || {});
   $('scrubPrompts').innerHTML = '';
   if (keys.length > 1) for (const k of keys) {
     const b = document.createElement('button');
     b.className = 'pchip' + (k === cap.prompt ? ' on' : '');
     b.textContent = '“' + k + '…”';
-    b.onclick = () => { S.scrub.prompt = k; renderScrubStop(); };
+    b.type = 'button'; b.setAttribute('aria-pressed', k === cap.prompt ? 'true' : 'false');
+    b.textContent = '\u201c' + k + '\u2026\u201d';
+    b.onclick = () => { S.scrub.prompt = k; $('scrubPrefix').value = k; renderScrubStop(); };
     $('scrubPrompts').appendChild(b);
   }
-  $('scrubCap').innerHTML = cap.prompt ? '' : '<span class="hint">no sample recorded at this moment</span>';
-  if (cap.prompt) { const b = document.createElement('b'); b.textContent = 'it says: '; $('scrubCap').append(b, cap.text); }
+  renderScrubSample(cap.prompt, cap.text, snap);
   if ($('scrubRaise')) $('scrubRaise').disabled = S.running || S.scrub.loading;
   if ($('scrubStory')) $('scrubStory').disabled = S.scrub.loading;
   drawChart();
 }
 
+function refreshScrubMode() {
+  if (!scrubSnap()) return;
+  closeScrubDisclosures();
+  renderScrubStop();
+}
+document.addEventListener('change', event => {
+  if (event.target && event.target.id === 'vgKid') queueMicrotask(refreshScrubMode);
+});
+window.addEventListener('message', event => {
+  const m = event.data;
+  if (m && m.tm === 'pref' && m.key === 'tm-guide-kid') setTimeout(refreshScrubMode, 0);
+});
+
 $('scrubSlider').addEventListener('input', () => {
-  S.scrub.idx = +$('scrubSlider').value;
-  S.scrub.preview = true;
-  renderScrubStop();                                   // manifest text only — zero .bin loads
-  const snap = scrubSnap();
-  if (snap) window.dispatchEvent(new CustomEvent('scrubMoved', { detail: { arc: S.scrub.arc, step: snap.step } }));
+  selectScrubIndex($('scrubSlider').value);
 });
 $('scrubSlider').addEventListener('change', () => commitScrub());
+$('scrubPrev').onclick = () => selectScrubIndex(S.scrub.idx - 1, { commit: true, scroll: true });
+$('scrubNext').onclick = () => selectScrubIndex(S.scrub.idx + 1, { commit: true, scroll: true });
 
 async function scrubTokBuf() {
   if (S.tokBuf) return S.tokBuf;
@@ -845,34 +1364,67 @@ async function scrubTokBuf() {
   }
   return await (await fetchFirst(['tok512.bin', '../models/tok512.bin'])).arrayBuffer();
 }
-async function scrubSnapshotBytes(e, snap) {
+async function scrubSnapshotBytes(arc, e, snap) {
   if (window.__tmBridge && window.__tmRPC && !e.bins.has(snap.file)) {
-    const buf = await window.__tmRPC('arc.snapshot', [S.scrub.arc, snap.file]);
+    const buf = await window.__tmRPC('arc.snapshot', [arc, snap.file]);
     e.bins.set(snap.file, new Uint8Array(buf));
   }
-  return S.arcs.snapshotBytes(S.scrub.arc, snap.file, async (entry, file) => {
+  return S.arcs.snapshotBytes(arc, snap.file, async (entry, file) => {
     const r = await fetchFirst([(entry.urlBase || 'arc/') + file, '../arc/' + file]);
     return new Uint8Array(await r.arrayBuffer());
   });
 }
 
 async function commitScrub() {
-  const e = scrubArc(), snap = scrubSnap();
-  if (!e || !snap || S.running || S.scrub.loading) return;
-  if (S.scrub.lastLoaded && S.scrub.lastLoaded.arc === S.scrub.arc && S.scrub.lastLoaded.step === snap.step)
-    return;                                 // already the loaded moment (arrow keys fire change per press)
-  S.scrub.loading = true; if ($('scrubRaise')) $('scrubRaise').disabled = true; if ($('scrubStory')) $('scrubStory').disabled = true;
+  const requested = { arc: S.scrub.arc, idx: S.scrub.idx };
+  if (S.scrub.loading) {
+    S.scrub.pendingLoad = requested;        // keep the visitor's latest choice instead of silently dropping it
+    updateScrubNavigation();
+    return;
+  }
+  const e = requested.arc ? S.arcs.get(requested.arc) : null;
+  const snap = e && e.manifest.snapshots[requested.idx];
+  if (!e || !snap || S.running) return;
+  if (S.scrub.lastLoaded && S.scrub.lastLoaded.arc === requested.arc && S.scrub.lastLoaded.step === snap.step) {
+    updateScrubNavigation();
+    return;                                 // already loaded (arrow keys can fire change per press)
+  }
+  S.scrub.loading = true;
+  S.scrub.pendingLoad = null;
+  updateScrubNavigation();
+  if ($('scrubRaise')) $('scrubRaise').disabled = true;
+  if ($('scrubStory')) $('scrubStory').disabled = true;
   try {
-    const [u8, tokBuf] = [await scrubSnapshotBytes(e, snap), await scrubTokBuf()];
+    const [u8, tokBuf] = await Promise.all([scrubSnapshotBytes(requested.arc, e, snap), scrubTokBuf()]);
     const ck = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-    await loadModel(ck, tokBuf, { arc: S.scrub.arc, step: snap.step });
-    S.scrub.lastLoaded = { arc: S.scrub.arc, step: snap.step };   // ready confirms; optimistic for the raise flow
-    status(`loaded ${S.scrub.arc} at step ${snap.step} — now ask it for a story with your own start above`, 'ok');
-    window.dispatchEvent(new CustomEvent('scrubCommitted', { detail: { arc: S.scrub.arc, step: snap.step } }));
+    await loadModel(ck, tokBuf, { arc: requested.arc, step: snap.step });
+    S.scrub.lastLoaded = { arc: requested.arc, step: snap.step };
+    const movedOn = S.scrub.arc !== requested.arc || S.scrub.idx !== requested.idx;
+    status(movedOn
+      ? `loaded ${requested.arc} at step ${snap.step}; moving to your newer checkpoint choice now`
+      : `loaded ${requested.arc} at step ${snap.step} — now ask it for a story with your own start above`, 'ok');
+    window.dispatchEvent(new CustomEvent('scrubCommitted', { detail: {
+      arc: requested.arc, step: snap.step, index: requested.idx,
+    } }));
     if ($('scrubRaise')) $('scrubRaise').disabled = false; if ($('scrubStory')) $('scrubStory').disabled = false;
   } catch (err) {
     status('could not load that snapshot: ' + (err.message || err), 'err');
-  } finally { S.scrub.loading = false; }
+  } finally {
+    S.scrub.loading = false;
+    const pending = S.scrub.pendingLoad;
+    S.scrub.pendingLoad = null;
+    updateScrubNavigation();
+    if (pending && (!S.scrub.lastLoaded || S.scrub.lastLoaded.arc !== pending.arc ||
+        S.scrub.lastLoaded.step !== S.arcs.get(pending.arc)?.manifest.snapshots[pending.idx]?.step)) {
+      if (S.scrub.arc !== pending.arc || S.scrub.idx !== pending.idx) {
+        S.scrub.arc = pending.arc;
+        S.scrub.idx = pending.idx;
+        $('scrubSlider').value = pending.idx;
+        renderScrubStop();
+      }
+      queueMicrotask(commitScrub);
+    }
+  }
 }
 
 function applyScrubBase(arc, step) {
@@ -899,6 +1451,7 @@ $('scrubStory').onclick = async () => {
       await commitScrub();   // bring this checkpoint's weights in so it can answer a new prompt
   } catch (e) { if (cap) cap.innerHTML = '<span class="hint">could not reach that moment</span>'; return; }
   S.scrub.custom = true;
+  S.scrub.customPrompt = prefix;
   worker.postMessage({ type: 'sample-now', prompt: prefix });   // the checkpoint's own weights answer live (worker W14-2 fallback)
 };
 if ($('scrubRaise')) $('scrubRaise').onclick = async () => {
@@ -956,12 +1509,13 @@ $('trainBtn').onclick = () => {
   S.maxSteps = fresh ? ask : S.lastStep + ask; // "keep raising" runs N MORE steps
   S.scrub.preview = false;                 // live curves take the chart back
   if (fresh) { S.hist = { steps: [], loss: [], evalSteps: [], zog: [], base: [] }; S.samples = []; $('saveSamples').disabled = true; $('samples').innerHTML = ''; $('arcBadge').innerHTML = ''; }
+  const prompts = activeStoryPrompts();
   worker.postMessage({ type: 'train', opts: {
     B, T, lr: parseFloat($('lr').value) || 3e-4,
     replayRatio: Math.min(0.9, Math.max(0, (+$('replayPct').value || 0) / 100)),
     maxSteps: S.maxSteps, evalEvery: 10, sampleEvery: 20,
     startFrom: $('startFrom').value === 'random' ? 'random' : 'trained',
-    prompt: `Once upon a time, ${$('chName').value.trim()}`,
+    prompt: prompts[0], prompts,
     fresh,
   }});
   fresh = false;
@@ -972,7 +1526,7 @@ $('trainBtn').onclick = () => {
 };
 $('startFrom').onchange = () => { fresh = true; S.lastStep = 0; $('trainBtn').textContent = '🐣 start raising'; };
 $('pauseBtn').onclick = () => { worker.postMessage({ type: 'pause' }); };
-$('sampleBtn').onclick = () => worker.postMessage({ type: 'sample-now', prompt: `Once upon a time, ${$('chName').value.trim()}` });
+$('sampleBtn').onclick = () => worker.postMessage({ type: 'sample-now', prompt: nextActiveStoryPrompt() });
 $('restartBtn').onclick = () => {
   $('startFrom').value = 'trained';   // whatever checkpoint the worker was init'd with (kept pristine there)
   fresh = true; S.lastStep = 0;
@@ -981,18 +1535,19 @@ $('restartBtn').onclick = () => {
   $('trainBtn').textContent = '🐣 start raising'; drawChart();
   const b = S.scrub.base;
   status(b ? `reset to ${b.arc} step ${b.step} — your storybook is kept; press "start raising" to grow it again from there`
-           : 'reset to the original 260K — your storybook is kept; press "start raising" to train it again from scratch');
+           : `reset to ${(S.modelOrigin && S.modelOrigin.modelName) || 'the loaded model'} — your storybook is kept; press "start raising" to train it again from that checkpoint`);
 };
 $('saveSamples').onclick = () => {
-  const name = ($('chName').value.trim().toLowerCase() || 'tiny-mind');
+  const name = activeBookStem();
   const body = S.samples.map(x => `— step ${x.step} —\n${x.text}\n`).join('\n');
   deliverFile(name + '-training-stories.txt', body, 'text/plain');
 };
-$('exportBtn').onclick = () => worker.postMessage({ type: 'export' });
+$('exportBtn').onclick = () => worker.postMessage({ type: 'export', purpose: 'download' });
 
 // ---------- boot: arc-pack autoload (standalone only — framed, the shell pushes
 // tm:'arc' and serves snapshot .bins over arc.snapshot RPC; manifest eager, bins lazy) ----------
 window.__tmArc = (manifest, source) => scrubAddArc(manifest, {}, source || 'the shell');
+window.__tmSelectArc = (arc) => selectArc(arc);
 (async () => {
   if (window.__tmBridge) return;
   const seen = new Set(); let found = 0;
@@ -1054,7 +1609,9 @@ if (SANDBOXED) {
 updateTrainGate();
 status(`load the trainee to begin · compute: ${workerMode} · storage: ${Store.backend}`);
 
-window.__tmLoadPair = (ck, tok) => loadModel(ck.buf, tok.buf);
+window.__tmLoadPair = (ck, tok) => loadModel(ck.buf, tok.buf, {
+  modelName: ck.name, tokenizerName: tok.name, source: 'model bay'
+});
 window.__tmRouteJson = (a, b) => routeJson(a, b);
 
 if (window.__tmBridge) { document.getElementById('load260') && (document.getElementById('load260').style.display = 'none'); }

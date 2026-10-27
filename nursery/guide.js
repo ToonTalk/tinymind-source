@@ -10,11 +10,13 @@
 const $ = id => document.getElementById(id);
 const F = window.VoiceGuide.fragments;
 const kid = () => window.__vgPrefs.kid;
-const sheet = () => ({
-  name:  ($('chName')  && $('chName').value.trim())  || 'your character',
-  attr1: ($('chAttr1') && $('chAttr1').value.trim()) || '',
-  attr2: ($('chAttr2') && $('chAttr2').value.trim()) || '',
-});
+const sheet = () => window.__tmBookMeta && window.__tmBookMeta.mode === 'binding'
+  ? { name: window.__tmBookMeta.label, attr1: 'four balanced characters', attr2: 'matched facts' }
+  : {
+      name:  ($('chName')  && $('chName').value.trim())  || 'your character',
+      attr1: ($('chAttr1') && $('chAttr1').value.trim()) || '',
+      attr2: ($('chAttr2') && $('chAttr2').value.trim()) || '',
+    };
 let api = null;
 let base0 = null;                      // first base-eval loss; forgetting = drift > +0.15 nats
 let lastData = null;                   // last set-data payload: the storybook the worker trains on
@@ -46,13 +48,20 @@ function wireWorker(emit){
   });
   /* ghostwrite verdicts land in #genOut as "N accepted, M rejected" */
   const out = $('genOut');
-  if (out) new MutationObserver(() => {
+  if (out && out.nodeType === 1) new MutationObserver(() => {
     const t = out.textContent || '';
     const m = /(\d+)\s+accepted,\s+(\d+)\s+rejected/.exec(t);
     if (!m) return;
     const ok = +m[1], bad = +m[2];
     emit(bad > 0 ? 'storyRejected' : 'storyAccepted', { ok, bad });
   }).observe(out, { childList: true, subtree: true });
+  window.addEventListener('scrubMoved', e => {
+    const d = e.detail || {};
+    if (d.step === 0) emit('beforeCharacterTraining', d);
+    else if (d.profile === 'held-loss-minimum') emit('heldLossBeforeBinding', d);
+    else if (d.profile === 'binding-demonstration') emit('bindingDemoPoint', d);
+    else if (d.profile === 'maximum-binding') emit('maximumBindingPoint', d);
+  });
 }
 
 /* ---------- character persistence (wave 4): the storybook the
@@ -73,8 +82,14 @@ function persistBook(){
     if (!s.name || s.name === 'your character') return;
     const book = [...lastData.stories.map(text => ({ split: 'train', text })),
                   ...(lastData.heldout || []).map(text => ({ split: 'heldout', text }))];
+    const meta = window.__tmBookMeta;
+    const storybook = meta && meta.mode === 'binding'
+      ? { mode: 'binding', purpose: meta.purpose, characters: meta.characters,
+          train: lastData.stories, heldout: lastData.heldout || [] }
+      : null;
     window.storage.set('tm-book-' + s.name, JSON.stringify({
-      sheet: s, kind: ($('chKind') && $('chKind').value) || '', book, ts: Date.now() })).catch(() => {});
+      sheet: s, kind: ($('chKind') && $('chKind').value) || '', book, storybook,
+      label: storybook ? 'load the four-character story world' : null, ts: Date.now() })).catch(() => {});
   } catch (_) {}
 }
 async function offerSavedBooks(){
@@ -88,13 +103,13 @@ async function offerSavedBooks(){
       let o; try { o = JSON.parse((await window.storage.get(k)).value); } catch (_) { continue; }
       const b = document.createElement('button');
       b.className = 'alt small'; b.style.marginLeft = '6px';
-      b.textContent = 'load ' + ((o.sheet && o.sheet.name) || k.slice(8)) + "'s storybook";
+      b.textContent = o.label || ('load ' + ((o.sheet && o.sheet.name) || k.slice(8)) + "'s storybook");
       b.onclick = () => { try {
         if (o.sheet) { if ($('chName')) $('chName').value = o.sheet.name || '';
           if ($('chKind')) $('chKind').value = o.kind || '';
           if ($('chAttr1')) $('chAttr1').value = o.sheet.attr1 || '';
           if ($('chAttr2')) $('chAttr2').value = o.sheet.attr2 || ''; }
-        if (window.__tmRouteJson) window.__tmRouteJson(((o.sheet && o.sheet.name) || 'saved') + '-storybook.json', JSON.stringify(o.book));
+        if (window.__tmRouteJson) window.__tmRouteJson(((o.sheet && o.sheet.name) || 'saved') + '-storybook.json', JSON.stringify(o.storybook || o.book));
       } catch (_) {} };
       demo.parentNode.insertBefore(b, demo.nextSibling);
     }
@@ -177,6 +192,18 @@ const NUR_TERMS = {
 };
 
 const EVENTS = {
+  beforeCharacterTraining: { priority: 'moment', cooldownMs: 4000, spot: '#scrubLearning',
+    lines: 'This is the pretrained stories260K starting model, before character training. About 25 percent is chance with four answers, so this checkpoint is still guessing the new character facts.',
+    kidLines: 'This mind already knows how simple stories sound, but it has not learned Zog, Mip, Bex or Nia. One right answer out of four is still just guessing.' },
+  heldLossBeforeBinding: { priority: 'moment', cooldownMs: 4000, spot: '#scrub',
+    lines: 'This is the crucial result: held-out story surprise is lowest here, but character-answer accuracy is still near chance. The mind learned the style of this story world before it learned which facts belong to which names.',
+    kidLines: 'The story surprise is low here, but the mind still mixes up who owns each fact. Getting used to the stories is not the same as matching facts to names.' },
+  bindingDemoPoint: { priority: 'moment', cooldownMs: 4000, spot: '#scrub',
+    lines: 'This is the recommended investigation point: the names select their own facts reliably, although ordinary storytelling has started to weaken.',
+    kidLines: 'Here the names finally point to the right facts. But the mind is starting to forget some ordinary stories.' },
+  maximumBindingPoint: { priority: 'moment', cooldownMs: 4000, spot: '#scrub',
+    lines: 'This endpoint has the strongest measured binding, but it is more forgetful and rigid. New contradictory context still fails to override its learned defaults.',
+    kidLines: 'This mind remembers the fact matches strongly, but it is more stuck in its ways and tells ordinary stories less well.' },
   floorReached: { priority: 'moment', once: true, spot: '#chart',
     lines: p => `There — it just learned ${sheet().name} as well as it ever will. Keep going past this floor and it starts parroting its storybook instead of understanding it.`,
     kidLines: p => `Look! It knows ${sheet().name} now as well as it ever will. If we keep going, it just starts copying.` },
@@ -246,20 +273,54 @@ function STEPS(){
 }
 
 /* ---------- Q&A grounding ---------- */
+function timeMachineStatus(){
+  const live = $('scrubLive');
+  if (!live || live.style.display === 'none')
+    return 'Time machine state: no recording is loaded. ';
+  const arc = window.__tmGuideArcContext || null;
+  const picker = $('scrubArcPick');
+  const recording = picker && picker.selectedOptions && picker.selectedOptions[0]
+    ? picker.selectedOptions[0].textContent : (($('scrubLabel') && $('scrubLabel').textContent) || 'unknown recording');
+  const selected = ($('scrubInfo') && $('scrubInfo').textContent) || 'unknown checkpoint';
+  const step = ($('scrubStepInfo') && $('scrubStepInfo').textContent) || '';
+  const load = ($('scrubLoadState') && $('scrubLoadState').textContent) || '';
+  const previous = $('scrubPrev') && $('scrubPrev').disabled ? 'disabled at this end' : 'available';
+  const next = $('scrubNext') && $('scrubNext').disabled ? 'disabled at this end' : 'available';
+  const stops = [...document.querySelectorAll('#scrubStops button')]
+    .map(b => b.getAttribute('aria-label') || b.textContent.trim()).join(', ');
+  const manifest = arc
+    ? `Authoritative time-machine manifest: arc id ${arc.arc}; note: ${arc.note || 'none'}; ` +
+      `${arc.snapshotCount} recorded moments from step ${arc.firstStep} through step ${arc.lastStep}; ` +
+      `character names in its recorded sample prompts: ${arc.characterNames.length ? arc.characterNames.join(', ') : 'none'}. ` +
+      `Recorded sample prompts: ${arc.samplePrompts.length ? arc.samplePrompts.join(' | ') : 'none'}. `
+    : 'Authoritative time-machine manifest details are unavailable. ';
+  return `Time machine context — authoritative and independent of the character editor and saved models. ${manifest}` +
+    `Visible recording label: ${recording}. Selected: ${selected}; ${step}. ` +
+    `Previous is ${previous}; Next is ${next}. Exact checkpoint buttons shown: ${stops || 'none'}. ` +
+    `Loading message: ${load || 'none'}. `;
+}
 function statusText(){
   const s = sheet();
   const st = $('status') ? $('status').textContent : '';
+  const model = $('modelInfo') ? $('modelInfo').textContent : 'unknown';
   const samples = $('samples') ? $('samples').textContent.slice(-400) : '';
-  return `Character: ${s.name}. Fact one: ${s.attr1}. Fact two: ${s.attr2}. ` +
+  return timeMachineStatus() +
+    `Separate Nursery editor context — this is NOT evidence about who or what the selected time-machine recording trained on. ` +
+    `Character editor currently says: ${s.name}. Fact one: ${s.attr1}. Fact two: ${s.attr2}. ` +
+    `Active storybook mode: ${window.__tmBookMeta && window.__tmBookMeta.mode === 'binding' ? 'balanced Zog, Mip, Bex and Nia corpus' : 'single character'}. ` +
+    `Separate loaded-model display: ${model}. ` +
     `App status line: ${st}. Latest sample text (may be empty): ${samples}. ` +
     `Storybook count shown: ${($('bookCount') && $('bookCount').textContent) || 'unknown'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide living beside the Tiny Mind Nursery, where a visitor raises a 260 thousand parameter language model on fifty tiny stories about an invented character. ' +
+  return 'You are the guide living beside the Tiny Mind Nursery, where a visitor raises a 260 thousand parameter language model on either a single-character storybook or a balanced four-character story world. ' +
     'You are honestly an A I yourself — a much bigger mind of the same general kind — and you may say so plainly when it helps. ' +
     (kid() ? 'The visitor is a young child: use short, warm, simple sentences, and never use the word loss — call it surprise. ' :
              'The visitor is ten or older: plain, concrete language; call the loss the surprise meter unless they use the technical word first. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
+    'The exact base checkpoint stories260K.bin is pretrained on TinyStories patterns but has not learned the visitor\'s custom characters. A restored storybook is training data, not a memory in the model weights. Never claim that facts from an earlier storybook can shine through a fresh base model. If the loaded filename is a custom exported model, say that it may already contain its earlier training. Do not invent or paraphrase model-choice cards you cannot see. ' +
+    'The authoritative time-machine manifest in the status is the ONLY source for saying who or what a recording trained on. Never infer an arc\'s subject from the character editor, saved storybook, loaded model, latest sample, or the fact that it ends at step 600. Arc B and Arc C both end at step 600 but are different recordings: arcB is the Zog-only recording; arcC is the four-character Zog, Mip, Bex and Nia recording. If Sisi appears only in the separate editor or model context, explicitly say that this does not make the selected arc a Sisi arc. Never describe arcC as Sisi\'s training. ' +
+    'Time-machine checkpoints are independent of storybook mode and of how many characters are in the storybook. Never say that single-character or storybook mode prevents access to a time-machine moment. When the visitor asks why a moment or checkpoint cannot be reached, use the Time machine context in the status: name the selected moment and the exact Start/Moment, Previous, and Next controls that are actually available. The overview slider is optional. If a moment is already loading, a new button choice is queued rather than discarded. ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, storybook, chart, train, sample, export, timemachine. ' +
     ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +

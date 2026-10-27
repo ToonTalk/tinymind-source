@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "characters": {
+    "Zog": {
+      "kind": "dragon",
+      "food": "clouds",
+      "home": "moon"
+    },
+    "Mip": {
+      "kind": "rabbit",
+      "food": "apples",
+      "home": "river"
+    },
+    "Bex": {
+      "kind": "bear",
+      "food": "honey",
+      "home": "cave"
+    },
+    "Nia": {
+      "kind": "bird",
+      "food": "berries",
+      "home": "tree"
+    }
+  },
+  "slots": {
+    "kind": {
+      "values": [
+        "dragon",
+        "rabbit",
+        "bear",
+        "bird"
+      ]
+    },
+    "food": {
+      "values": [
+        "clouds",
+        "apples",
+        "honey",
+        "berries"
+      ]
+    },
+    "home": {
+      "values": [
+        "moon",
+        "river",
+        "cave",
+        "tree"
+      ]
+    }
+  },
+  "direct": [
+    {
+      "id": "direct-zog-kind",
+      "name": "Zog",
+      "slot": "kind",
+      "prompt": "Zog is a small",
+      "continuation": " dragon"
+    },
+    {
+      "id": "direct-zog-food",
+      "name": "Zog",
+      "slot": "food",
+      "prompt": "Zog likes to eat",
+      "continuation": " clouds"
+    },
+    {
+      "id": "direct-zog-home",
+      "name": "Zog",
+      "slot": "home",
+      "prompt": "Zog's home is by the",
+      "continuation": " moon"
+    },
+    {
+      "id": "direct-mip-kind",
+      "name": "Mip",
+      "slot": "kind",
+      "prompt": "Mip is a small",
+      "continuation": " rabbit"
+    },
+    {
+      "id": "direct-mip-food",
+      "name": "Mip",
+      "slot": "food",
+      "prompt": "Mip likes to eat",
+      "continuation": " apples"
+    },
+    {
+      "id": "direct-mip-home",
+      "name": "Mip",
+      "slot": "home",
+      "prompt": "Mip's home is by the",
+      "continuation": " river"
+    },
+    {
+      "id": "direct-bex-kind",
+      "name": "Bex",
+      "slot": "kind",
+      "prompt": "Bex is a small",
+      "continuation": " bear"
+    },
+    {
+      "id": "direct-bex-food",
+      "name": "Bex",
+      "slot": "food",
+      "prompt": "Bex likes to eat",
+      "continuation": " honey"
+    },
+    {
+      "id": "direct-bex-home",
+      "name": "Bex",
+      "slot": "home",
+      "prompt": "Bex's home is by the",
+      "continuation": " cave"
+    },
+    {
+      "id": "direct-nia-kind",
+      "name": "Nia",
+      "slot": "kind",
+      "prompt": "Nia is a small",
+      "continuation": " bird"
+    },
+    {
+      "id": "direct-nia-food",
+      "name": "Nia",
+      "slot": "food",
+      "prompt": "Nia likes to eat",
+      "continuation": " berries"
+    },
+    {
+      "id": "direct-nia-home",
+      "name": "Nia",
+      "slot": "home",
+      "prompt": "Nia's home is by the",
+      "continuation": " tree"
+    }
+  ],
+  "paraphrase": [
+    {
+      "id": "paraphrase-zog-kind",
+      "name": "Zog",
+      "slot": "kind",
+      "prompt": "What kind of friend is Zog? Zog is a small",
+      "continuation": " dragon"
+    },
+    {
+      "id": "paraphrase-zog-food",
+      "name": "Zog",
+      "slot": "food",
+      "prompt": "What does Zog like to eat? Zog likes to eat",
+      "continuation": " clouds"
+    },
+    {
+      "id": "paraphrase-zog-home",
+      "name": "Zog",
+      "slot": "home",
+      "prompt": "Where is Zog's home? Zog's home is by the",
+      "continuation": " moon"
+    },
+    {
+      "id": "paraphrase-mip-kind",
+      "name": "Mip",
+      "slot": "kind",
+      "prompt": "What kind of friend is Mip? Mip is a small",
+      "continuation": " rabbit"
+    },
+    {
+      "id": "paraphrase-mip-food",
+      "name": "Mip",
+      "slot": "food",
+      "prompt": "What does Mip like to eat? Mip likes to eat",
+      "continuation": " apples"
+    },
+    {
+      "id": "paraphrase-mip-home",
+      "name": "Mip",
+      "slot": "home",
+      "prompt": "Where is Mip's home? Mip's home is by the",
+      "continuation": " river"
+    },
+    {
+      "id": "paraphrase-bex-kind",
+      "name": "Bex",
+      "slot": "kind",
+      "prompt": "What kind of friend is Bex? Bex is a small",
+      "continuation": " bear"
+    },
+    {
+      "id": "paraphrase-bex-food",
+      "name": "Bex",
+      "slot": "food",
+      "prompt": "What does Bex like to eat? Bex likes to eat",
+      "continuation": " honey"
+    },
+    {
+      "id": "paraphrase-bex-home",
+      "name": "Bex",
+      "slot": "home",
+      "prompt": "Where is Bex's home? Bex's home is by the",
+      "continuation": " cave"
+    },
+    {
+      "id": "paraphrase-nia-kind",
+      "name": "Nia",
+      "slot": "kind",
+      "prompt": "What kind of friend is Nia? Nia is a small",
+      "continuation": " bird"
+    },
+    {
+      "id": "paraphrase-nia-food",
+      "name": "Nia",
+      "slot": "food",
+      "prompt": "What does Nia like to eat? Nia likes to eat",
+      "continuation": " berries"
+    },
+    {
+      "id": "paraphrase-nia-home",
+      "name": "Nia",
+      "slot": "home",
+      "prompt": "Where is Nia's home? Nia's home is by the",
+      "continuation": " tree"
+    }
+  ],
+  "distractor": [
+    {
+      "id": "distractor-zog-kind",
+      "name": "Zog",
+      "slot": "kind",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Zog is a small",
+      "continuation": " dragon"
+    },
+    {
+      "id": "distractor-zog-food",
+      "name": "Zog",
+      "slot": "food",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Zog likes to eat",
+      "continuation": " clouds"
+    },
+    {
+      "id": "distractor-zog-home",
+      "name": "Zog",
+      "slot": "home",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Zog's home is by the",
+      "continuation": " moon"
+    },
+    {
+      "id": "distractor-mip-kind",
+      "name": "Mip",
+      "slot": "kind",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Mip is a small",
+      "continuation": " rabbit"
+    },
+    {
+      "id": "distractor-mip-food",
+      "name": "Mip",
+      "slot": "food",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Mip likes to eat",
+      "continuation": " apples"
+    },
+    {
+      "id": "distractor-mip-home",
+      "name": "Mip",
+      "slot": "home",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Mip's home is by the",
+      "continuation": " river"
+    },
+    {
+      "id": "distractor-bex-kind",
+      "name": "Bex",
+      "slot": "kind",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Bex is a small",
+      "continuation": " bear"
+    },
+    {
+      "id": "distractor-bex-food",
+      "name": "Bex",
+      "slot": "food",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Bex likes to eat",
+      "continuation": " honey"
+    },
+    {
+      "id": "distractor-bex-home",
+      "name": "Bex",
+      "slot": "home",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Bex's home is by the",
+      "continuation": " cave"
+    },
+    {
+      "id": "distractor-nia-kind",
+      "name": "Nia",
+      "slot": "kind",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Nia is a small",
+      "continuation": " bird"
+    },
+    {
+      "id": "distractor-nia-food",
+      "name": "Nia",
+      "slot": "food",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Nia likes to eat",
+      "continuation": " berries"
+    },
+    {
+      "id": "distractor-nia-home",
+      "name": "Nia",
+      "slot": "home",
+      "prompt": "Zog is a small dragon. Zog likes to eat clouds. Zog's home is by the moon. Mip is a small rabbit. Mip likes to eat apples. Mip's home is by the river. Bex is a small bear. Bex likes to eat honey. Bex's home is by the cave. Nia is a small bird. Nia likes to eat berries. Nia's home is by the tree. Nia's home is by the",
+      "continuation": " tree"
+    }
+  ],
+  "override": [
+    {
+      "id": "override-zog-food",
+      "name": "Zog",
+      "slot": "food",
+      "prompt": "Usually Zog likes to eat clouds. Today Zog does not want clouds. Today Zog wants bread. Today Zog likes to eat",
+      "continuation": " bread",
+      "learnedContinuation": " clouds"
+    },
+    {
+      "id": "override-mip-food",
+      "name": "Mip",
+      "slot": "food",
+      "prompt": "Usually Mip likes to eat apples. Today Mip does not want apples. Today Mip wants milk. Today Mip likes to eat",
+      "continuation": " milk",
+      "learnedContinuation": " apples"
+    },
+    {
+      "id": "override-bex-food",
+      "name": "Bex",
+      "slot": "food",
+      "prompt": "Usually Bex likes to eat honey. Today Bex does not want honey. Today Bex wants cake. Today Bex likes to eat",
+      "continuation": " cake",
+      "learnedContinuation": " honey"
+    },
+    {
+      "id": "override-nia-food",
+      "name": "Nia",
+      "slot": "food",
+      "prompt": "Usually Nia likes to eat berries. Today Nia does not want berries. Today Nia wants corn. Today Nia likes to eat",
+      "continuation": " corn",
+      "learnedContinuation": " berries"
+    }
+  ]
+}

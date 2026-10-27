@@ -450,8 +450,9 @@ window.__vgDeferBoot = async function(create){
    build-release.js injects this as a plain <script> ahead of each app's module script
    (dist singles AND the mega templates), so an app inside the shell's iframe gets:
    window.claude + window.storage proxied over postMessage RPC to the shell,
-   load-pair / json pushes routed to the app's __tmLoadPair / __tmRouteJson hooks,
-   and __tmBubbleExport to hand files up to the shell (nested frames cannot download). */
+   load-pair / json / arc-selection pushes routed to the app's public hooks,
+   __tmBubbleExport to hand downloads up to the shell, and __tmPublishModel to
+   register a completed training run without forcing a download. */
 (function () {
   if (window.parent === window) return;
   window.__tmBridge = true;
@@ -470,7 +471,7 @@ window.__vgDeferBoot = async function(create){
       if (m.ok) p.resolve(m.value); else p.reject(new Error(m.error || 'rpc failed'));
     } else if (m.tm === 'load-pair') {
       const tryLoad = (n) => {
-        if (window.__tmLoadPair) window.__tmLoadPair({ name: m.ckName, buf: m.ck }, { name: m.tokName, buf: m.tok });
+        if (window.__tmLoadPair) window.__tmLoadPair({ name: m.ckName, buf: m.ck, meta: m.modelMeta || null }, { name: m.tokName, buf: m.tok });
         else if (n > 0) setTimeout(() => tryLoad(n - 1), 150);
       };
       tryLoad(100);
@@ -486,6 +487,12 @@ window.__vgDeferBoot = async function(create){
         else if (n > 0) setTimeout(() => tryArc(n - 1), 150);
       };
       tryArc(100);
+    } else if (m.tm === 'select-arc') {
+      const trySelectArc = (n) => {
+        if (window.__tmSelectArc) window.__tmSelectArc(m.arc);
+        else if (n > 0) setTimeout(() => trySelectArc(n - 1), 150);
+      };
+      trySelectArc(100);
     }
   });
   window.__tmRPC = rpc;   // generic escape hatch (arc.snapshot etc.); inert standalone
@@ -501,6 +508,11 @@ window.__vgDeferBoot = async function(create){
   window.__tmBubbleExport = (name, u8) => {
     const buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
     parent.postMessage({ tm: 'export', name, bytes: buf }, '*');
+  };
+  window.__tmPublishModel = (name, bytes, meta) => {
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    const buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+    parent.postMessage({ tm: 'publish-model', name, bytes: buf, meta: meta || null }, '*');
   };
   window.addEventListener('load', () => parent.postMessage({ tm: 'ready', app: document.title }, '*'));
 })();
@@ -1976,6 +1988,7 @@ function splitArcPacks(recs) {
 const KID_LABELS = {
   arcB: 'a mind learning your character (and then just memorizing)',
   arcA: 'a brand-new mind growing up',
+  arcC: 'a mind learning which facts belong to which character',
 };
 function arcKidLabel(manifest) {
   return KID_LABELS[manifest.arc] || manifest.note || manifest.arc;
@@ -1991,6 +2004,121 @@ function stopCaption(snapshot, preferPrompt) {
   if (!keys.length) return { prompt: null, text: '' };
   const prompt = (preferPrompt && keys.includes(preferPrompt)) ? preferPrompt : keys[keys.length - 1];
   return { prompt, text: String(samples[prompt]) };
+}
+
+// The stored sample includes the prompt because it is useful for replay and
+// export. The teaching UI separates the two so children can see which words
+// were supplied and which words the model actually added.
+function sampleContinuation(text, prompt) {
+  const full = String(text || '');
+  const start = String(prompt || '');
+  if (!start || !full.startsWith(start)) return full.trim();
+  return full.slice(start.length).trimStart();
+}
+
+// Four balanced candidate answers make random guessing a one-in-four event.
+// Keep this pure so wording and threshold behavior stay covered by Node tests.
+function chanceLevelInterpretation(accuracy, choices = 4) {
+  const chance = choices > 0 ? 1 / choices : 0;
+  const nearChance = Number.isFinite(accuracy) && Math.abs(accuracy - chance) <= 0.05;
+  return {
+    chance,
+    nearChance,
+    label: nearChance ? 'approximately chance' : (accuracy > chance ? 'above chance' : 'below chance'),
+    explanation: `With ${choices} possible answers, a blind guess is right about 1 in ${choices} times (${(100 * chance).toFixed(0)}%).`,
+  };
+}
+
+// Binding arcs carry behavioural measurements alongside story losses. Keep the
+// teaching stage derived from those measurements so new schedules do not need
+// hard-coded step numbers.
+function bindingStage(snapshot, baseLoss0 = null) {
+  const b = snapshot && snapshot.binding;
+  if (!b) return null;
+  const direct = b.directAccuracy ?? 0;
+  const specificity = b.specificityAccuracy ?? 0;
+  const baseLossDelta = Number.isFinite(baseLoss0) && Number.isFinite(snapshot.baseLoss)
+    ? snapshot.baseLoss - baseLoss0 : null;
+  let key, label, headline, summary;
+  if (snapshot.step === 0) {
+    key = 'before-training';
+    label = 'before character training';
+    headline = 'The mind is still guessing.';
+    summary = 'It knows how simple stories sound, but it has not learned which facts belong to Zog, Mip, Bex and Nia.';
+  } else if (specificity >= 0.95 && direct >= 0.9 && baseLossDelta !== null && baseLossDelta >= 0.4) {
+    key = 'very-strong-rigid';
+    label = 'very strong, but more rigid';
+    headline = 'The character facts are very strong, but the mind is more stuck in its ways.';
+    summary = 'It matches names and facts very well, while its ordinary storytelling has become noticeably worse.';
+  } else if (specificity >= 0.95 && direct >= 0.8) {
+    key = 'strong';
+    label = 'strong character learning';
+    headline = 'The mind has learned the character facts strongly.';
+    summary = 'The names now point to the right facts reliably, although some old storytelling skill has faded.';
+  } else if (specificity >= 0.8 && direct >= 0.6) {
+    key = 'separating';
+    label = 'character facts separating';
+    headline = 'The character facts are separating.';
+    summary = 'The mind usually uses each name to find that character\'s facts, but it is not fully reliable yet.';
+  } else if (specificity >= 0.5) {
+    key = 'names-matter';
+    label = 'names beginning to matter';
+    headline = 'The names are beginning to matter.';
+    summary = 'Changing the name is starting to change which fact the mind expects.';
+  } else if (direct > 0.25 || specificity >= 0.25) {
+    key = 'mixing';
+    label = 'still mixing character facts';
+    headline = 'The mind is still mixing the characters.';
+    summary = 'It is learning the new stories, but the names do not reliably choose the right facts yet.';
+  } else {
+    key = 'learning-world';
+    label = 'learning the new story world';
+    headline = 'The new story world is sounding more familiar.';
+    summary = 'The mind is getting used to these stories, but it is still guessing which fact belongs to each character.';
+  }
+  return {
+    key,
+    label,
+    headline,
+    summary,
+    baseLossDelta,
+    ordinaryStoryDamageWarning: baseLossDelta !== null && baseLossDelta >= 0.25,
+  };
+}
+
+// Qualitative first, exact values second. Kid mode consumes only the labels;
+// standard mode combines the percentages with these interpretations.
+function bindingStatus(snapshot, baseLoss0 = null, bindingHeld0 = null) {
+  const b = snapshot && snapshot.binding;
+  if (!b) return null;
+  const direct = b.directAccuracy ?? 0;
+  const specificity = b.specificityAccuracy ?? 0;
+  const leakage = b.meanLeakageRatio ?? 0;
+  const overall = b.bindingScore ?? 0;
+  const chance = chanceLevelInterpretation(direct, 4);
+  const baseDelta = Number.isFinite(baseLoss0) && Number.isFinite(snapshot.baseLoss)
+    ? snapshot.baseLoss - baseLoss0 : null;
+  const baseRelative = snapshot.step === 0 || baseDelta === null || !baseLoss0 ? null : baseDelta / baseLoss0;
+  const heldDelta = Number.isFinite(bindingHeld0) && Number.isFinite(snapshot.bindingHeld)
+    ? snapshot.bindingHeld - bindingHeld0 : null;
+  const heldRelative = snapshot.step === 0 || heldDelta === null || !bindingHeld0 ? null : heldDelta / bindingHeld0;
+  return {
+    direct: chance.nearChance ? 'just guessing' : direct < 0.5 ? 'weak' : direct < 0.8 ? 'improving' : 'strong',
+    specificity: specificity < 0.4 ? 'weak' : specificity < 0.8 ? 'improving' : 'strong',
+    mixing: leakage >= 0.95 ? 'often mixes them' : leakage >= 0.8 ? 'still mixes them' : leakage >= 0.65 ? 'improving' : 'rarely mixes them',
+    ordinary: baseRelative === null || baseRelative <= 0.07 ? 'unchanged' : baseRelative < 0.25 ? 'somewhat worse' : 'much worse',
+    overall: overall < 0.4 ? 'just guessing' : overall < 0.65 ? 'weak' : overall < 0.85 ? 'improving' : 'strong',
+    newStory: heldRelative === null ? 'starting point' : heldRelative <= -0.2 ? 'much easier' : heldRelative < -0.05 ? 'easier' : heldRelative > 0.05 ? 'harder again' : 'about the same',
+    chance,
+    directValue: direct,
+    specificityValue: specificity,
+    leakageValue: leakage,
+    overallValue: overall,
+    baseDelta,
+    baseRelative,
+    heldDelta,
+    heldRelative,
+  };
 }
 
 // Multi-arc pool. Adding an arc with an existing key replaces it (idempotent re-drop);
@@ -2033,6 +2161,71 @@ function nearestStopIndex(snapshots, step) {
   let best = 0, bestD = Infinity;
   snapshots.forEach((s, i) => { const d = Math.abs(s.step - step); if (d < bestD) { bestD = d; best = i; } });
   return best;
+}
+
+// ---- inlined src/hunt-evidence.js ----
+// Pure, testable decision helpers for the Treasure Hunt. The browser page owns
+// rendering; these functions own the evidence thresholds and manifest-derived data.
+
+function questPresetsFromManifest(manifest) {
+  const chars = manifest && manifest.characters;
+  if (!chars || typeof chars !== 'object') return [];
+  const slots = ['kind', 'food', 'home', 'food'];
+  return Object.entries(chars).map(([name, facts], i) => {
+    const slot = slots[i % slots.length];
+    const value = String(facts && facts[slot] || '').trim();
+    if (!value) return null;
+    if (slot === 'kind') return { name, slot, label: `what IS ${name}?`, probe: `${name} is a small`, continuation: ` ${value}` };
+    if (slot === 'food') return { name, slot, label: `what does ${name} eat?`, probe: `${name} likes to eat`, continuation: ` ${value}` };
+    return { name, slot, label: `where does ${name} live?`, probe: `${name}'s home is by the`, continuation: ` ${value}` };
+  }).filter(Boolean);
+}
+
+function controlNamesForManifest(manifest, intendedName, limit = 3) {
+  const trained = Object.keys(manifest && manifest.characters || {});
+  const fallback = ['Max', 'Lily', 'Tom', 'Anna', 'Ben', 'Mia', 'Sam'];
+  const source = trained.length > 1 ? trained : fallback;
+  return source.filter(name => name.toLowerCase() !== String(intendedName).toLowerCase()).slice(0, limit);
+}
+
+function nameSpecificityVerdict({ intendedMeanLogProb, alternatives = [], nameInProbe = true }) {
+  if (!nameInProbe) return { kind: 'invalid', label: 'not name-specific yet', margin: null, leakageRatio: null };
+  const valid = alternatives.filter(r => Number.isFinite(r.meanLogProb));
+  if (!Number.isFinite(intendedMeanLogProb) || !valid.length)
+    return { kind: 'unavailable', label: 'not name-specific yet', margin: null, leakageRatio: null };
+  const bestOther = valid.reduce((a, b) => b.meanLogProb > a.meanLogProb ? b : a);
+  const margin = intendedMeanLogProb - bestOther.meanLogProb;
+  const leakageRatio = Math.exp(bestOther.meanLogProb - intendedMeanLogProb);
+  const intendedRanksFirst = margin > 0;
+  if (intendedRanksFirst && leakageRatio <= 0.8 && margin >= 0.15)
+    return { kind: 'specific', label: 'name-specific', margin, leakageRatio, bestOther };
+  if (intendedRanksFirst)
+    return { kind: 'partial', label: 'partly name-specific', margin, leakageRatio, bestOther };
+  return { kind: 'not-specific', label: 'not name-specific yet', margin, leakageRatio, bestOther };
+}
+
+function median(values) {
+  const xs = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!xs.length) return 0;
+  const mid = Math.floor(xs.length / 2);
+  return xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
+}
+
+function causalVerdict(targetRatio, controlRatios = []) {
+  const safeTarget = Number.isFinite(targetRatio) ? targetRatio : 1;
+  const targetDamage = Math.max(0, 1 - safeTarget);
+  const medianControlDamage = median(controlRatios.map(r => Math.max(0, 1 - r)));
+  const selectivity = targetDamage - medianControlDamage;
+  if (safeTarget < 0.5 && targetDamage >= 2 * Math.max(0.01, medianControlDamage)) {
+    return { kind: 'selective', label: 'strong causal contributor', targetDamage, medianControlDamage, selectivity };
+  }
+  if (safeTarget < 0.5) {
+    return { kind: 'general', label: 'general-purpose contributor', targetDamage, medianControlDamage, selectivity };
+  }
+  if (safeTarget > 1.15) {
+    return { kind: 'suppressor', label: 'possible suppressor', targetDamage, medianControlDamage, selectivity };
+  }
+  return { kind: 'little', label: 'little measured effect', targetDamage, medianControlDamage, selectivity };
 }
 
 // ---- inlined src/ingest.js ----
@@ -3643,7 +3836,7 @@ function createGuide(){
       window.addEventListener('message', e => { const mm = e.data; if (mm && mm.tm === 'pref' && mm.key === 'tm-guide-kid') setTimeout(window.__vgMicRefresh, 0); });
       wire((n, p) => a.emit(n, p)); window.__vgAttach((n, p) => a.emit(n, p)); window.__vgPanelToggles(a);
       const mi = $('modelInfo');
-      if (mi) new MutationObserver(() => maybePrefillStory()).observe(mi, { childList: true, subtree: true, characterData: true });
+      if (mi && mi.nodeType === 1) new MutationObserver(() => maybePrefillStory()).observe(mi, { childList: true, subtree: true, characterData: true });
       setTimeout(maybePrefillStory, 300);
     },
   };
