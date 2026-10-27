@@ -557,3 +557,80 @@ wave-7-14 multi-manifest discovery (`arc/arcs.json` + `manifest.more`). jsdom sm
 wave-15 check that the worker falls back to checkpoint weights and the stopgap text is
 gone. The two v9 patch scripts (`patch-tiny-mind-w14.mjs`, `tm-nursery-adapter.js`) are
 obsolete for building — the changes live in sources and the mega regenerates complete.
+
+# Neuron card addendum — "what does this neuron do?" (2026-10-27)
+
+Prompted by Goodfire's essay "Neural networks are already clean": look at a neuron's
+**both poles**, read its **top dataset examples** (not one prompt), and **steer** it to see
+what the model writes. Microscope (stories15M) now has all three.
+
+**Offline atlas** — `tools/build-neuron-atlas.js` runs the repo's own `src/model.js` via
+`captureRun` (the exact Microscope worker path) over the first 3,000 TinyStories validation
+stories (600,318 tokens, seq ≤ 256), and keeps for every FFN hidden neuron (6 × 768 = 4,608)
+the 5 strongest snippets at each pole of the **signed** activation `cap.ffn[(l*n+p)*HD+j]`:
+the lit piece plus 6 pieces before and 2 after, at most one snippet per story per pole, BOS
+excluded (it is identical in every story). Speed-up: activations never depend on logits, so
+the capture runs on the model with the classifier trimmed to one row — ~2.5× faster, and the
+tool asserts (and e12 re-asserts) the FFN activations are **bit-identical** to the full model.
+Deterministic: fixed corpus prefix, total order (|act| desc, story, position), shard-free
+merge — e12 checks sharded == unsharded and that a re-encode is byte-identical; the shipped
+file re-encodes byte-identically from the raw candidates. 58 min on 6 worker threads.
+Format `tiny-mind-neuron-atlas-v1` (`src/neuron-atlas.js`): piece table + snippets as
+`[q%, target, story, pos, ...pieceIdx]`, peaks to 3 significant digits, weight fingerprint
+so the card only shows examples for the model they came from. Negligible neurons (peak <
+0.05) are dropped and a pole under 10% of the other is emptied — in practice none of the
+4,608 neurons is negligible and only one pole is empty: **4,607/4,608 neurons have both
+poles**, and the negative pole is typically as strong as the positive (median |neg|/pos ≈ 1.0)
+— the essay's point, visible here. Examples: L2·n300 = "bright**ly**" (+) vs ", **but**" (−);
+L0·n5 = "wanted to **make** / **build** / **create**" (+). The neuron finder's |act| contrast
+lists L1·n668 as "18× brighter" at " was" — the card shows that is its *negative* pole.
+**Labels** — `tools/label-neuron-atlas.js` (gpt-5.4-mini, `OPENAI_API_KEY` from the machine
+env, used only in the request header; never logged, never in the browser) wrote one short
+plain-English label per pole for all 4,608 neurons (83 of 9,216 poles answered "no clear pattern"
+→ null). Each label is signed with a hash of the snippets it was written from; a rebuild
+that changes a neuron's snippets drops its label. The card says the labels are an AI's
+guess, not a proof. Atlas size **2.6 MB** — too big to embed in the pages (the mega itself is
+1.1 MB), so it ships as a same-folder pack: `shell/resources.json` lists
+`tiny-mind-neuron-atlas.json`, build-release copies it to `dist/`, the shell's manifest
+autoload fetches it (Cache Storage like the other packs), routes it to the Microscope frame
+(held in the frame queue until the Microscope opens, so no eager frame boot) and does not
+also write the same-folder copy into bay storage. The standalone Microscope fetches it
+beside itself; anywhere fetch is blocked (artifact) it can be dropped on the bay or page.
+
+**Card (UI)** — click a neuron in the neuron finder: the card shows the + side ("most
+switched on") beside the − side ("most switched the other way"), 3 snippets each with the
+lit piece highlighted and the label on top; "more examples and the numbers" opens all 5
+with values, %, story/piece provenance and how the atlas was made. Guide context and the
+neuron-selected line mention the card.
+
+**Steering** — "turn it up" (hold at 2× its strongest atlas value), "mute it" (0), and in
+details "turn it the other way" (2× its most negative); "back to normal". `src/steer.js`,
+bundled only into the Microscope worker: mute = model.js's own `ablate.neurons`; a clamp is
+written into the live SwiGLU buffer through the ffn tap just before w2 reads it (so
+`model.js`/`capture.js` are untouched). Steers join the head mutes in `getAblCap`'s key, so
+the existing whole-microscope ablation view (banner, bars, lens, neurons, attention) shows
+the steered model; a new `continue` message writes 30 greedy tokens with and without the
+change and the card highlights where the story diverges. Sweep over 24 evenly spaced
+neurons on a Zog prompt: "turn it up" changed the continuation 24/24, "the other way"
+24/24, "mute" only 10/24 — one neuron is usually redundant, the Hunt's lesson again.
+
+**Strictly additive / gates.** Old vs new worker, fed the same un-steered message script
+(load, run, lens, neurons, neuron-acts, head-ablated run/lens/neurons/neuron-acts) on
+both 260K and 15M: **every response byte-identical** (new fields `steer`, `fingerprint`,
+`hi`/`lo` are additions). e12 also checks `steer: []` ≡ no field, steered-with-nothing ≡
+`captureRun`, mute ≡ model.js neuron ablation, a clamp moves the residual along the w2
+column (err ~1e-6), and the unchanged continuation path reproduces both 260K C golden
+fixtures. **Worker blobs: nursery and hunt byte-identical; only the microscope blob changed
+(intended).** Nursery/hunt pages are byte-identical too (the atlas module is a
+microscope-only page extra).
+
+**Gates:** `npm test` **155 PASS, 0 FAIL** (was 127; +28 in `tests/e12-neuron-atlas.test.js`)
+— G1 greedy parity exact on all four fixtures (256/256, 256/256, 300/300, 300/300). jsdom
+smoke `npm run smoke` **205/0** (+17 in a new "microscope: neuron card" block: routed atlas,
+both poles, highlights, labels, details behind a click, steer messages, steered banner,
+continuations, back to normal, model mismatch). Worker blob hashes before → after:
+nursery `306e7038…` → same, hunt `83bbdd65…` → same, microscope `5e62ca60…` →
+`b2a886e9…` (intended). Rebuild: `node tools/build-neuron-atlas.js --stories 3000`
+(add `--raw PATH` to keep candidates; `--from-raw PATH` re-encodes in seconds and keeps
+labels whose snippets are unchanged), then `node tools/label-neuron-atlas.js` (incremental;
+`--batch 3` mops up neurons the model skipped), then `node tools/build-release.js`.

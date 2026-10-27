@@ -144,8 +144,8 @@ const EVENTS = {
     lines: p => deltaLine(p, false) || AGAIN[(p.n - 2) % AGAIN.length],
     kidLines: p => deltaLine(p, true) || AGAIN_KID[(p.n - 2) % AGAIN_KID.length] },
   neuronSelected: { priority: 'ambient', cooldownMs: 20000,
-    lines: 'That strip shows where this one neuron fires across the whole story. Bright spans are its favorite moments.',
-    kidLines: 'That stripe shows when this one tiny piece wakes up in the story.' },
+    lines: 'That strip shows where this one neuron fires across the whole story. The card below shows its two sides: where it switched on most in real stories, and where it went most strongly the other way.',
+    kidLines: 'That stripe shows when this one tiny piece wakes up in the story. The card below shows its two sides: when it switches on, and when it goes the other way.' },
 };
 
 function STEPS(){
@@ -180,7 +180,9 @@ function statusText(){
     `Visible views right now \u2014 attention heatmap: ${vis('heat') ? 'OPEN' : 'not shown'}, ` +
     `logit lens: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
     `neuron list: ${vis('neuronList') ? 'OPEN' : 'not shown'}, ` +
-    `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}.`;
+    `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}. ` +
+    `Neuron card (what does this neuron do? both sides from real stories, plus turn it up / mute it and see the story go on): ` +
+    `${($('neuronCard') && $('neuronCard').textContent.replace(/\s+/g, ' ').trim().slice(0, 600)) || 'closed'}.`;
 }
 function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, logit lens, and head or neuron ablation. ' +

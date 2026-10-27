@@ -625,6 +625,83 @@ async function main() {
     }
   }
 
+  /* ====== MICROSCOPE: "what does this neuron do?" card + steering ====== */
+  console.log('-- microscope: neuron card --');
+  {
+    const errors = [];
+    const dom = makeDom(extractTemplate('microscope'), errors, w => mkStorage(w, {}));
+    const w = dom.window, d = w.document;
+    const booted = await until(() => w.__guide && w.__vgW && w.__vgW.workers[0], 6000);
+    check('microscope boots for the neuron card', booted);
+    if (booted) {
+      w.__guide.setWordMs(0);
+      const wk = w.__vgW.workers[0];
+      /* a tiny atlas for a 2-layer, 4-neuron model, routed the way the shell does it */
+      const atlas = { schema: 'tiny-mind-neuron-atlas-v1', model: 'stories15M',
+        config: { dim: 8, nLayers: 2, hiddenDim: 4, vocabSize: 16 }, fingerprint: 'fp-test',
+        corpus: { file: 'x', stories: 3000, tokens: 600000 }, window: { before: 6, after: 2 }, perPole: 5,
+        pieces: [' Zog', ' ate', ' a', ' cloud', '.', ' gave', ' up'],
+        neurons: { '1:2': [2.5, -1.8, [[100, 1, 7, 12, 0, 1, 2, 3], [60, 0, 9, 4, 1, 2, 3]], [[100, 1, 8, 30, 5, 6, 4]]] },
+        labels: { '1:2': ['eating words', null, 'sig'] } };
+      w.__tmRouteJson('tiny-mind-neuron-atlas.json', JSON.stringify(atlas));
+      check('routed atlas is accepted', /neuron atlas ready/.test(d.getElementById('status').textContent));
+      w.__tmRouteJson('replay.json', '{"stories":[]}');
+      check('a non-atlas json is ignored by the microscope route', /neuron atlas ready/.test(d.getElementById('status').textContent));
+      wk.fakeReceive({ type: 'loaded', fingerprint: 'fp-test',
+        config: { dim: 8, nLayers: 2, nHeads: 2, nKvHeads: 2, hiddenDim: 4, vocabSize: 16, seqLen: 32 } });
+      const n = 4;
+      wk.fakeReceive({ type: 'run-done', n, ids: [1, 2, 3, 4], pieces: ['(start)', 'Zog', ' ate', ' a'],
+        topK: Array.from({ length: n }, () => [{ token: 5, piece: ' cloud', prob: 0.5, logit: 1 }]),
+        nextProb: [0.1, 0.2, 0.3, 0], attention: new Float32Array(2 * 2 * n * n).buffer,
+        config: { nLayers: 2, nHeads: 2, hiddenDim: 4, dim: 8, vocabSize: 16, seqLen: 32 }, bytes: 1 });
+      wk.fakeReceive({ type: 'neurons-done', spanStart: 1, spanEnd: 2, ablate: null,
+        top: [{ layer: 1, neuron: 2, score: 4, inMean: 1, outMean: 0.2 }] });
+      const item = d.querySelector('.neuron-item');
+      check('neuron finder lists a neuron to click', !!item);
+      if (item) item.click();
+      const card = d.getElementById('neuronCard');
+      check('clicking a neuron opens its card', /L1 · neuron 2/.test(card.textContent));
+      check('card shows both poles side by side', !!card.querySelector('.pole.pos') && !!card.querySelector('.pole.neg'));
+      check('the lit piece is highlighted in each snippet',
+        card.querySelector('.pole.pos mark') && card.querySelector('.pole.pos mark').textContent === ' ate' &&
+        card.querySelector('.pole.neg mark').textContent === ' up');
+      check('the AI label shows on its pole, none invented for the other',
+        /eating words/.test(card.querySelector('.pole.pos').textContent) && !card.querySelector('.pole.neg .plabel'));
+      check('numbers and provenance stay behind a click',
+        !!card.querySelector('details') && /\+2\.5 \(100%\) · story 7, piece 12/.test(card.querySelector('details').textContent));
+      wk.sent.length = 0;
+      card.querySelector('button[data-steer="up"]').click();
+      const run = wk.sent.find(m => m.type === 'run'), cont = wk.sent.find(m => m.type === 'continue');
+      check('"turn it up" re-runs the microscope with the neuron held at 2× its strongest',
+        run && run.steer && run.steer.length === 1 && run.steer[0].layer === 1 && run.steer[0].neuron === 2 && run.steer[0].value === 5,
+        JSON.stringify(run && run.steer));
+      check('... and asks for the story to go on under the same change', cont && cont.steer && cont.steer[0].value === 5);
+      wk.fakeReceive({ type: 'run-ablated', n, ids: [1, 2, 3, 4], pieces: ['(start)', 'Zog', ' ate', ' a'],
+        topK: Array.from({ length: n }, () => [{ token: 5, piece: ' cloud', prob: 0.4, logit: 1 }]),
+        nextProb: [0.1, 0.1, 0.3, 0], attention: new Float32Array(2 * 2 * n * n).buffer, ablate: [],
+        steer: [{ layer: 1, neuron: 2, value: 5 }], config: { nLayers: 2, nHeads: 2, hiddenDim: 4, dim: 8, vocabSize: 16, seqLen: 32 }, bytes: 1 });
+      check('the whole microscope switches to the steered model (banner)',
+        d.getElementById('ablBanner').style.display !== 'none' && /L1·n2 turned up/.test(d.getElementById('ablBanner').textContent));
+      wk.fakeReceive({ type: 'continue-done', changed: true, ablate: [], steer: [{ layer: 1, neuron: 2, value: 5 }],
+        base: [' cloud', '.', ' The', ' end'], steered: [' cloud', ' and', ' a', ' cake'] });
+      const conts = [...d.querySelectorAll('#neuronCard .cont')].map(c => c.textContent);
+      check('normal and changed continuations shown, the difference highlighted',
+        conts.length === 2 && /normal model/.test(conts[0]) && d.querySelector('#neuronCard .cont .new').textContent === ' and a cake',
+        conts.join(' | '));
+      wk.sent.length = 0;
+      d.querySelector('button[data-steer="normal"]').click();
+      check('"back to normal" leaves the steered view without a re-run',
+        d.getElementById('ablBanner').style.display === 'none' && !wk.sent.some(m => m.type === 'run'));
+      const plainCont = wk.sent.find(m => m.type === 'continue');
+      check('... and the plain continuation carries no steer at all', plainCont && !('steer' in plainCont) && !('ablate' in plainCont));
+      /* a model the atlas was not made for: no examples, steering still offered */
+      wk.fakeReceive({ type: 'loaded', fingerprint: 'other',
+        config: { dim: 8, nLayers: 2, nHeads: 2, nKvHeads: 2, hiddenDim: 4, vocabSize: 16, seqLen: 32 } });
+      check('a different model closes the card', d.getElementById('neuronCard').textContent.trim() === '');
+      check('no unexpected neuron-card page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+    }
+  }
+
   /* ====== MICROSCOPE: no sample yet, so a story it grew up on ====== */
   console.log('-- microscope: prefill falls back to the storybook --');
   {
