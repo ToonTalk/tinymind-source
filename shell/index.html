@@ -177,7 +177,12 @@ async function claudeComplete(prompt) {
   if (window.claude && typeof window.claude.complete === 'function') return await window.claude.complete(prompt);
   if (window.claude && typeof window.claude.use === 'function') {
     if (tmSample === undefined) tmSample = await window.claude.use('sample').catch(() => null);
-    if (tmSample) return (await tmSample(prompt)).text;
+    // quick tier: tiny stories and guide replies need speed more than depth; no cache, or
+    // pressing "write 8 stories" again would replay the same eight for five minutes
+    if (tmSample) {
+      try { return (await tmSample(prompt, { modelTier: 'quick', cache: false })).text; }
+      catch (e) { throw new Error((e && e.code === 'not_granted') ? 'built-in Claude was not allowed for this page' : 'built-in Claude: ' + ((e && (e.message || e.code)) || e)); }
+    }
   }
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

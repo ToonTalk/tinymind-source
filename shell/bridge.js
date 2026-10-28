@@ -18,7 +18,9 @@
     return new Promise((resolve, reject) => {
       const id = ++seq; pending.set(id, { resolve, reject });
       parent.postMessage({ tm: 'rpc', id, method, args }, '*');
-      setTimeout(() => { const p = pending.get(id); if (p) { pending.delete(id); p.reject(new Error(method + ' timed out')); } }, 60000);
+      // Claude can take minutes (the viewer's consent dialog, then thinking and writing eight stories)
+      const ms = method === 'claude.complete' ? 300000 : 60000;
+      setTimeout(() => { const p = pending.get(id); if (p) { pending.delete(id); p.reject(new Error(method + ' timed out')); } }, ms);
     });
   }
   window.addEventListener('message', (e) => {

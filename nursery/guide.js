@@ -145,16 +145,18 @@ async function preflight(g){
   }
   if (!checks.length) return;
   const bits = [];
+  const split = [];                 // multi-piece answers, explained together once
   for (const { answer, r } of checks) {
     if (r.pieces > 1) { const shown = (r.pieceTexts || []).map(p => p.trim() || '(space)').join(' · ');
-      bits.push(kid()
-      ? `The mind reads "${answer}" as ${r.pieces} little pieces${shown ? ': ' + shown : ''}. Words that are one piece, like play, happy or friend, are easier to find later.`
-      : `This mind reads "${answer}" as ${r.pieces} pieces${shown ? ' (' + shown + ')' : ''}, because its alphabet only has 512 pieces. A word in several pieces is harder to find in the treasure hunt: the fact is spread over several guesses. Few words are a single piece here; play, happy, friend and mom are.`); }
+      split.push(`"${answer}" as ${r.pieces} pieces${shown ? ' (' + shown + ')' : ''}`); }
     else if (r.prob != null && r.prob > 0.10) { bits.push(kid()
       ? `Careful — before it ever met ${s.name}, the mind already guesses "${answer}" ${odds(r.prob)}. Pick a stranger fact to bury.`
       : `The base mind already gives "${answer}" ${odds(r.prob)} before any training — that pairing is a collocation it knew anyway. Pick a stranger fact to bury.`);
       worst = (worst == null || r.prob > worst) ? r.prob : worst; }
   }
+  if (split.length) bits.unshift(kid()
+    ? `The mind reads ${split.join(' and ')}. Words that are one piece, like play, happy or friend, are easier to find later.`
+    : `This mind reads ${split.join(' and ')}, because its alphabet only has 512 pieces. A word in several pieces is harder to find in the treasure hunt: the fact is spread over several guesses. Few words are a single piece here; play, happy, friend and mom are.`);
   const text = bits.length
     ? bits.join(' ')
     : (kid() ? 'Good news: these facts look strange enough to bury and hunt later.'
@@ -229,6 +231,8 @@ const EVENTS = {
 };
 
 /* ---------- tour ---------- */
+const bookStories = () => (((($('bookCount') || {}).textContent) || '').match(/\d+/g) || []).reduce((n, x) => n + +x, 0);
+const writing = () => /is writing/.test((($('genOut') || {}).textContent) || '');
 const hasBuiltIn = () => { const p = $('provider'); return !!p && [...p.options].some(o => o.value === 'keyless'); };
 function STEPS(){
   return [
@@ -242,8 +246,10 @@ function STEPS(){
     text: () => kid() ? 'Let me check if your facts will bury well.' : 'One moment — let me pre-flight your facts for huntability before you commit to them.',
     action: g => preflight(g), skipIf: () => !window.__vgW.workers.length },
   { name: 'ghostwrite', spot: '#provider', allow: '#genBtn,#provider,#apiFields,#manualFields,#pasteBox,#pasteBtn,#bindingDemoBtn,#demoBtn,#apiKey,#apiModel,#rememberKey,#strictWords',
-    until: { event: 'storyAccepted' },
-    text: () => kid()
+    until: { event: 'storyAccepted' }, skipIf: () => bookStories() > 0,
+    text: () => writing() ? (kid() ? 'The helper is already writing your stories. They will pop into the storybook below. I will wait.'
+        : 'The ghostwriter is already writing — the stories will appear in the storybook below. I will wait right here.')
+      : kid()
       ? 'Now we need stories! In "who writes?", pick a helper to write them' + (hasBuiltIn() ? ' — built-in Claude needs no key' : ' (a grown-up pastes a key)') + ', then press write 8 stories. Or write some yourself and press check and add. Or load a ready-made storybook. I will wait.'
       : 'Now the storybook. Under "who writes?" choose who drafts the stories: ' + (hasBuiltIn() ? 'built-in Claude needs no key, or ' : '') + 'an AI with your own key, then press ✍️ write 8 stories, a few times. Or choose "me", paste stories you wrote, and press check + add. Or load one of the ready-made storybooks. Every sixth story is kept secret to test the mind with later. I will wait right here.' },
   { name: 'readAloud', spot: '#storyList', text: () => kid()

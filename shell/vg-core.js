@@ -132,6 +132,7 @@ function create(A){
 '  display:flex;align-items:center;justify-content:center;padding:0}',
 '.vg-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(123,223,242,.55);transform:none}',
 '.vg-primary{color:#06111f;background:linear-gradient(180deg,#aaf4ff,#65d4ea);border:none;font-size:16px;font-weight:900}',
+'.vg-btn.vg-primary:hover{background:linear-gradient(180deg,#c9f9ff,#86e2f3);box-shadow:0 0 0 2px rgba(170,244,255,.45)}',   /* hover brightens the main button; the plain-button hover used to grey it out */
 '#vgMic.vg-live{background:#e0483c;color:#fff;border:none;animation:vgPulse 1.2s infinite}',
 '#vgMic.vg-off{opacity:.45}',
 '',
