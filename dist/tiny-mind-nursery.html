@@ -4201,6 +4201,7 @@ function create(A){
   }
   if('speechSynthesis' in window){ vgPickVoice(); speechSynthesis.onvoiceschanged=vgPickVoice; }
   function vgSynthCancel(){ try{ speechSynthesis.cancel(); }catch(e){} }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) vgSynthCancel(); });   // drop anything queued; nothing replays later
   async function vgSpeak(text,g,who,abortFn){        // abortFn: v2 event-manager preemption seam
     const face=vg$('vgFace'), tab=vg$('vgTab');
     face.classList.add('vg-talk'); tab.classList.add('vg-talk');
@@ -4272,7 +4273,8 @@ function create(A){
   const vgEvOnceDone=new Set(), vgEvLastAt=new Map();
   const vgEvDyn={};                         // api.on/off registry, over A.events
   let vgEvWaiters=[], vgEvSweep=null;
-  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;   // a room the shell has hidden never talks out loud
+  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;
+    if(document.hidden) return false;   // a background tab: speech would queue up and play on return   // a room the shell has hidden never talks out loud
     const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
   function vgEvSpec(name){ return vgEvDyn[name]||((A.events||{})[name]); }
   function vgEvLineOf(spec,payload){

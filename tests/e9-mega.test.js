@@ -34,6 +34,11 @@ export async function run(t) {
     mega.includes('window.__tmKeyless = !!(window.claude &&') &&
     mega.includes('shellHasClaude = !!parent.__tmKeyless') &&
     !mega.includes("if (!(window.claude && typeof window.claude.complete === 'function'))\n    window.claude = {"));
+  t.check('mega: the switch-off lab shows how the story goes on (normal vs switched off)',
+    mega.includes('<div id="ablCont"></div>') && mega.includes("S.contBusy = true; S.contProgress = null; S.cont = null;") &&
+    mega.includes('function renderAblCont()'));
+  t.check('mega: a guide in a hidden tab never queues speech to play on return',
+    mega.includes("if(document.hidden) return false;") && mega.includes("if(document.hidden) vgSynthCancel();"));
   t.check('mega: same-folder runtime packs are manifest-driven with an embedded fallback',
     resourceManifest.version === 1 &&
     resourceManifest.resources.map(r => r.file).join('|') ===

@@ -153,6 +153,7 @@
       <button class="small" id="ablRun" disabled>re-run with checked heads OFF</button>
       <button class="small" id="ablClear" disabled>clear</button>
       <div id="ablInfo" class="hint" style="margin-top:.3rem"></div>
+      <div id="ablCont"></div>
       <div class="lesson">"the picture SUGGESTED it — switching it off PROVED it."</div>
     </div>
   </div>
@@ -196,8 +197,13 @@ function mutedHeads() { return [...document.querySelectorAll('#ablGrid input:che
 function steerList() { return S.steer.map(({ layer, neuron, value }) => ({ layer, neuron, value })); }
 const STEER_WORDS = { up: 'turned up', mute: 'muted', flip: 'turned the other way' };
 // "L0:1, L3·n100 turned up" — everything the changed model has changed
+// in plain words: heads grouped by layer, then any changed neurons
 function describeChanges(heads, steer) {
-  return [...heads, ...steer.map(s => `L${s.layer}·n${s.neuron} ${STEER_WORDS[s.how] || 'steered'}`)].join(', ');
+  const byLayer = new Map();
+  for (const h of heads) { const [l, n] = String(h).split(':'); if (!byLayer.has(l)) byLayer.set(l, []); byLayer.get(l).push(n); }
+  const hs = [...byLayer].map(([l, ns]) => `layer ${l} head${ns.length > 1 ? 's' : ''} ${ns.join(', ')}`);
+  const ns = steer.map(s => `neuron ${s.neuron} of layer ${s.layer} ${STEER_WORDS[s.how] || 'changed'}`);
+  return [...(hs.length ? [hs.join('; ') + ' off'] : []), ...ns].join('; ');
 }
 function curAtt() { return (S.ablActive && S.ablAtt) ? S.ablAtt : S.att; }
 // flip the WHOLE microscope between the full and the ablated model, and refresh every
@@ -347,18 +353,19 @@ worker.onmessage = (e) => {
     }
     const steer = (m.steer || []).map(s => S.steer.find(x => x.layer === s.layer && x.neuron === s.neuron) || s);
     $('ablInfo').innerHTML =
-      (steer.length ? `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>` : `heads OFF: <b>${m.ablate.join(', ')}</b>`) +
-      ` — the model's confidence in the real next piece changed by ` +
-      `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average; biggest change <b>${(100 * maxD).toFixed(1)}%</b> ` +
-      `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (piece ${maxAt + 1})`;
-    status('ablated run done — the whole microscope now shows the damaged model');
+      `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>. ` +
+      `Across the story, how sure the mind was of each word that really came next moved by ` +
+      `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average — most at <b>${esc(JSON.stringify(S.run.pieces[maxAt + 1] ?? '?'))}</b> ` +
+      `(piece ${maxAt + 1}, by ${(100 * maxD).toFixed(1)}%). The whole microscope now shows the switched-off mind.`;
+    renderAblCont();
+    status('switch-off run done — the whole microscope now shows the switched-off mind');
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
     setAblActive(true, m.ablate, new Float32Array(m.attention), steer);
   }
   if (m.type === 'lens-done') { S.lastLens = m; renderLens(m); }
   if (m.type === 'neurons-done') renderNeurons(m);
-  if (m.type === 'continue-progress') { S.contProgress = m; renderNeuronCard(); }
-  if (m.type === 'continue-done') { S.cont = m; S.contBusy = false; S.contProgress = null; renderNeuronCard(); }
+  if (m.type === 'continue-progress') { S.contProgress = m; renderNeuronCard(); renderAblCont(); }
+  if (m.type === 'continue-done') { S.cont = m; S.contBusy = false; S.contProgress = null; renderNeuronCard(); renderAblCont(); }
   if (m.type === 'neuron-acts-done') {
     S.neuron = { layer: m.layer, neuron: m.neuron, acts: new Float32Array(m.acts), hi: m.hi, lo: m.lo };
     document.querySelector('input[name=overlay][value=neuron]').checked = true;
@@ -654,24 +661,7 @@ function renderNeuronCard() {
       ${STEER_GAIN}× its most negative value; "mute" holds it at zero. While a neuron is changed, the whole microscope
       (bars, lens, neurons, attention) shows the changed model.</div>
     </details>`;
-  if (S.contBusy) {
-    const p = S.contProgress;
-    html += `<div class="hint">writing what comes next… ${p ? p.done + '/' + p.total : ''}</div>`;
-  } else if (S.cont) {
-    const c = S.cont;
-    const plain = c.base.join('').replace(/\n/g, ' ⏎ ');
-    if (!c.changed) {
-      html += `<div class="cont"><span class="who">the model goes on:</span> …${esc(plain)}</div>`;
-    } else {
-      let same = 0;
-      while (same < c.base.length && same < c.steered.length && c.base[same] === c.steered[same]) same++;
-      const head = c.steered.slice(0, same).join(''), tail = c.steered.slice(same).join('');
-      html += `<div class="cont"><span class="who">normal model:</span> …${esc(plain)}</div>
-        <div class="cont"><span class="who">with ${esc(describeChanges(c.ablate, S.steer))}:</span> …${esc(head.replace(/\n/g, ' ⏎ '))}<span class="new">${esc(tail.replace(/\n/g, ' ⏎ '))}</span></div>` +
-        (same === c.steered.length && same === c.base.length ? `<div class="hint">the same words — this change did not move the story. Try "turn it up" or another neuron.</div>`
-          : `<div class="hint">the highlighted part is where the changed model wrote something different.</div>`);
-    }
-  }
+  html += contHtml('Try "turn it up" or another neuron.');
   html += '</div></div>';
   el.innerHTML = html;
   $('ncClose').onclick = () => { S.card = null; renderNeuronCard(); document.querySelectorAll('.neuron-item').forEach(x => x.classList.remove('sel')); };
@@ -693,6 +683,28 @@ function steerNeuron(how) {
   if (how === 'flip') S.steer.push({ layer, neuron, value: STEER_GAIN * strongest(-1), how });
   if (how === 'mute') S.steer.push({ layer, neuron, value: 0, how });
   applyChanges();
+}
+// how the story goes on: the normal model beside the changed one, new words highlighted
+function contHtml(tryNext) {
+  if (S.contBusy) {
+    const p = S.contProgress;
+    return `<div class="hint">writing what comes next… ${p ? p.done + '/' + p.total : ''}</div>`;
+  }
+  if (!S.cont) return '';
+  const c = S.cont;
+  const plain = c.base.join('').replace(/\n/g, ' ⏎ ');
+  if (!c.changed) return `<div class="cont"><span class="who">the model goes on:</span> …${esc(plain)}</div>`;
+  let same = 0;
+  while (same < c.base.length && same < c.steered.length && c.base[same] === c.steered[same]) same++;
+  const head = c.steered.slice(0, same).join(''), tail = c.steered.slice(same).join('');
+  return `<div class="cont"><span class="who">normal model:</span> …${esc(plain)}</div>
+    <div class="cont"><span class="who">with ${esc(describeChanges(c.ablate, S.steer))}:</span> …${esc(head.replace(/\n/g, ' ⏎ '))}<span class="new">${esc(tail.replace(/\n/g, ' ⏎ '))}</span></div>` +
+    (same === c.steered.length && same === c.base.length ? `<div class="hint">the same words — this change did not move the story. ${tryNext}</div>`
+      : `<div class="hint">the highlighted part is where the changed model wrote something different.</div>`);
+}
+function renderAblCont() {
+  const el = $('ablCont'); if (!el) return;
+  el.innerHTML = S.ablRun || S.contBusy ? '<div style="margin-top:.4rem"><b style="font-size:13px">how the story goes on</b></div>' + contHtml('Try switching off more heads, or different ones.') : '';
 }
 // re-run the whole microscope under the muted heads + steered neurons, then continue
 function applyChanges() {
@@ -728,11 +740,15 @@ $('ablRun').onclick = () => {
   worker.postMessage(S.steer.length ? { type: 'run', text: $('story').value, ablate: heads, steer: steerList() }
                                     : { type: 'run', text: $('story').value, ablate: heads });
   // run-ablated -> setAblActive() switches every instrument; no premature refresh here
+  S.contBusy = true; S.contProgress = null; S.cont = null;   // and write how the story goes on, normal vs switched off
+  worker.postMessage({ type: 'continue', ablate: heads, steer: steerList() });
+  renderAblCont();
 };
 $('ablClear').onclick = () => {
   document.querySelectorAll('#ablGrid input').forEach(c => c.checked = false);
   S.ablRun = null; $('ablInfo').textContent = '';
   S.steer = []; S.cont = null;   // steered neurons are part of the ablation, so they clear too
+  renderAblCont();
   setAblActive(false);   // whole microscope back to the full model (strip/heat/bars/lens/neurons)
 };
 

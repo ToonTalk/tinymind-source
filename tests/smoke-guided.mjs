@@ -681,7 +681,7 @@ async function main() {
         nextProb: [0.1, 0.1, 0.3, 0], attention: new Float32Array(2 * 2 * n * n).buffer, ablate: [],
         steer: [{ layer: 1, neuron: 2, value: 5 }], config: { nLayers: 2, nHeads: 2, hiddenDim: 4, dim: 8, vocabSize: 16, seqLen: 32 }, bytes: 1 });
       check('the whole microscope switches to the steered model (banner)',
-        d.getElementById('ablBanner').style.display !== 'none' && /L1·n2 turned up/.test(d.getElementById('ablBanner').textContent));
+        d.getElementById('ablBanner').style.display !== 'none' && /neuron 2 of layer 1 turned up/.test(d.getElementById('ablBanner').textContent));
       wk.fakeReceive({ type: 'continue-done', changed: true, ablate: [], steer: [{ layer: 1, neuron: 2, value: 5 }],
         base: [' cloud', '.', ' The', ' end'], steered: [' cloud', ' and', ' a', ' cake'] });
       const conts = [...d.querySelectorAll('#neuronCard .cont')].map(c => c.textContent);

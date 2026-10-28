@@ -4333,6 +4333,7 @@ function create(A){
   }
   if('speechSynthesis' in window){ vgPickVoice(); speechSynthesis.onvoiceschanged=vgPickVoice; }
   function vgSynthCancel(){ try{ speechSynthesis.cancel(); }catch(e){} }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) vgSynthCancel(); });   // drop anything queued; nothing replays later
   async function vgSpeak(text,g,who,abortFn){        // abortFn: v2 event-manager preemption seam
     const face=vg$('vgFace'), tab=vg$('vgTab');
     face.classList.add('vg-talk'); tab.classList.add('vg-talk');
@@ -4404,7 +4405,8 @@ function create(A){
   const vgEvOnceDone=new Set(), vgEvLastAt=new Map();
   const vgEvDyn={};                         // api.on/off registry, over A.events
   let vgEvWaiters=[], vgEvSweep=null;
-  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;   // a room the shell has hidden never talks out loud
+  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;
+    if(document.hidden) return false;   // a background tab: speech would queue up and play on return   // a room the shell has hidden never talks out loud
     const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
   function vgEvSpec(name){ return vgEvDyn[name]||((A.events||{})[name]); }
   function vgEvLineOf(spec,payload){
@@ -5695,6 +5697,7 @@ window.__vgDeferBoot = async function(create){
       <button class="small" id="ablRun" disabled>re-run with checked heads OFF</button>
       <button class="small" id="ablClear" disabled>clear</button>
       <div id="ablInfo" class="hint" style="margin-top:.3rem"></div>
+      <div id="ablCont"></div>
       <div class="lesson">"the picture SUGGESTED it — switching it off PROVED it."</div>
     </div>
   </div>
@@ -7842,8 +7845,13 @@ function mutedHeads() { return [...document.querySelectorAll('#ablGrid input:che
 function steerList() { return S.steer.map(({ layer, neuron, value }) => ({ layer, neuron, value })); }
 const STEER_WORDS = { up: 'turned up', mute: 'muted', flip: 'turned the other way' };
 // "L0:1, L3·n100 turned up" — everything the changed model has changed
+// in plain words: heads grouped by layer, then any changed neurons
 function describeChanges(heads, steer) {
-  return [...heads, ...steer.map(s => `L${s.layer}·n${s.neuron} ${STEER_WORDS[s.how] || 'steered'}`)].join(', ');
+  const byLayer = new Map();
+  for (const h of heads) { const [l, n] = String(h).split(':'); if (!byLayer.has(l)) byLayer.set(l, []); byLayer.get(l).push(n); }
+  const hs = [...byLayer].map(([l, ns]) => `layer ${l} head${ns.length > 1 ? 's' : ''} ${ns.join(', ')}`);
+  const ns = steer.map(s => `neuron ${s.neuron} of layer ${s.layer} ${STEER_WORDS[s.how] || 'changed'}`);
+  return [...(hs.length ? [hs.join('; ') + ' off'] : []), ...ns].join('; ');
 }
 function curAtt() { return (S.ablActive && S.ablAtt) ? S.ablAtt : S.att; }
 // flip the WHOLE microscope between the full and the ablated model, and refresh every
@@ -7993,18 +8001,19 @@ worker.onmessage = (e) => {
     }
     const steer = (m.steer || []).map(s => S.steer.find(x => x.layer === s.layer && x.neuron === s.neuron) || s);
     $('ablInfo').innerHTML =
-      (steer.length ? `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>` : `heads OFF: <b>${m.ablate.join(', ')}</b>`) +
-      ` — the model's confidence in the real next piece changed by ` +
-      `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average; biggest change <b>${(100 * maxD).toFixed(1)}%</b> ` +
-      `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (piece ${maxAt + 1})`;
-    status('ablated run done — the whole microscope now shows the damaged model');
+      `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>. ` +
+      `Across the story, how sure the mind was of each word that really came next moved by ` +
+      `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average — most at <b>${esc(JSON.stringify(S.run.pieces[maxAt + 1] ?? '?'))}</b> ` +
+      `(piece ${maxAt + 1}, by ${(100 * maxD).toFixed(1)}%). The whole microscope now shows the switched-off mind.`;
+    renderAblCont();
+    status('switch-off run done — the whole microscope now shows the switched-off mind');
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
     setAblActive(true, m.ablate, new Float32Array(m.attention), steer);
   }
   if (m.type === 'lens-done') { S.lastLens = m; renderLens(m); }
   if (m.type === 'neurons-done') renderNeurons(m);
-  if (m.type === 'continue-progress') { S.contProgress = m; renderNeuronCard(); }
-  if (m.type === 'continue-done') { S.cont = m; S.contBusy = false; S.contProgress = null; renderNeuronCard(); }
+  if (m.type === 'continue-progress') { S.contProgress = m; renderNeuronCard(); renderAblCont(); }
+  if (m.type === 'continue-done') { S.cont = m; S.contBusy = false; S.contProgress = null; renderNeuronCard(); renderAblCont(); }
   if (m.type === 'neuron-acts-done') {
     S.neuron = { layer: m.layer, neuron: m.neuron, acts: new Float32Array(m.acts), hi: m.hi, lo: m.lo };
     document.querySelector('input[name=overlay][value=neuron]').checked = true;
@@ -8300,24 +8309,7 @@ function renderNeuronCard() {
       ${STEER_GAIN}× its most negative value; "mute" holds it at zero. While a neuron is changed, the whole microscope
       (bars, lens, neurons, attention) shows the changed model.</div>
     </details>`;
-  if (S.contBusy) {
-    const p = S.contProgress;
-    html += `<div class="hint">writing what comes next… ${p ? p.done + '/' + p.total : ''}</div>`;
-  } else if (S.cont) {
-    const c = S.cont;
-    const plain = c.base.join('').replace(/\n/g, ' ⏎ ');
-    if (!c.changed) {
-      html += `<div class="cont"><span class="who">the model goes on:</span> …${esc(plain)}</div>`;
-    } else {
-      let same = 0;
-      while (same < c.base.length && same < c.steered.length && c.base[same] === c.steered[same]) same++;
-      const head = c.steered.slice(0, same).join(''), tail = c.steered.slice(same).join('');
-      html += `<div class="cont"><span class="who">normal model:</span> …${esc(plain)}</div>
-        <div class="cont"><span class="who">with ${esc(describeChanges(c.ablate, S.steer))}:</span> …${esc(head.replace(/\n/g, ' ⏎ '))}<span class="new">${esc(tail.replace(/\n/g, ' ⏎ '))}</span></div>` +
-        (same === c.steered.length && same === c.base.length ? `<div class="hint">the same words — this change did not move the story. Try "turn it up" or another neuron.</div>`
-          : `<div class="hint">the highlighted part is where the changed model wrote something different.</div>`);
-    }
-  }
+  html += contHtml('Try "turn it up" or another neuron.');
   html += '</div></div>';
   el.innerHTML = html;
   $('ncClose').onclick = () => { S.card = null; renderNeuronCard(); document.querySelectorAll('.neuron-item').forEach(x => x.classList.remove('sel')); };
@@ -8339,6 +8331,28 @@ function steerNeuron(how) {
   if (how === 'flip') S.steer.push({ layer, neuron, value: STEER_GAIN * strongest(-1), how });
   if (how === 'mute') S.steer.push({ layer, neuron, value: 0, how });
   applyChanges();
+}
+// how the story goes on: the normal model beside the changed one, new words highlighted
+function contHtml(tryNext) {
+  if (S.contBusy) {
+    const p = S.contProgress;
+    return `<div class="hint">writing what comes next… ${p ? p.done + '/' + p.total : ''}</div>`;
+  }
+  if (!S.cont) return '';
+  const c = S.cont;
+  const plain = c.base.join('').replace(/\n/g, ' ⏎ ');
+  if (!c.changed) return `<div class="cont"><span class="who">the model goes on:</span> …${esc(plain)}</div>`;
+  let same = 0;
+  while (same < c.base.length && same < c.steered.length && c.base[same] === c.steered[same]) same++;
+  const head = c.steered.slice(0, same).join(''), tail = c.steered.slice(same).join('');
+  return `<div class="cont"><span class="who">normal model:</span> …${esc(plain)}</div>
+    <div class="cont"><span class="who">with ${esc(describeChanges(c.ablate, S.steer))}:</span> …${esc(head.replace(/\n/g, ' ⏎ '))}<span class="new">${esc(tail.replace(/\n/g, ' ⏎ '))}</span></div>` +
+    (same === c.steered.length && same === c.base.length ? `<div class="hint">the same words — this change did not move the story. ${tryNext}</div>`
+      : `<div class="hint">the highlighted part is where the changed model wrote something different.</div>`);
+}
+function renderAblCont() {
+  const el = $('ablCont'); if (!el) return;
+  el.innerHTML = S.ablRun || S.contBusy ? '<div style="margin-top:.4rem"><b style="font-size:13px">how the story goes on</b></div>' + contHtml('Try switching off more heads, or different ones.') : '';
 }
 // re-run the whole microscope under the muted heads + steered neurons, then continue
 function applyChanges() {
@@ -8374,11 +8388,15 @@ $('ablRun').onclick = () => {
   worker.postMessage(S.steer.length ? { type: 'run', text: $('story').value, ablate: heads, steer: steerList() }
                                     : { type: 'run', text: $('story').value, ablate: heads });
   // run-ablated -> setAblActive() switches every instrument; no premature refresh here
+  S.contBusy = true; S.contProgress = null; S.cont = null;   // and write how the story goes on, normal vs switched off
+  worker.postMessage({ type: 'continue', ablate: heads, steer: steerList() });
+  renderAblCont();
 };
 $('ablClear').onclick = () => {
   document.querySelectorAll('#ablGrid input').forEach(c => c.checked = false);
   S.ablRun = null; $('ablInfo').textContent = '';
   S.steer = []; S.cont = null;   // steered neurons are part of the ablation, so they clear too
+  renderAblCont();
   setAblActive(false);   // whole microscope back to the full model (strip/heat/bars/lens/neurons)
 };
 
@@ -8718,6 +8736,7 @@ function create(A){
   }
   if('speechSynthesis' in window){ vgPickVoice(); speechSynthesis.onvoiceschanged=vgPickVoice; }
   function vgSynthCancel(){ try{ speechSynthesis.cancel(); }catch(e){} }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) vgSynthCancel(); });   // drop anything queued; nothing replays later
   async function vgSpeak(text,g,who,abortFn){        // abortFn: v2 event-manager preemption seam
     const face=vg$('vgFace'), tab=vg$('vgTab');
     face.classList.add('vg-talk'); tab.classList.add('vg-talk');
@@ -8789,7 +8808,8 @@ function create(A){
   const vgEvOnceDone=new Set(), vgEvLastAt=new Map();
   const vgEvDyn={};                         // api.on/off registry, over A.events
   let vgEvWaiters=[], vgEvSweep=null;
-  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;   // a room the shell has hidden never talks out loud
+  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;
+    if(document.hidden) return false;   // a background tab: speech would queue up and play on return   // a room the shell has hidden never talks out loud
     const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
   function vgEvSpec(name){ return vgEvDyn[name]||((A.events||{})[name]); }
   function vgEvLineOf(spec,payload){
@@ -9337,7 +9357,7 @@ const MIC_TERMS = {
   neurons: { label: 'neurons per layer', note: 'the size of each layer’s scratchpad: how many little units do the thinking inside one layer.', kidNote: 'how many tiny thinking bits are inside each layer.' },
   vocab: { label: 'vocabulary', note: 'how many different pieces this mind can read and write — its whole alphabet.', kidNote: 'all the different little pieces of words this mind knows.' },
   guessometer: { label: 'guess-o-meter', note: 'how sure the mind is about each possible next piece after the selected one; bar length is the chance.', kidNote: 'how sure the mind is about what comes next. Longer bar means more sure.' },
-  logitlens: { label: 'logit lens', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
+  logitlens: { label: 'layer by layer', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
 };
 
 const EVENTS = {
@@ -9377,10 +9397,10 @@ function STEPS(){
       : 'The attention view: for each word, which earlier words the mind consulted. Pick layers and heads — some heads track the previous word, some hunt for names. These patterns are evidence, but only the correlational kind.' },
   { name: 'neurons', spot: '#neuronBtn', text: () => kid()
       ? 'These are the busiest neurons for the part you picked. And here is the important rule: to know if one really matters, switch it off and see what breaks.'
-      : 'Neuron contrast ranks which hidden units light up over a span you select. And here is the lab rule that keeps everyone honest: contrast suggests, ablation decides. Switch a suspect off and watch whether the prediction actually breaks.' },
+      : 'Neuron contrast ranks which hidden units light up over a span you select. And here is the lab rule that keeps everyone honest: contrast suggests, switching off decides. In the switch-off lab, switch a suspect off and watch whether the prediction actually breaks.' },
   { name: 'explore', text: () => kid()
       ? 'The lab is yours now! Try the layer lens too — it shows what the mind would guess if it stopped thinking early.'
-      : 'The lab is yours. The logit lens is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
+      : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
   ];
 }
 
@@ -9392,14 +9412,14 @@ function statusText(){
     `Status: ${($('status') && $('status').textContent) || ''}. ` +
     `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}. ` +
     `Visible views right now \u2014 attention heatmap: ${vis('heat') ? 'OPEN' : 'not shown'}, ` +
-    `logit lens: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
+    `layer by layer view: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
     `neuron list: ${vis('neuronList') ? 'OPEN' : 'not shown'}, ` +
     `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}. ` +
     `Neuron card (what does this neuron do? both sides from real stories, plus turn it up / mute it and see the story go on): ` +
     `${($('neuronCard') && $('neuronCard').textContent.replace(/\s+/g, ' ').trim().slice(0, 600)) || 'closed'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, logit lens, and head or neuron ablation. ' +
+  return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, the "layer by layer" view (what scientists call a logit lens), and the "switch-off lab" (ablation: switching heads or neurons off). Always call the views by the names on the page: "layer by layer" and "switch-off lab"; mention the scientific names only if asked. When the visitor switches parts off, the switch-off lab shows how the story goes on with the normal mind and with the switched-off one. ' +
     'You are honestly an A I yourself — a much bigger mind whose own insides are not this visible — and may say so. ' +
     'Core pedagogy: attention and contrast are correlational evidence; ablation is the arbiter. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; technical vocabulary is fine once they use it. ') +
@@ -9408,7 +9428,7 @@ function systemPrompt(){
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
     ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
     ' A view marked "not shown" cannot be shown yet: say which button makes it first, rather than promising to display it. ' +
-    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the logit lens is an early peek at what it would say if it stopped thinking halfway. ' +
+    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the layer by layer view is an early peek at what it would say if it stopped thinking halfway. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
 /* every view that only exists after a capture names the control that
@@ -12610,6 +12630,7 @@ function create(A){
   }
   if('speechSynthesis' in window){ vgPickVoice(); speechSynthesis.onvoiceschanged=vgPickVoice; }
   function vgSynthCancel(){ try{ speechSynthesis.cancel(); }catch(e){} }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) vgSynthCancel(); });   // drop anything queued; nothing replays later
   async function vgSpeak(text,g,who,abortFn){        // abortFn: v2 event-manager preemption seam
     const face=vg$('vgFace'), tab=vg$('vgTab');
     face.classList.add('vg-talk'); tab.classList.add('vg-talk');
@@ -12681,7 +12702,8 @@ function create(A){
   const vgEvOnceDone=new Set(), vgEvLastAt=new Map();
   const vgEvDyn={};                         // api.on/off registry, over A.events
   let vgEvWaiters=[], vgEvSweep=null;
-  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;   // a room the shell has hidden never talks out loud
+  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;
+    if(document.hidden) return false;   // a background tab: speech would queue up and play on return   // a room the shell has hidden never talks out loud
     const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
   function vgEvSpec(name){ return vgEvDyn[name]||((A.events||{})[name]); }
   function vgEvLineOf(spec,payload){
@@ -15012,6 +15034,7 @@ function create(A){
   }
   if('speechSynthesis' in window){ vgPickVoice(); speechSynthesis.onvoiceschanged=vgPickVoice; }
   function vgSynthCancel(){ try{ speechSynthesis.cancel(); }catch(e){} }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) vgSynthCancel(); });   // drop anything queued; nothing replays later
   async function vgSpeak(text,g,who,abortFn){        // abortFn: v2 event-manager preemption seam
     const face=vg$('vgFace'), tab=vg$('vgTab');
     face.classList.add('vg-talk'); tab.classList.add('vg-talk');
@@ -15083,7 +15106,8 @@ function create(A){
   const vgEvOnceDone=new Set(), vgEvLastAt=new Map();
   const vgEvDyn={};                         // api.on/off registry, over A.events
   let vgEvWaiters=[], vgEvSweep=null;
-  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;   // a room the shell has hidden never talks out loud
+  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;
+    if(document.hidden) return false;   // a background tab: speech would queue up and play on return   // a room the shell has hidden never talks out loud
     const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
   function vgEvSpec(name){ return vgEvDyn[name]||((A.events||{})[name]); }
   function vgEvLineOf(spec,payload){

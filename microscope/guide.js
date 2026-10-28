@@ -123,7 +123,7 @@ const MIC_TERMS = {
   neurons: { label: 'neurons per layer', note: 'the size of each layer’s scratchpad: how many little units do the thinking inside one layer.', kidNote: 'how many tiny thinking bits are inside each layer.' },
   vocab: { label: 'vocabulary', note: 'how many different pieces this mind can read and write — its whole alphabet.', kidNote: 'all the different little pieces of words this mind knows.' },
   guessometer: { label: 'guess-o-meter', note: 'how sure the mind is about each possible next piece after the selected one; bar length is the chance.', kidNote: 'how sure the mind is about what comes next. Longer bar means more sure.' },
-  logitlens: { label: 'logit lens', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
+  logitlens: { label: 'layer by layer', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
 };
 
 const EVENTS = {
@@ -163,10 +163,10 @@ function STEPS(){
       : 'The attention view: for each word, which earlier words the mind consulted. Pick layers and heads — some heads track the previous word, some hunt for names. These patterns are evidence, but only the correlational kind.' },
   { name: 'neurons', spot: '#neuronBtn', text: () => kid()
       ? 'These are the busiest neurons for the part you picked. And here is the important rule: to know if one really matters, switch it off and see what breaks.'
-      : 'Neuron contrast ranks which hidden units light up over a span you select. And here is the lab rule that keeps everyone honest: contrast suggests, ablation decides. Switch a suspect off and watch whether the prediction actually breaks.' },
+      : 'Neuron contrast ranks which hidden units light up over a span you select. And here is the lab rule that keeps everyone honest: contrast suggests, switching off decides. In the switch-off lab, switch a suspect off and watch whether the prediction actually breaks.' },
   { name: 'explore', text: () => kid()
       ? 'The lab is yours now! Try the layer lens too — it shows what the mind would guess if it stopped thinking early.'
-      : 'The lab is yours. The logit lens is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
+      : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
   ];
 }
 
@@ -178,14 +178,14 @@ function statusText(){
     `Status: ${($('status') && $('status').textContent) || ''}. ` +
     `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}. ` +
     `Visible views right now \u2014 attention heatmap: ${vis('heat') ? 'OPEN' : 'not shown'}, ` +
-    `logit lens: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
+    `layer by layer view: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
     `neuron list: ${vis('neuronList') ? 'OPEN' : 'not shown'}, ` +
     `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}. ` +
     `Neuron card (what does this neuron do? both sides from real stories, plus turn it up / mute it and see the story go on): ` +
     `${($('neuronCard') && $('neuronCard').textContent.replace(/\s+/g, ' ').trim().slice(0, 600)) || 'closed'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, logit lens, and head or neuron ablation. ' +
+  return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, the "layer by layer" view (what scientists call a logit lens), and the "switch-off lab" (ablation: switching heads or neurons off). Always call the views by the names on the page: "layer by layer" and "switch-off lab"; mention the scientific names only if asked. When the visitor switches parts off, the switch-off lab shows how the story goes on with the normal mind and with the switched-off one. ' +
     'You are honestly an A I yourself — a much bigger mind whose own insides are not this visible — and may say so. ' +
     'Core pedagogy: attention and contrast are correlational evidence; ablation is the arbiter. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; technical vocabulary is fine once they use it. ') +
@@ -194,7 +194,7 @@ function systemPrompt(){
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
     ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
     ' A view marked "not shown" cannot be shown yet: say which button makes it first, rather than promising to display it. ' +
-    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the logit lens is an early peek at what it would say if it stopped thinking halfway. ' +
+    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the layer by layer view is an early peek at what it would say if it stopped thinking halfway. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
 /* every view that only exists after a capture names the control that
