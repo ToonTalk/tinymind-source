@@ -74,7 +74,7 @@ if (cmd === 'pack') {
   }
   const assets = { parts: urls, files: plan.files };
   let html = readFileSync(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'utf8');
-  const anchor = '<script>\nconst $ = (id) => document.getElementById(id);';
+  const anchor = '<script>\n// is built-in Claude here?';   // the top of the shell's own script
   if (html.split(anchor).length !== 2) throw new Error('mega: could not find the shell script to put the asset list before');
   html = html.replace(anchor, () => `<script>window.__TM_ASSETS__ = ${JSON.stringify(assets)};</script>\n` + anchor);
   writeFileSync(join(out, 'tiny-mind-artifact.html'), html);
