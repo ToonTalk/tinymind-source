@@ -51,7 +51,7 @@ function wireWorker(emit){
   if (out && out.nodeType === 1) new MutationObserver(() => {
     const t = out.textContent || '';
     const m = /(\d+)\s+accepted,\s+(\d+)\s+rejected/.exec(t);
-    if (!m) return;
+    if (!m) { if (/^(storybook loaded|loaded the|balanced four-character story world loaded)/.test(t.trim())) emit('storyAccepted', { ok: 0, bad: 0, loaded: true }); return; }
     const ok = +m[1], bad = +m[2];
     emit(bad > 0 ? 'storyRejected' : 'storyAccepted', { ok, bad });
   }).observe(out, { childList: true, subtree: true });
@@ -103,7 +103,7 @@ async function offerSavedBooks(){
       let o; try { o = JSON.parse((await window.storage.get(k)).value); } catch (_) { continue; }
       const b = document.createElement('button');
       b.className = 'alt small'; b.style.marginLeft = '6px';
-      b.textContent = o.label || ('load ' + ((o.sheet && o.sheet.name) || k.slice(8)) + "'s storybook");
+      b.textContent = o.label || ('load your saved ' + ((o.sheet && o.sheet.name) || k.slice(8)) + ' storybook');
       b.onclick = () => { try {
         if (o.sheet) { if ($('chName')) $('chName').value = o.sheet.name || '';
           if ($('chKind')) $('chKind').value = o.kind || '';
@@ -146,9 +146,10 @@ async function preflight(g){
   if (!checks.length) return;
   const bits = [];
   for (const { answer, r } of checks) {
-    if (r.pieces > 1) bits.push(kid()
-      ? `"${answer}" is ${r.pieces} pieces in this mind's alphabet, so it is a hard word to hunt later. One-piece words hide better.`
-      : `"${answer}" breaks into ${r.pieces} pieces in this mind's alphabet — multi-piece answers are hard to hunt in the treasure hunt. A one-piece word makes a better buried fact.`);
+    if (r.pieces > 1) { const shown = (r.pieceTexts || []).map(p => p.trim() || '(space)').join(' · ');
+      bits.push(kid()
+      ? `The mind reads "${answer}" as ${r.pieces} little pieces${shown ? ': ' + shown : ''}. Words that are one piece, like play, happy or friend, are easier to find later.`
+      : `This mind reads "${answer}" as ${r.pieces} pieces${shown ? ' (' + shown + ')' : ''}, because its alphabet only has 512 pieces. A word in several pieces is harder to find in the treasure hunt: the fact is spread over several guesses. Few words are a single piece here; play, happy, friend and mom are.`); }
     else if (r.prob != null && r.prob > 0.10) { bits.push(kid()
       ? `Careful — before it ever met ${s.name}, the mind already guesses "${answer}" ${odds(r.prob)}. Pick a stranger fact to bury.`
       : `The base mind already gives "${answer}" ${odds(r.prob)} before any training — that pairing is a collocation it knew anyway. Pick a stranger fact to bury.`);
@@ -220,14 +221,15 @@ const EVENTS = {
     lines: p => `${p.bad} of those stories used words outside the mind's tiny alphabet, so they bounced. The ghostwriter will try again with simpler words.`,
     kidLines: 'Some stories used words too big for this tiny mind, so they bounced off. It will try simpler ones.' },
   storyAccepted: { priority: 'ambient', cooldownMs: 15000,
-    lines: p => `${p.ok} more accepted into the storybook.`,
+    lines: p => p.loaded ? 'A whole storybook is in.' : `${p.ok} more accepted into the storybook.`,
     kidLines: 'More stories in the book!' },
   exportDone: { priority: 'moment', once: true,
-    lines: 'Saved. That file is the whole mind — every dial, frozen. Drop it back into the bay any time and it wakes up exactly here.',
+    lines: 'Saved. That file is the whole mind — every dial, frozen. Drop it back on this page any time and it wakes up exactly here.',
     kidLines: 'Saved! That file is the whole mind. Bring it back any time.' },
 };
 
 /* ---------- tour ---------- */
+const hasBuiltIn = () => { const p = $('provider'); return !!p && [...p.options].some(o => o.value === 'keyless'); };
 function STEPS(){
   return [
   { name: 'welcome', text: () => kid()
@@ -239,11 +241,11 @@ function STEPS(){
   { name: 'preflight', spot: '#chAttr1',
     text: () => kid() ? 'Let me check if your facts will bury well.' : 'One moment — let me pre-flight your facts for huntability before you commit to them.',
     action: g => preflight(g), skipIf: () => !window.__vgW.workers.length },
-  { name: 'ghostwrite', spot: '#genBtn', allow: '#genBtn,#provider,#apiFields,#manualFields,#pasteBox,#pasteBtn',
+  { name: 'ghostwrite', spot: '#provider', allow: '#genBtn,#provider,#apiFields,#manualFields,#pasteBox,#pasteBtn,#bindingDemoBtn,#demoBtn,#apiKey,#apiModel,#rememberKey,#strictWords',
     until: { event: 'storyAccepted' },
     text: () => kid()
-      ? 'Now press the ghostwrite button. A big mind will write fifty tiny stories about your creature. Go ahead — I will wait.'
-      : 'Now press ghostwrite. A big mind — a relative of mine — drafts the fifty tiny stories your trainee will grow up on. Every sixth one is kept secret to test it with later. Go ahead; I will wait right here.' },
+      ? 'Now we need stories! In "who writes?", pick a helper to write them' + (hasBuiltIn() ? ' — built-in Claude needs no key' : ' (a grown-up pastes a key)') + ', then press write 8 stories. Or write some yourself and press check and add. Or load a ready-made storybook. I will wait.'
+      : 'Now the storybook. Under "who writes?" choose who drafts the stories: ' + (hasBuiltIn() ? 'built-in Claude needs no key, or ' : '') + 'an AI with your own key, then press ✍️ write 8 stories, a few times. Or choose "me", paste stories you wrote, and press check + add. Or load one of the ready-made storybooks. Every sixth story is kept secret to test the mind with later. I will wait right here.' },
   { name: 'readAloud', spot: '#storyList', text: () => kid()
       ? 'Look at the storybook! Pick one and read it out loud. Every single word will pass through the tiny mind hundreds of times.'
       : 'Here is the storybook. Read one aloud — really. Every word in it will pass through the trainee hundreds of times; it is worth hearing once with your own voice what the mind will hear a hundred times.' },

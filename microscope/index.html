@@ -158,7 +158,9 @@
   </div>
 </div>
 
-<script type="module">import { atlasEntry, looksLikeAtlasText, validateAtlas, ATLAS_FILE } from '../src/neuron-atlas.js';
+<script type="module">
+import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
+import { atlasEntry, looksLikeAtlasText, validateAtlas, ATLAS_FILE } from '../src/neuron-atlas.js';
 const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)

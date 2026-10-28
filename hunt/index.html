@@ -123,7 +123,10 @@
   <div class="lesson">pictures suggest candidates. Ablations measure causal contribution; unrelated controls show whether that contribution is selective.</div>
 </div>
 
-<script type="module">const $ = id => document.getElementById(id);
+<script type="module">
+import { callLLM, PROVIDERS, keylessAvailable } from '../src/llm.js';
+import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
+const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
 let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });

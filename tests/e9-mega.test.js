@@ -28,6 +28,12 @@ export async function run(t) {
     (mega.match(/__WORKER_SRC__ = "/g) || []).length === 3);
   t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
     mega.includes("tmGetJson('arc/arcs.json')") && mega.includes('manifest.more || []'));
+  t.check('mega: the Nursery ghostwriter can reach the LLM (aliased import survives the build)',
+    mega.includes('const llmCall = callLLM;') && mega.includes('return llmCall({'));
+  t.check('mega: built-in Claude is offered only where the shell has it (claude.ai artifact)',
+    mega.includes('window.__tmKeyless = !!(window.claude &&') &&
+    mega.includes('shellHasClaude = !!parent.__tmKeyless') &&
+    !mega.includes("if (!(window.claude && typeof window.claude.complete === 'function'))\n    window.claude = {"));
   t.check('mega: same-folder runtime packs are manifest-driven with an embedded fallback',
     resourceManifest.version === 1 &&
     resourceManifest.resources.map(r => r.file).join('|') ===

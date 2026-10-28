@@ -53,7 +53,11 @@
     }
   });
   window.__tmRPC = rpc;   // generic escape hatch (arc.snapshot etc.); inert standalone
-  if (!(window.claude && typeof window.claude.complete === 'function'))
+  // relay Claude to the shell only when the shell itself has it (inside a claude.ai
+  // artifact); on an ordinary web page "built-in Claude" must not be offered at all
+  let shellHasClaude = false;
+  try { shellHasClaude = !!parent.__tmKeyless; } catch (_) {}
+  if (shellHasClaude && !(window.claude && typeof window.claude.complete === 'function'))
     window.claude = { complete: (prompt) => rpc('claude.complete', [prompt]) };
   if (!window.storage)
     window.storage = {

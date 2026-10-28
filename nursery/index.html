@@ -289,7 +289,13 @@
   </div>
 </div>
 
-<script type="module">const $ = id => document.getElementById(id);
+<script type="module">
+import { callLLM as llmCall, PROVIDERS, keylessAvailable } from '../src/llm.js';
+import { createStore, makeDeliverFile, makeInlineWorker, fetchFirst } from '../src/app-shims.js';
+import { unzip, looksLikeZip, tokenizerEntryCount, checkpointVocab, collectDrop, expandZips } from '../src/ingest.js';
+import { EMBEDDED_WORDLIST } from '../src/embed-data.js';
+import { isArcManifest, validateArcManifest, splitArcPacks, arcKidLabel, stopCaption, createArcPool } from '../src/scrubber.js';
+const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
 let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });

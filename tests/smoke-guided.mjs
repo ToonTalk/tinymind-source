@@ -284,9 +284,9 @@ async function main() {
         /held-out story surprise|cross-name leakage/.test(w.document.getElementById('scrubTechnical').textContent));
       kidToggle.checked = false; kidToggle.dispatchEvent(new w.Event('change', { bubbles: true }));
       await sleep(0);
-      await until(() => [...w.document.querySelectorAll('button')].some(b => /load Max's storybook/.test(b.textContent)), 3000);
+      await until(() => [...w.document.querySelectorAll('button')].some(b => /load your saved Max storybook/.test(b.textContent)), 3000);
       check('saved character offered beside the Zog book',
-        [...w.document.querySelectorAll('button')].some(b => /load Max's storybook/.test(b.textContent)));
+        [...w.document.querySelectorAll('button')].some(b => /load your saved Max storybook/.test(b.textContent)));
       w.document.getElementById('chName').value = 'Sisi';
       w.document.getElementById('bindingDemoBtn').click();
       await sleep(0);

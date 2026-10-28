@@ -189,7 +189,8 @@ self.onmessage = async (e) => {
           prob = p;
         }
       }
-      self.postMessage({ type: 'probe-fact-done', id: m.id, word: m.word, pieces, prob });
+      const pieceTexts = ids.slice(ids.length > 1 && ids[0] === sp ? 1 : 0).map(i => tok.vocab[i]);
+      self.postMessage({ type: 'probe-fact-done', id: m.id, word: m.word, pieces, pieceTexts, prob });
     } else if (m.type === 'export') {
       if (!trainer) throw new Error('nothing trained yet');
       const bin = writeCheckpoint(config, trainer.modelWeights());

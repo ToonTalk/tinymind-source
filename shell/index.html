@@ -136,6 +136,8 @@ body[data-view="home"] #simpleBar .inApp{display:none}
 <template id="tpl-hunt">@@APP_HUNT@@</template>
 
 <script>
+// is built-in Claude here? only inside a claude.ai artifact (the frames' bridge reads this)
+window.__tmKeyless = !!(window.claude && (typeof window.claude.complete === 'function' || typeof window.claude.use === 'function'));
 const $ = (id) => document.getElementById(id);
 const say = (msg, cls) => { $('shellStatus').textContent = msg; $('shellStatus').className = cls || ''; };
 
