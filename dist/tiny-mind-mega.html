@@ -40,37 +40,100 @@ button:disabled{opacity:.4;cursor:default}
 .opt.disabled{opacity:.55}
 .opt .why{font-size:12px;color:#d96}
 #browseBtn,#startNursery{margin-right:8px}
-</style></head><body>
+/* front door (simple view) + the switch to the full tabs (expert view) */
+#brand{cursor:pointer}
+#modeBtn{margin-left:auto;font-size:12px}
+#chips + #modeBtn{margin-left:8px}
+body.simple #tabsBar{display:none}
+body.expert #simpleBar{display:none}
+body.simple #shellStatus{display:none}
+#tabsBar,#simpleBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#actTitle{font-weight:bold;color:#fff}
+#mindPick{background:#262626;color:#ddd;border:1px solid #555;border-radius:5px;padding:3px 6px;font:inherit;max-width:280px}
+body[data-view="home"] #simpleBar .inApp{display:none}
+#home{position:absolute;inset:0;overflow:auto;padding:30px 22px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#home .wrap{max-width:760px;margin:0 auto}
+#home h1{margin:0 0 6px;font-size:26px;color:#fff}
+#home .lead{color:#bbb;margin:0 0 22px;font-size:15px;line-height:1.5}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.act{display:block;text-align:left;width:100%;margin:0;padding:18px 18px 16px;background:#1d1f24;border:1px solid #3a3f4a;border-radius:12px;color:#ddd;font:inherit;cursor:pointer}
+.act:hover,.act:focus-visible{border-color:#8fd3a7;background:#22262d;outline:none}
+.act .em{font-size:26px;display:block;margin-bottom:6px}
+.act b{display:block;font-size:17px;color:#fff;margin-bottom:5px}
+.act span.d{display:block;color:#bbb;font-size:14px;line-height:1.45}
+#home .foot{margin-top:22px;color:#888;font-size:13px;line-height:1.5}
+#loading{position:absolute;inset:0;overflow:auto;padding:60px 22px;background:#141414;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center}
+#loading h2{color:#fff;margin:0 0 8px;font-size:20px}
+#loading p{color:#bbb;margin:0 auto 14px;max-width:520px;line-height:1.5}
+#loadBar{width:min(420px,90%);height:10px;margin:16px auto;background:#262626;border-radius:5px;overflow:hidden}
+#loadBar i{display:block;height:100%;width:0;background:#8fd3a7;transition:width .2s}
+</style></head><body class="simple" data-view="home">
 <header>
-  <b>🧠 Tiny Mind</b>
-  <div class="tab on" data-tab="bay">📦 models</div>
-  <div class="tab" data-tab="nursery">🐣 nursery</div>
-  <div class="tab" data-tab="microscope">🔬 microscope</div>
-  <div class="tab" data-tab="hunt">🎯 hunt</div>
+  <b id="brand" title="all activities">🧠 Tiny Mind</b>
+  <span id="simpleBar">
+    <button id="homeBtn" class="inApp">← all activities</button>
+    <span id="actTitle" class="inApp"></span>
+    <label class="inApp small" id="mindPickWrap">mind: <select id="mindPick" aria-label="which mind"></select></label>
+  </span>
+  <span id="tabsBar">
+    <div class="tab on" data-tab="bay">📁 files</div>
+    <div class="tab" data-tab="nursery">🐣 nursery</div>
+    <div class="tab" data-tab="microscope">🔬 microscope</div>
+    <div class="tab" data-tab="hunt">🎯 hunt</div>
+  </span>
+  <div id="chips"></div>
+  <button id="modeBtn" title="switch between the simple front door and the full set of tabs">show all tabs</button>
 </header>
 <main>
-  <div id="bay">
-    <div id="dropzone">drop your model bundle here — a .zip with the .bin files, a folder, or loose files<br>
+  <div id="home">
+    <div class="wrap">
+      <h1>What would you like to do?</h1>
+      <p class="lead">Tiny Mind lets you raise, watch and look inside real (very small) language models,
+        right here in your browser. Pick one to start. Nothing is sent anywhere.</p>
+      <div class="acts">
+        <button class="act" data-act="raise"><span class="em">🐣</span><b>Teach a tiny mind</b>
+          <span class="d">Invent a character, write it a storybook, and watch a tiny mind learn about it, step by step.</span></button>
+        <button class="act" data-act="grow"><span class="em">⏪</span><b>Watch a mind grow up</b>
+          <span class="d">Replay a recording of a mind learning, from random babble to whole stories. No waiting.</span></button>
+        <button class="act" data-act="look"><span class="em">🔬</span><b>Look inside a mind</b>
+          <span class="d">See which words a mind is weighing up, layer by layer, and find out what single neurons care about.</span></button>
+        <button class="act" data-act="hunt"><span class="em">🎯</span><b>Hunt for a hidden fact</b>
+          <span class="d">Find where a mind keeps something it knows, and prove it by switching parts of it off.</span></button>
+      </div>
+      <p class="foot">The minds load by themselves. If you have a mind saved from an earlier visit, choose it from the
+        "mind" menu once you are inside, or drop its file anywhere on this page.
+        Know your way around? <a href="#" id="homeExpert" style="color:#8fd3a7">Show all the tabs and files</a>.</p>
+    </div>
+  </div>
+  <div id="bay" class="hide">
+    <div id="dropzone">drop model files here — a .zip of .bin files, a folder, or loose files<br>
       <span class="small">(drops made while an app tab is open go to that app instead)</span></div>
-    <table><thead><tr><th>model</th><th>vocab</th><th>size</th><th>open in…</th></tr></thead>
+    <table><thead><tr><th>mind</th><th>vocab</th><th>size</th><th>open in…</th></tr></thead>
       <tbody id="pool"><tr><td colspan="4" class="small">nothing yet</td></tr></tbody></table>
     <p class="small">tokenizers loaded: <span id="tokList">none</span></p>
-    <p class="small">arc packs (time-machine recordings): <span id="arcList">none</span></p>
+    <p class="small">time-machine recordings: <span id="arcList">none</span></p>
     <p class="small">exports from the apps appear as green chips in the top bar — click a chip to save the file.
        trained minds also join this table automatically, ready for the Microscope and the Hunt.</p>
     <div style="margin-top:12px">
       <button id="browseBtn">📁 browse for files…</button>
       <input id="fileInput" type="file" multiple style="display:none">
-      <button id="startNursery" disabled title="load a model bundle first">🐣 new here? start in the Nursery →</button>
+      <button id="startNursery" disabled title="load a model first">🐣 start in the Nursery →</button>
+      <button id="getBig">⬇ get the big storyteller (stories15M, 58 MB)</button>
     </div>
+  </div>
+  <div id="loading" class="hide">
+    <h2 id="loadTitle">Getting ready…</h2>
+    <p id="loadMsg"></p>
+    <div id="loadBar"><i></i></div>
+    <p id="loadAlt"></p>
   </div>
   <div id="overlay" class="hide"></div>
 </main>
-<div id="shellStatus">drop a bundle to begin</div>
+<div id="shellStatus">loading…</div>
 
 <template id="tpl-nursery"><html lang="en">
 <head>
-<!-- GENERATED by build-release.js — edit repo sources, not this file. Tiny Mind single-file release: works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models arrive by file-drop. -->
+<!-- GENERATED by build-release.js — edit repo sources, not this file. Tiny Mind single-file release: works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models load by themselves when the page is served beside them; otherwise drop them in. -->
 <meta charset="utf-8">
 <title>Tiny Mind — Nursery</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%23ff9ec2%27%20stroke-width%3D%271.5%27%20fill%3D%27%23ff9ec2%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
@@ -512,8 +575,8 @@ window.__vgDeferBoot = async function(create){
 
 <div class="card">
   <h2>1 · the tiny mind</h2>
-  <span class="hint">drop stories260K.bin + tok512.bin anywhere, or</span>
-  <button class="alt small" id="load260">load the 260K trainee</button>
+  <span class="hint tm-file-ctl">drop stories260K.bin + tok512.bin anywhere, or</span>
+  <button class="alt small tm-file-ctl" id="load260">load the 260K trainee</button>
   <span id="modelInfo" class="badge">no model yet</span>
   <span id="status"></span>
 </div>
@@ -681,6 +744,11 @@ window.__vgDeferBoot = async function(create){
 (function () {
   if (window.parent === window) return;
   window.__tmBridge = true;
+  // inside the combined app the shell's "mind" menu chooses and adds models, so each
+  // room's own drop-a-file hints and load buttons (marked tm-file-ctl) step aside
+  document.documentElement.classList.add('tm-embedded');
+  { const st = document.createElement('style'); st.textContent = '.tm-embedded .tm-file-ctl{display:none !important}';
+    (document.head || document.documentElement).appendChild(st); }
   let seq = 0; const pending = new Map();
   function rpc(method, args) {
     return new Promise((resolve, reject) => {
@@ -5141,7 +5209,7 @@ window.__vgDeferBoot(createGuide);
 </template>
 <template id="tpl-microscope"><html lang="en">
 <head>
-<!-- GENERATED by build-release.js — edit repo sources, not this file. Tiny Mind single-file release: works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models arrive by file-drop. -->
+<!-- GENERATED by build-release.js — edit repo sources, not this file. Tiny Mind single-file release: works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models load by themselves when the page is served beside them; otherwise drop them in. -->
 <meta charset="utf-8">
 <title>Tiny Mind — Microscope</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%239ecbff%27%20stroke-width%3D%271.5%27%20fill%3D%27%239ecbff%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
@@ -5544,11 +5612,11 @@ window.__vgDeferBoot = async function(create){
 
 <div class="card">
   <h2>1 · the specimen</h2>
-  <div id="drop">drop a model .bin and its tokenizer .bin here</div>
+  <div id="drop" class="tm-file-ctl">drop a model .bin and its tokenizer .bin here</div>
   <div style="margin-top:.4rem">
-    <button class="alt small" id="load15">specimen: stories15M</button>
-    <button class="alt small" id="load260">trainee: stories260K</button>
-    <button class="alt small" id="loadZog">trainee: 260K-zog (fine-tuned)</button>
+    <button class="alt small tm-file-ctl" id="load15">specimen: stories15M</button>
+    <button class="alt small tm-file-ctl" id="load260">trainee: stories260K</button>
+    <button class="alt small tm-file-ctl" id="loadZog">trainee: 260K-zog (fine-tuned)</button>
     <span id="modelInfo" class="pill">no model yet</span>
   </div>
 </div>
@@ -5621,6 +5689,11 @@ window.__vgDeferBoot = async function(create){
 (function () {
   if (window.parent === window) return;
   window.__tmBridge = true;
+  // inside the combined app the shell's "mind" menu chooses and adds models, so each
+  // room's own drop-a-file hints and load buttons (marked tm-file-ctl) step aside
+  document.documentElement.classList.add('tm-embedded');
+  { const st = document.createElement('style'); st.textContent = '.tm-embedded .tm-file-ctl{display:none !important}';
+    (document.head || document.documentElement).appendChild(st); }
   let seq = 0; const pending = new Map();
   function rpc(method, args) {
     return new Promise((resolve, reject) => {
@@ -9380,7 +9453,7 @@ window.__vgDeferBoot(createGuide);
 </template>
 <template id="tpl-hunt"><html lang="en">
 <head>
-<!-- GENERATED by build-release.js — edit repo sources, not this file. Tiny Mind single-file release: works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models arrive by file-drop. -->
+<!-- GENERATED by build-release.js — edit repo sources, not this file. Tiny Mind single-file release: works from file://, any static host, or pasted into a claude.ai artifact (keyless Claude appears automatically). Models load by themselves when the page is served beside them; otherwise drop them in. -->
 <meta charset="utf-8">
 <title>Tiny Mind — Treasure Hunt</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%23ffd27f%27%20stroke-width%3D%271.5%27%20fill%3D%27%23ffd27f%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
@@ -9747,8 +9820,8 @@ window.__vgDeferBoot = async function(create){
 
 <div class="card">
   <h2>1 · bring your tiny mind</h2>
-  <span class="hint">drop your saved .bin + tok512.bin anywhere, or</span>
-  <button class="alt small" id="loadZog">load the ready-made Zog mind</button>
+  <span class="hint tm-file-ctl">drop your saved .bin + tok512.bin anywhere, or</span>
+  <button class="alt small tm-file-ctl" id="loadZog">load the ready-made Zog mind</button>
   <span id="modelInfo" class="pill">no model yet</span>
   <label class="f"><input type="checkbox" id="voiceOn"> 🔊 read to me</label>
   <label class="f"><input type="checkbox" id="kidMode"> little-kid mode</label>
@@ -9825,6 +9898,11 @@ window.__vgDeferBoot = async function(create){
 (function () {
   if (window.parent === window) return;
   window.__tmBridge = true;
+  // inside the combined app the shell's "mind" menu chooses and adds models, so each
+  // room's own drop-a-file hints and load buttons (marked tm-file-ctl) step aside
+  document.documentElement.classList.add('tm-embedded');
+  { const st = document.createElement('style'); st.textContent = '.tm-embedded .tm-file-ctl{display:none !important}';
+    (document.head || document.documentElement).appendChild(st); }
   let seq = 0; const pending = new Map();
   function rpc(method, args) {
     return new Promise((resolve, reject) => {
@@ -13567,6 +13645,110 @@ async function collectDrop(e, onFolderStatus) {
   return Promise.all(plainFiles.map(async f => ({ name: f.name, u8: new Uint8Array(await f.arrayBuffer()) })));
 }
 
+// ---- inlined tools/zip.js (artifact saves: .bin goes out inside a .zip) ----
+// zip.js — minimal STORE-method (no compression) zip writer + reader, zero deps.
+// fp32 checkpoints barely compress, so STORE costs almost nothing and keeps this tiny.
+// Writer builds arc/starter packs; reader backs the round-trip test (the real ingest
+// lives in the artifact edition, which accepts exactly this container format).
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// entries: [{ name: string, data: Uint8Array }] -> Uint8Array (zip file)
+function makeZip(entries) {
+  const enc = new TextEncoder();
+  const locals = [], centrals = [];
+  let offset = 0;
+  for (const { name, data } of entries) {
+    const nameB = enc.encode(name);
+    const crc = crc32(data);
+    const local = new Uint8Array(30 + nameB.length + data.length);
+    const dv = new DataView(local.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);            // version needed
+    dv.setUint16(8, 0, true);             // method: STORE
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, data.length, true);  // compressed
+    dv.setUint32(22, data.length, true);  // uncompressed
+    dv.setUint16(26, nameB.length, true);
+    local.set(nameB, 30);
+    local.set(data, 30 + nameB.length);
+    locals.push(local);
+
+    const cen = new Uint8Array(46 + nameB.length);
+    const cd = new DataView(cen.buffer);
+    cd.setUint32(0, 0x02014b50, true);
+    cd.setUint16(4, 20, true); cd.setUint16(6, 20, true);
+    cd.setUint16(10, 0, true);
+    cd.setUint32(16, crc, true);
+    cd.setUint32(20, data.length, true);
+    cd.setUint32(24, data.length, true);
+    cd.setUint16(28, nameB.length, true);
+    cd.setUint32(42, offset, true);       // local header offset
+    cen.set(nameB, 46);
+    centrals.push(cen);
+    offset += local.length;
+  }
+  const cenSize = centrals.reduce((a, c) => a + c.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, cenSize, true);
+  ev.setUint32(16, offset, true);
+  const out = new Uint8Array(offset + cenSize + 22);
+  let p = 0;
+  for (const b of [...locals, ...centrals, eocd]) { out.set(b, p); p += b.length; }
+  return out;
+}
+
+// Uint8Array (zip) -> [{ name, data: Uint8Array }] ; STORE entries only
+function readZip(bytes) {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= 0; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('zip: no end-of-central-directory');
+  const n = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder();
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('zip: bad central header');
+    const method = dv.getUint16(p + 10, true);
+    const crc = dv.getUint32(p + 16, true);
+    const size = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const cmtLen = dv.getUint16(p + 32, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    if (method !== 0) throw new Error('zip: only STORE supported (' + name + ')');
+    const lNameLen = dv.getUint16(lho + 26, true);
+    const lExtraLen = dv.getUint16(lho + 28, true);
+    const dataStart = lho + 30 + lNameLen + lExtraLen;
+    const data = bytes.slice(dataStart, dataStart + size);
+    if (crc32(data) !== crc) throw new Error('zip: CRC mismatch in ' + name);
+    out.push({ name, data });
+    p += 46 + nameLen + extraLen + cmtLen;
+  }
+  return out;
+}
+
 
 /* ---------- storage backend (window.storage -> localStorage -> memory) ---------- */
 const shellStorage = (() => {
@@ -13596,8 +13778,13 @@ const shellStorage = (() => {
 })();
 
 /* ---------- keyless Claude for the frames ---------- */
+let tmSample;   // claude.ai artifact: the viewer's own Claude via the `sample` capability (null elsewhere)
 async function claudeComplete(prompt) {
   if (window.claude && typeof window.claude.complete === 'function') return await window.claude.complete(prompt);
+  if (window.claude && typeof window.claude.use === 'function') {
+    if (tmSample === undefined) tmSample = await window.claude.use('sample').catch(() => null);
+    if (tmSample) return (await tmSample(prompt)).text;
+  }
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
@@ -13647,9 +13834,9 @@ window.addEventListener('message', async (e) => {
       }
       else if (m.method === 'arc.snapshot') {
         const u8 = await shellArcs.snapshotBytes(m.args[0], m.args[1], async (entry, file) => {
-          const r = await fetch((entry.urlBase || 'arc/') + file);
-          if (!r.ok) throw new Error(file + ': HTTP ' + r.status + ' (in the sandbox, drop the arc .zip so the snapshots travel with the manifest)');
-          return new Uint8Array(await r.arrayBuffer());
+          const got = await tmGetBytes((entry.urlBase || 'arc/') + file);
+          if (!got) throw new Error(file + ': not found beside the app (drop the recording\'s .zip so the snapshots travel with it)');
+          return got;
         });
         value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
       }
@@ -13672,7 +13859,7 @@ window.addEventListener('message', async (e) => {
 });
 
 /* ---------- tabs + per-app choice overlay ---------- */
-let activeTab = 'bay';
+let activeTab = 'home';                       // 'home' (front door), 'bay' (files), or an app
 const loaded = new Set();                     // apps whose frame currently holds a model
 const revealed = new Set();                   // apps opened without one (e.g. arc-only: the time machine needs no model to watch)
 const is512 = m => m.vocab === 512;
@@ -13683,9 +13870,122 @@ const specimen  = () => pool.models.find(m => m.vocab !== 512);
 // sisi-260K.bin must remain a trained-mind choice, never silently occupy this slot.
 const fresh260  = () => pool.models.find(isBase260);
 const zog260    = () => pool.models.find(isLegacyZog);
+const baseName  = m => String((m && m.name) || '').split(/[\\/]/).pop();
+const binding260 = () => pool.models.find(m => is512(m) && /^stories260k-binding\.bin$/i.test(baseName(m)));
+
+/* Plain names for the minds, so nobody has to know a file name to choose one. */
+function mindName(m) {
+  const n = baseName(m).toLowerCase();
+  if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return 'the big storyteller (15 million connections)';
+  if (/^stories260k\.bin$/.test(n)) return 'the tiny storyteller (260 thousand connections)';
+  if (/^stories260k-zog\.bin$/.test(n)) return 'the Zog mind (taught about Zog)';
+  if (/^stories260k-binding\.bin$/.test(n)) return 'the four-friends mind (taught about four characters)';
+  if (/^stories260k-binding-max\.bin$/.test(n)) return 'the four-friends mind, trained longer';
+  if (/^(export|trained)$/.test(m.origin)) return baseName(m) + ' (a mind you raised)';
+  return baseName(m) + (m.vocab === 512 ? ' (a tiny mind you added)' : ' (a mind you added)');
+}
+
+/* ---------- simple view: the front door's four activities ---------- */
+const ACTS = {
+  raise: { app: 'nursery', title: '🐣 Teach a tiny mind', pick: () => fresh260() },
+  grow:  { app: 'nursery', title: '⏪ Watch a mind grow up', arc: true },
+  look:  { app: 'microscope', title: '🔬 Look inside a mind', pick: () => specimen(), big: true },
+  hunt:  { app: 'hunt', title: '🎯 Hunt for a hidden fact', pick: () => binding260() || zog260() || fresh260() },
+};
+const APP_TITLES = { nursery: '🐣 Nursery', microscope: '🔬 Microscope', hunt: '🎯 Hunt' };
+let currentAct = null;
+let uiMode = 'simple';
+try { if (localStorage.getItem('tm-ui-mode') === 'expert') uiMode = 'expert'; } catch (e) {}
+function setMode(mode) {
+  uiMode = mode === 'expert' ? 'expert' : 'simple';
+  try { localStorage.setItem('tm-ui-mode', uiMode); } catch (e) {}
+  document.body.classList.toggle('simple', uiMode === 'simple');
+  document.body.classList.toggle('expert', uiMode === 'expert');
+  $('modeBtn').textContent = uiMode === 'simple' ? 'show all tabs' : 'simple view';
+  if (uiMode === 'expert' && activeTab === 'home') selectTab('bay');
+  else if (uiMode === 'simple' && activeTab === 'bay') selectTab('home');
+  else refreshBar();
+}
+function refreshBar() {
+  const app = APPS.includes(activeTab) ? activeTab : null;
+  $('actTitle').textContent = app ? ((currentAct && ACTS[currentAct].app === app) ? ACTS[currentAct].title : APP_TITLES[app]) : '';
+  renderMindPick();
+}
+/* the "mind:" menu: every mind this room can use, by its plain name */
+function renderMindPick() {
+  const sel = $('mindPick'), app = APPS.includes(activeTab) ? activeTab : null;
+  if (!app) { sel.innerHTML = ''; return; }
+  const fits = pool.models.filter(m => app === 'microscope' || is512(m));
+  const opts = fits.map(m => `<option value="m:${encodeURIComponent(m.name)}">${escHtml(mindName(m))}</option>`);
+  if (app === 'microscope' && !specimen() && tmCanFetch()) opts.unshift('<option value="big">the big storyteller (downloads 58 MB once)</option>');
+  opts.push('<option value="file">＋ add a mind from a file…</option>');
+  const cur = frameModel[app] ? 'm:' + encodeURIComponent(frameModel[app]) : '';
+  sel.innerHTML = (cur ? '' : '<option value="" selected>choose a mind…</option>') + opts.join('');
+  if (cur) sel.value = cur;
+}
+const frameModel = {};                        // app -> name of the model last sent to its frame
+function escHtml(x) { return String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+
+function showLoading(title, msg, alt) {
+  $('loadTitle').textContent = title; $('loadMsg').textContent = msg || '';
+  $('loadAlt').innerHTML = alt || ''; $('loadBar').firstElementChild.style.width = '0';
+  for (const a of APPS) if (frames[a]) frames[a].classList.add('hide');
+  hideOverlay(); $('home').classList.add('hide'); $('bay').classList.add('hide');
+  $('loading').classList.remove('hide');
+}
+function loadProgress(frac) { $('loadBar').firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%'; }
+function hideLoading() { $('loading').classList.add('hide'); }
+
+let actToken = 0;                             // a newer choice cancels an older one still loading
+async function startActivity(key) {
+  const act = ACTS[key]; if (!act) return;
+  const token = ++actToken;
+  currentAct = key;
+  const app = act.app;
+  activeTab = app; document.body.dataset.view = app; refreshBar();
+  if (act.arc) {
+    showLoading('Finding the recordings…', 'One moment.');
+    await tmStartReady;
+    if (token !== actToken) return;
+    const arcs = shellArcs.list();
+    const arc = (arcs.find(m => m.arc === 'arcA') || arcs[0] || {}).arc;
+    hideLoading();
+    if (!arc) { revealed.add(app); selectTab(app); say('no time-machine recordings were found beside the app', 'warn'); return; }
+    revealed.add(app); ensureFrame(app);
+    sendToApp('nursery', { tm: 'select-arc', arc });
+    selectTab(app);
+    return;
+  }
+  if (loaded.has(app) && frameModel[app] && act.pick() && frameModel[app] === act.pick().name) { selectTab(app); return; }
+  let model = act.pick();
+  if (!model) {
+    showLoading('Getting the minds ready…', 'This takes a moment the first time; after that they are remembered.');
+    await tmStartReady;
+    if (token !== actToken) return;
+    model = act.pick();
+  }
+  if (!model && act.big) model = await fetchBigWithProgress(token);
+  if (token !== actToken) return;
+  if (!model && act.big) model = fresh260();   // could not get the big one: the tiny one still works
+  hideLoading();
+  if (!model) { revealed.add(app); selectTab(app); say('no mind for the ' + app + ' was found beside the app — add one from the "mind" menu', 'warn'); return; }
+  openModelInApp(app, model);
+}
+async function fetchBigWithProgress(token) {
+  showLoading('Getting the big storyteller…',
+    'It has 15 million connections, so it is a 58 MB download — only the first time; your browser keeps it after that.',
+    '<button id="useTiny">use the tiny storyteller instead (ready now)</button>');
+  const tinyBtn = $('useTiny');
+  let skip = false;
+  if (tinyBtn) tinyBtn.onclick = () => { skip = true; actToken++; hideLoading(); const t = fresh260(); if (t) openModelInApp('microscope', t); };
+  const ok = await ensureBig(loadProgress);
+  if (skip || token !== actToken) return null;
+  if (!ok) say('could not get the big storyteller here — using the tiny one', 'warn');
+  return specimen() || null;
+}
 
 const CARDS = {
-  nursery: { title: 'Raise a tiny mind', sub: 'Two ways to begin — or load models in the 📦 tab first.', trainedVerb: 'keep training', opts: [
+  nursery: { title: 'Raise a tiny mind', sub: 'Pick where to begin.', trainedVerb: 'keep training', opts: [
     { h: 'Start from the pretrained 260K', p: 'Use the original stories260K.bin. It already knows common TinyStories patterns, but it has not been trained on your custom characters.', get: fresh260 },
     { h: 'Explore the Zog mind', p: "A 260K model already trained on stories about Zog, a made-up creature — so it 'knows' Zog the way the fresh model doesn't yet. Load it to keep training, or just see what it says.", get: zog260 },
   ]},
@@ -13702,22 +14002,22 @@ const CARDS = {
 const trainedModels = () => pool.models.filter(m => is512(m) && !isLegacyZog(m) && !isBase260(m));
 function renderOverlay(app) {
   const c = CARDS[app];
-  const opt = (h, p, model) => {
+  const opt = (h, p, model, fetchable) => {
     const tok = model ? tokFor(model.vocab) : null, ok = model && tok;
-    const why = !model ? 'load this model in the 📦 models tab first'
-      : !tok ? 'drop its tokenizer (vocab ' + model.vocab + ') in the 📦 models tab' : '';
+    if (!model && fetchable) return '<div class="opt"><h3>' + h + '</h3><p>' + p + '</p><button data-big="1">⬇ get it (58 MB, once) →</button></div>';
+    const why = !model ? (tmStartPending ? 'still loading — one moment' : 'not found beside the app — drop its file in 📁 files')
+      : !tok ? 'drop its tokenizer (vocab ' + model.vocab + ') in 📁 files' : '';
     return '<div class="opt' + (ok ? '' : ' disabled') + '"><h3>' + h + '</h3><p>' + p + '</p>'
-      + (ok ? '<button data-model="' + model.name + '">open ' + model.name + ' →</button>'
+      + (ok ? '<button data-model="' + escHtml(model.name) + '">open ' + escHtml(model.name) + ' →</button>'
             : '<span class="why">⚠ ' + why + '</span>') + '</div>';
   };
-  let rows = c.opts.map(o => opt(o.h, o.p, o.get())).join('');
+  let rows = c.opts.map(o => opt(o.h, o.p, o.get(), o.get === specimen && tmCanFetch())).join('');
   if (app === 'nursery') {
     const escH = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     for (const m of shellArcs.list()) {
       rows += '<div class="opt"><h3>⏪ Time machine: ' + escH(m.label || arcKidLabel(m)) + '</h3>'
         + '<p>' + m.snapshots.length + ' snapshots of a mind growing up, from the very start to step '
-        + m.snapshots[m.snapshots.length - 1].step + '. Choose any exact checkpoint, or use Previous and Next — no model needed. '
-        + 'To wake a moment up in the trainee, keep the little alphabet file (tok512.bin) in the bay.</p>'
+        + m.snapshots[m.snapshots.length - 1].step + '. Choose any exact checkpoint, or use Previous and Next — no model needed.</p>'
         + '<button data-arc="' + escH(m.arc) + '">open the time machine →</button></div>';
     }
   }
@@ -13728,6 +14028,12 @@ function renderOverlay(app) {
       (/^(export|trained)$/.test(m.origin) ? 'A mind you raised in the Nursery' : 'A vocab-' + m.vocab + ' mind you loaded') + ' (vocab ' + m.vocab + ').', m);
   }
   $('overlay').innerHTML = '<div class="card"><h2>' + c.title + '</h2><div class="sub">' + c.sub + '</div>' + rows + '</div>';
+  $('overlay').querySelectorAll('button[data-big]').forEach(b => b.onclick = async () => {
+    const token = ++actToken;
+    const m = await fetchBigWithProgress(token);
+    hideLoading();
+    if (m) openModelInApp('microscope', m); else selectTab('microscope');
+  });
   $('overlay').querySelectorAll('button[data-model]').forEach(b => b.onclick = () => {
     const model = pool.models.find(m => m.name === b.dataset.model);
     if (model) openModelInApp(app, model);
@@ -13743,7 +14049,7 @@ function showOverlay(app) { renderOverlay(app); $('overlay').classList.remove('h
 /* once a room is showing a model, offer a way back to that room's model
    picker without reloading the page (the overlay is otherwise one-shot). */
 function showChooseAnother(app) {
-  if (app === 'bay') return;
+  if (!APPS.includes(app) || uiMode === 'simple') return;   // the simple view has the "mind:" menu instead
   let b = document.getElementById('vgChooseAnother');
   if (!b) {
     b = document.createElement('button');
@@ -13760,25 +14066,48 @@ function showChooseAnother(app) {
 function hideOverlay() { $('overlay').classList.add('hide'); }
 
 function selectTab(tab) {
+  if (tab === 'home' && uiMode === 'expert') tab = 'bay';
+  if (tab === 'bay' && uiMode === 'simple') tab = 'home';
+  if (tab === 'home' || tab === 'bay') { currentAct = null; actToken++; }
   activeTab = tab;
+  document.body.dataset.view = tab;
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
   $('bay').classList.toggle('hide', tab !== 'bay');
+  $('home').classList.toggle('hide', tab !== 'home');
+  hideLoading();
   for (const a of APPS) if (frames[a]) frames[a].classList.add('hide');
   for (const a of Object.keys(frames)) { try { frames[a].contentWindow.postMessage({ tm: 'vg-tab', active: a === tab, tab }, '*'); } catch (e) {} } // vg: tab visibility for the frame guides
-  if (tab === 'bay') hideOverlay();
+  const old = document.getElementById('vgChooseAnother'); if (old && (!APPS.includes(tab) || uiMode === 'simple')) old.remove();
+  if (!APPS.includes(tab)) hideOverlay();
   else if (loaded.has(tab) || revealed.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); showChooseAnother(tab); }
+  else if (uiMode === 'simple') { startActivity(tab === 'nursery' ? 'raise' : tab === 'microscope' ? 'look' : 'hunt'); return; }
   else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
+  refreshBar();
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
-window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, get activeTab(){ return activeTab; } }; // vg: shell adapter seam
+document.querySelectorAll('.act').forEach(b => b.onclick = () => startActivity(b.dataset.act));
+$('brand').onclick = () => selectTab('home');
+$('homeBtn').onclick = () => selectTab('home');
+$('modeBtn').onclick = () => setMode(uiMode === 'simple' ? 'expert' : 'simple');
+$('homeExpert').onclick = e => { e.preventDefault(); setMode('expert'); };
+$('mindPick').onchange = async () => {
+  const v = $('mindPick').value, app = activeTab;
+  if (!APPS.includes(app)) return;
+  if (v === 'file') { renderMindPick(); $('fileInput').click(); return; }
+  if (v === 'big') { const token = ++actToken; const m = await fetchBigWithProgress(token); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
+  const model = v.startsWith('m:') && pool.models.find(m => m.name === decodeURIComponent(v.slice(2)));
+  if (model) openModelInApp(app, model);
+};
+window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, startActivity, setMode, get activeTab(){ return activeTab; }, get uiMode(){ return uiMode; } }; // vg: shell adapter seam
 const tmRestoreReady = tmRestorePool(); // vg wave 4: bring back last visit's bay before same-folder discovery
 
 function openModelInApp(app, model) {
   const tok = tokFor(model.vocab);
-  if (!tok) { say(model.name + ' needs a vocab-' + model.vocab + ' tokenizer — drop it in the bay', 'warn'); return; }
+  if (!tok) { say(model.name + ' needs a vocab-' + model.vocab + ' tokenizer — drop it in 📁 files', 'warn'); return; }
   const buf = model.u8.buffer.slice(model.u8.byteOffset, model.u8.byteOffset + model.u8.byteLength);
   const tbuf = tok.u8.buffer.slice(tok.u8.byteOffset, tok.u8.byteOffset + tok.u8.byteLength);
   sendToApp(app, { tm: 'load-pair', ckName: model.name, ck: buf, modelMeta: model.meta || null, tokName: tok.name, tok: tbuf });
+  frameModel[app] = model.name;
   loaded.add(app); selectTab(app);
   say('loading ' + model.name + ' + ' + tok.name + ' into the ' + app + '…');
 }
@@ -13804,7 +14133,7 @@ function renderPool() {
       b.onclick = () => openModelInApp(app, mo);
       cell.appendChild(b);
     }
-    tr.innerHTML = `<td>${mo.name}</td><td>${mo.vocab}</td><td>${fmtKB(mo.u8.length)}</td>`;
+    tr.innerHTML = `<td>${escHtml(mo.name)}<br><span class="small">${escHtml(mindName(mo))}</span></td><td>${mo.vocab}</td><td>${fmtKB(mo.u8.length)}</td>`;
     tr.appendChild(cell);
     tb.appendChild(tr);
   }
@@ -13812,8 +14141,10 @@ function renderPool() {
   $('arcList').textContent = shellArcs.size()
     ? shellArcs.list().map(m => `${m.label || arcKidLabel(m)} (${m.snapshots.length} snapshots to step ${m.snapshots[m.snapshots.length - 1].step})`).join(', ')
     : 'none';
-  if (activeTab !== 'bay' && !loaded.has(activeTab)) renderOverlay(activeTab);   // keep a visible card fresh
+  if (APPS.includes(activeTab) && !loaded.has(activeTab) && !$('overlay').classList.contains('hide')) renderOverlay(activeTab);   // keep a visible card fresh
   $('startNursery').disabled = pool.models.length === 0 && shellArcs.size() === 0;
+  $('getBig').classList.toggle('hide', !!specimen() || !tmCanFetch());
+  renderMindPick();
 }
 function cloneModelMeta(meta) {
   if (!meta || typeof meta !== 'object') return null;
@@ -14012,7 +14343,22 @@ window.addEventListener('drop', async e => {
 });
 
 /* ---------- exports bubbled up from the frames ---------- */
-function onExport(name, u8, fromApp) {
+let tmDownloads;   // claude.ai artifact: the viewer confirms each save through the `downloads` capability
+async function onExport(name, u8, fromApp) {
+  if (window.claude && typeof window.claude.use === 'function') {
+    if (tmDownloads === undefined) tmDownloads = await window.claude.use('downloads').catch(() => null);
+    if (tmDownloads) {
+      // the artifact's save list has no .bin: a model goes out inside a .zip, which drops straight back in
+      const plain = /\.(json|txt|md|csv|zip|png|html)$/i.test(name);
+      const file = plain ? name : name.replace(/\.[^.]*$/, '') + '.zip';
+      const data = plain ? u8 : makeZip([{ name, data: u8 }]);
+      try { await tmDownloads.save({ filename: file, data: new Blob([data]) }); say('saved ' + file, 'ok'); }
+      catch (e) { say(e && e.code === 'declined' ? 'not saved' : 'could not save ' + file + ': ' + (e && (e.message || e.code) || e), 'warn'); }
+      const v0 = checkpointVocab(u8);
+      if (v0 > 0) addModel(name, u8, v0, 'export');
+      return;
+    }
+  }
   // The app frame cannot download (nested-frame downloads are blocked); the user's Save
   // click is a gesture inside the frame, not here. The top frame CAN download, so trigger
   // it now — same-origin blob downloads don't need a fresh gesture. Standalone apps still
@@ -14052,14 +14398,35 @@ $('startNursery').onclick = () => selectTab('nursery');
    Successful responses are kept in Cache Storage: large arc packs and the 15M
    specimen do not need to cross the network again on the next visit. */
 const RESOURCE_MANIFEST = 'tiny-mind-resources.json';
-const FALLBACK_RESOURCE_PACKS = ["tiny-mind-starter.zip","tiny-mind-binding-models-corrected.zip","zog-arc.zip","newborn-arc.zip","binding-arc.zip","tiny-mind-neuron-atlas.json"];
+const FALLBACK_RESOURCE_PACKS = [{"file":"tiny-mind-starter.zip","kind":"starter","description":"Pretrained 260K model, matching tokenizer, and replay stories"},{"file":"tiny-mind-binding-models-corrected.zip","kind":"models","description":"Recommended and maximum-learning four-character checkpoints"},{"file":"zog-arc.zip","kind":"time-machine","description":"Single-character training recording"},{"file":"newborn-arc.zip","kind":"time-machine","description":"From-scratch training recording"},{"file":"binding-arc.zip","kind":"time-machine","description":"Four-character binding training recording"},{"file":"tiny-mind-neuron-atlas.json","kind":"neuron-atlas","description":"stories15M neuron examples (both poles) for the Microscope's neuron card","load":"later","group":"big"}];
+// loose files probed at start-up; the big storyteller's files wait until someone asks for it
 const MODEL_FILES = [
-  'tok512.bin', 'tokenizer.bin',
+  'tok512.bin',
   'stories260K.bin', 'stories260K-zog.bin',
   'stories260K-binding.bin', 'stories260K-binding-max.bin',
-  'stories15M.bin'
 ];
+const BIG_FILES = ['tokenizer.bin', 'stories15M.bin'];
 const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1';
+/* The claude.ai artifact edition cannot reach the network, but it can read its own asset
+   store: tools/build-artifact.mjs sets window.__TM_ASSETS__ = { parts: [url…], files:
+   { "<path>": { parts: [i…], bytes } } }, each part a .js asset holding one JSON object —
+   { files: { path: base64 } } for small files, { chunk: { path, index, b64 } } for slices of
+   a big one. Paths are the ones a served deploy uses beside the page, so every loader below
+   works unchanged on both. */
+const TM_ASSETS = (window.__TM_ASSETS__ && typeof window.__TM_ASSETS__ === 'object' && window.__TM_ASSETS__.files) ? window.__TM_ASSETS__ : null;
+const tmPartCache = new Map();        // the last few parsed parts: scrubbing a recording reuses its part
+async function assetPart(i) {
+  if (tmPartCache.has(i)) return tmPartCache.get(i);
+  const p = fetch(TM_ASSETS.parts[i]).then(r => {
+    if (!r.ok) throw new Error('asset part ' + i + ': HTTP ' + r.status);
+    return r.text();
+  }).then(t => JSON.parse(t));
+  tmPartCache.set(i, p);
+  p.catch(() => tmPartCache.delete(i));
+  while (tmPartCache.size > 3) tmPartCache.delete(tmPartCache.keys().next().value);
+  return p;
+}
+const tmCanFetch = () => !!TM_ASSETS || /^https?:$/i.test(window.location.protocol);
 function safeSameFolderFile(value) {
   return typeof value === 'string' && /^[^/\\?#]+\.(?:zip|bin|json)$/i.test(value);
 }
@@ -14084,20 +14451,63 @@ async function fetchBeside(name, { persistent = true } = {}) {
   }
   return { response, cacheHit: false };
 }
-async function resourcePackNames() {
+/* read a response body, reporting progress as a fraction when the size is known */
+async function readWithProgress(response, onProgress, expected) {
+  const total = +response.headers.get('content-length') || expected || 0;
+  if (!onProgress || !response.body || !response.body.getReader) return new Uint8Array(await response.arrayBuffer());
+  const reader = response.body.getReader(), parts = []; let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value); got += value.length;
+    if (total) onProgress(got / total);
+  }
+  const out = new Uint8Array(got); let at = 0;
+  for (const p of parts) { out.set(p, at); at += p.length; }
+  return out;
+}
+async function assetBytes(path, onProgress) {
+  const e = TM_ASSETS.files[path];
+  if (!e) return null;
+  const chunks = []; let got = 0;
+  for (const i of e.parts) {
+    const part = await assetPart(i);
+    const b64 = part.chunk && part.chunk.path === path ? part.chunk.b64 : part.files && part.files[path];
+    if (typeof b64 !== 'string') throw new Error(path + ': not in asset part ' + i);
+    if (part.chunk) tmPartCache.delete(i);   // a slice of a big file is read once; don't hold it
+    const u = tmB64ToU8(b64);
+    chunks.push(u); got += u.length;
+    if (onProgress && e.bytes) onProgress(got / e.bytes);
+  }
+  const out = new Uint8Array(got); let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
+}
+/* one way to get a file "beside the app": the asset store in an artifact, else HTTP
+   (same-folder names go through Cache Storage; arc/ paths ride ordinary HTTP caching) */
+async function tmGetBytes(path, { onProgress, persistent = true, expected } = {}) {
+  if (TM_ASSETS) return assetBytes(path, onProgress);
+  if (safeSameFolderFile(path)) {
+    const { response } = await fetchBeside(path, { persistent });
+    return response.ok ? readWithProgress(response, onProgress, expected) : null;
+  }
+  const r = await fetch(path);
+  return r.ok ? readWithProgress(r, onProgress, expected) : null;
+}
+async function tmGetJson(path) {
+  const u8 = await tmGetBytes(path, { persistent: false });
+  return u8 ? JSON.parse(new TextDecoder().decode(u8)) : null;
+}
+const resourceFile = r => typeof r === 'string' ? r : r && r.file;
+async function resourcePacks() {
   try {
-    const { response } = await fetchBeside(RESOURCE_MANIFEST, { persistent: false });
-    if (response.ok) {
-      const data = await response.json();
-      const raw = Array.isArray(data) ? data : data && data.resources;
-      if (Array.isArray(raw)) {
-        return [...new Set(raw.map(x => typeof x === 'string' ? x : x && x.file)
-          .filter(safeSameFolderFile))];
-      }
-    }
+    const data = await tmGetJson(RESOURCE_MANIFEST);
+    const raw = Array.isArray(data) ? data : data && data.resources;
+    if (Array.isArray(raw)) return raw.filter(r => safeSameFolderFile(resourceFile(r)));
   } catch (e) { /* older deploy: use the embedded fallback */ }
   return [...FALLBACK_RESOURCE_PACKS];
 }
+const loadsLater = r => !!(r && typeof r === 'object' && r.load === 'later');
 function alreadyInBay(name) {
   return pool.models.some(x => x.name === name) || pool.toks.some(x => x.name === name) ||
     shellJsonNames.has(name);
@@ -14106,25 +14516,60 @@ window.__tmSameFolderResources = {
   manifest: RESOURCE_MANIFEST,
   fallback: [...FALLBACK_RESOURCE_PACKS],
   cacheName: TM_RESOURCE_CACHE,
-  fetchBeside,
+  fetchBeside, tmGetBytes,
 };
 
-(async function autoLoadModels() {
+/* the big storyteller (stories15M + its tokenizer + the neuron atlas): fetched once,
+   on demand, with progress; concurrent callers share one download */
+let bigPromise = null;
+function ensureBig(onProgress) {
+  if (specimen() && tokFor(specimen().vocab)) return Promise.resolve(true);
+  if (!tmCanFetch()) return Promise.resolve(false);
+  const listeners = bigPromise ? bigPromise.listeners : [];
+  if (onProgress) listeners.push(onProgress);
+  if (bigPromise) return bigPromise;
+  const report = f => listeners.forEach(fn => { try { fn(f); } catch (e) {} });
+  bigPromise = (async () => {
+    const later = (await resourcePacks()).filter(loadsLater).map(resourceFile);
+    const names = [...new Set([...BIG_FILES, ...later])].filter(n => !alreadyInBay(n));
+    const weight = n => /15m/i.test(n) ? 0.9 : 0.05;              // the model is nearly all of the bytes
+    let done = 0;
+    for (const name of names) {
+      try {
+        const u8 = await tmGetBytes(name, { onProgress: f => report(done + f * weight(name)),
+          expected: /15m/i.test(name) ? 60816028 : 0 });
+        if (u8) await shellIngest([{ name, u8, origin: 'same-folder' }]);
+      } catch (e) { /* missing here: the tiny storyteller still works */ }
+      done += weight(name); report(done);
+    }
+    report(1);
+    return !!(specimen() && tokFor(specimen().vocab));
+  })();
+  bigPromise.listeners = listeners;
+  bigPromise.finally(() => { const p = bigPromise; setTimeout(() => { if (bigPromise === p) bigPromise = null; }, 0); });
+  return bigPromise;
+}
+$('getBig').onclick = async () => { $('getBig').disabled = true; say('getting the big storyteller (58 MB, once)…');
+  const ok = await ensureBig(f => say('getting the big storyteller… ' + Math.round(f * 100) + '%'));
+  $('getBig').disabled = false; say(ok ? 'the big storyteller is ready — open it in the Microscope' : 'could not get the big storyteller here', ok ? 'ok' : 'warn'); };
+
+let tmStartPending = true;
+const tmStartReady = (async function autoLoadModels() {
   await tmRestoreReady;
-  let got = 0, packGot = 0, cacheHits = 0, fetchWorked = false;
+  let got = 0, packGot = 0, fetchWorked = false;
   let gotReplay = shellJsonNames.has('replay.json');
 
-  const packs = await resourcePackNames();
+  const packs = (await resourcePacks()).filter(r => !loadsLater(r));
   for (let i = 0; i < packs.length; i++) {
-    const name = packs[i];
+    const name = resourceFile(packs[i]);
+    if (alreadyInBay(name)) continue;
     try {
-      say(`same-folder resources ${i + 1}/${packs.length}: loading ${name}…`);
-      const { response, cacheHit } = await fetchBeside(name);
+      say(`getting things ready ${i + 1}/${packs.length}: ${name}…`);
+      const u8 = await tmGetBytes(name);
       fetchWorked = true;
-      if (!response.ok) continue;
-      await shellIngest([{ name, u8: new Uint8Array(await response.arrayBuffer()), origin: 'same-folder' }]);
+      if (!u8) continue;
+      await shellIngest([{ name, u8, origin: 'same-folder' }]);
       packGot++;
-      if (cacheHit) cacheHits++;
       gotReplay = gotReplay || shellJsonNames.has('replay.json');
     } catch (e) { /* an optional pack may not be present on this host */ }
   }
@@ -14132,63 +14577,59 @@ window.__tmSameFolderResources = {
   for (const name of MODEL_FILES) {
     if (alreadyInBay(name)) continue;
     try {
-      const { response, cacheHit } = await fetchBeside(name);
+      const u8 = await tmGetBytes(name);
       fetchWorked = true;
-      if (!response.ok) continue;
-      await shellIngest([{ name, u8: new Uint8Array(await response.arrayBuffer()), origin: 'same-folder' }]);
+      if (!u8) continue;
+      await shellIngest([{ name, u8, origin: 'same-folder' }]);
       got++;
-      if (cacheHit) cacheHits++;
     } catch { /* missing file — skip */ }
   }
   if (!gotReplay) {
     try {   // loose replay corpus is also supported when no starter pack supplied it
-      const { response, cacheHit } = await fetchBeside('replay.json');
+      const u8 = await tmGetBytes('replay.json');
       fetchWorked = true;
-      if (response.ok) {
-        await shellIngest([{ name: 'replay.json', u8: new Uint8Array(await response.arrayBuffer()), origin: 'same-folder' }]);
-        gotReplay = true;
-        if (cacheHit) cacheHits++;
-      }
+      if (u8) { await shellIngest([{ name: 'replay.json', u8, origin: 'same-folder' }]); gotReplay = true; }
     } catch { /* no replay corpus here — the embedded fallback still draws the blue line */ }
   }
 
-  let gotArc = shellArcs.list()[0] || null;
-  try {   // arc packs beside the app: arc/arcs.json may list several (each with its own folder),
+  try {   // recordings beside the app: arc/arcs.json may list several (each with its own folder),
            // else the single arc/arc-manifest.json. A manifest may also name siblings in "more".
+           // Only the manifests load now; each snapshot is fetched when someone scrubs to it.
     const seen = new Set(), found = [];
     const addArc = async (rel) => {
       if (seen.has(rel)) return; seen.add(rel);
       try {
-        const r = await fetch('arc/' + rel);
-        if (!r.ok) return;
-        const manifest = await r.json();
+        const manifest = await tmGetJson('arc/' + rel);
+        if (!manifest) return;
         found.push({ manifest, urlBase: 'arc/' + rel.slice(0, rel.lastIndexOf('/') + 1) });
         for (const m of (manifest.more || [])) await addArc(m);
       } catch (e) {}
     };
     try {
-      const ix = await fetch('arc/arcs.json');
-      if (ix.ok) {
-        const list = await ix.json();
-        for (const rel of (Array.isArray(list) ? list : (list.manifests || []))) await addArc(rel);
-      }
+      const list = await tmGetJson('arc/arcs.json');
+      if (list) for (const rel of (Array.isArray(list) ? list : (list.manifests || []))) await addArc(rel);
     } catch (e) {}
     if (!found.length) await addArc('arc-manifest.json');
     for (const { manifest, urlBase } of found) {
+      if (shellArcs.list().some(m => m.arc === manifest.arc)) continue;   // a recording pack already brought it
       takeArc(manifest, { urlBase }, 'autoload');
-      gotArc = gotArc || manifest;
     }
-  } catch { /* no arc pack beside this deploy */ }
+  } catch { /* no recordings beside this deploy */ }
+  tmStartPending = false;
   if (!fetchWorked && !packGot && !got) {
-    say('nothing can be fetched beside the app here (sandbox or file://) — drop your bundle (models, replay.json, arc .zip) into the bay', 'warn');
+    say('nothing can be fetched beside the app here (sandbox or file://) — drop your files (models, replay.json, recording .zip) into 📁 files', 'warn');
+    renderPool();
     return;
   }
   const arcCount = shellArcs.size();
-  say(`beside the app: ${packGot}/${packs.length} resource packs · ${got} extra loose model/tokenizer files`
-    + ` · ${cacheHits} loaded from cache · replay ${gotReplay ? '✓' : '—'}`
-    + ` · time machines ${arcCount || '—'}${arcCount ? ' (open the Nursery to scrub)' : ''}`,
+  say(`ready: ${packGot}/${packs.length} packs · ${got} loose model files`
+    + ` · replay ${gotReplay ? '✓' : '—'} · time machines ${arcCount || '—'}`
+    + ` · the big storyteller ${specimen() ? 'is here' : 'loads when the Microscope needs it'}`,
     (packGot || got || arcCount) ? 'ok' : 'warn');
+  renderPool();
 })();
+setMode(uiMode);
+selectTab(uiMode === 'expert' ? 'bay' : 'home');
 </script>
 <script>
 
@@ -15009,13 +15450,12 @@ window.VoiceGuide={version:2,fragments,create};
 <script>
 /* ============================================================
    tm-shell-adapter.js — Tiny Mind shell guide (vg-core v2).
-   Owns the starter-pack "catch the brain" tour (artifact edition's
-   front door) and the master guide/kid/voice toggles, which it
-   persists via shellStorage and rebroadcasts to the frames. The
-   build exposes window.__tmShell = {frames, shellStorage, selectTab,
-   APPS} for this adapter. The starter zip URL is read from
-   window.TM_STARTER_ZIP, defaulting to the confirmed host
-   (toontalk.github.io/misc/).
+   Owns the front-door tour (the four activities on the home page)
+   and the master guide/kid/voice toggles, which it persists via
+   shellStorage and rebroadcasts to the frames. The build exposes
+   window.__tmShell = {frames, shellStorage, selectTab, startActivity,
+   APPS} for this adapter. The minds load by themselves now, so the
+   old "catch the brain" starter-pack quest is gone.
    ============================================================ */
 (function(){
 'use strict';
@@ -15084,7 +15524,6 @@ if (!window.__vgProviders) window.__vgProviders = {
 };
 
 const SH = () => window.__tmShell || {};
-const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/misc/tiny-mind-starter.zip';
 const prefs = { kid: false, voice: false, on: true };
 let api = null;
 
@@ -15108,7 +15547,8 @@ function frameKey(){
 }
 const inClaude = () => !!(api && api.inClaude);
 const shellKey = () => frameKey() || (window.__vgRememberedKey && window.__vgRememberedKey());
-const activeTab = () => (SH().activeTab) || 'bay';
+const activeTab = () => (SH().activeTab) || 'home';
+const onFrontPage = () => ['home', 'bay'].includes(document.body.dataset.view || activeTab());   // the shell marks the view on <body data-view>
 
 async function loadPrefs(){
   const st = SH().shellStorage; if (!st) return;
@@ -15135,73 +15575,62 @@ function setPref(key, value){
 }
 const kid = () => prefs.kid;
 
-/* modelLoaded without app edits: rows appear in the bay's #pool
-   table when a bundle is ingested. Unlatched: any pool change while
-   models are present re-emits, so an until-waiter armed AFTER the
-   drop still resolves (narration stays single via once:true). */
-const poolHasModel = () => { const p = $('pool');
-  return !!p && p.querySelectorAll('tr').length > 0 && !/nothing yet/.test(p.textContent || ''); };
-function wire(emit){
-  const pool = $('pool');
-  if (pool && pool.nodeType === 1) new MutationObserver(() => { if (poolHasModel()) emit('modelLoaded', {}); })
-    .observe(pool, { childList: true, subtree: true });
-}
+/* the pool table still lives on the files page (expert view); a change
+   there is narrated only as a provenance remark, never as a quest */
+const poolText = () => ($('pool') && $('pool').textContent) || '';
+function wire(emit){}
 
-const EVENTS = {
-  modelLoaded: { priority: 'moment', once: true, spot: '#pool',
-    lines: 'Caught! The brain is in the bay. It will still be here next visit — the bay remembers.',
-    kidLines: 'You caught the brain! And it will still be here next time you come back.' },
-};
+const EVENTS = {};
 
 function STEPS(){
   return [
-  { name: 'catchTheBrain', skipIf: poolHasModel, spot: '#dropzone', text: () => kid()
-      ? 'First quest: catch a brain! Ask a grown-up to download the starter pack from the address I put in my log, then drag the file into this drop zone.'
-      : `First, catch the brain. Download the starter pack — I have put the address in my transcript log so you can copy it: ${STARTER()} — then drag the downloaded zip into this drop zone. Everything runs on your machine; nothing is uploaded anywhere.` },
-  { name: 'dragIn', skipIf: poolHasModel, spot: '#dropzone', allow: '#dropzone,#browseBtn,#fileInput',
-    until: 'modelLoaded',
-    text: () => kid()
-      ? 'Drag the file in, or press browse. I will wait right here.'
-      : 'Drag it in, or use the browse button. I will wait — the bay will list every model and tokenizer it finds inside.' },
-  { name: 'persisted', spot: '#pool', text: () => kid()
-      ? 'See the list? Those are the minds you caught. They stay saved, so next time they will already be waiting.'
-      : 'There is your pool: the trainee, its tokenizer, and any recordings. It persists — next time you open this page, the minds will already be here waiting.' },
-  { name: 'pickADoor', spot: '#startNursery', allow: '#startNursery,.tab', text: () => kid()
-      ? 'Now pick a door! The Nursery button starts you raising your very own tiny mind. See you inside!'
-      : 'Now pick a door. The Nursery is the front one — press the start button, or use the tabs along the top: Nursery to raise a mind, Microscope to look inside one, Treasure Hunt to find where a fact lives. A guide is waiting in each room.' },
+  { name: 'welcome', spot: '#home h1', text: () => kid()
+      ? 'Hi! This is the front door of Tiny Mind. Each big button is a different game with a real little computer mind.'
+      : 'This is the front door of Tiny Mind. Each card is one thing you can do with a real, very small language model. The minds load by themselves; nothing leaves your computer.' },
+  { name: 'makeAndWatch', spot: '[data-act="raise"]', text: () => kid()
+      ? 'Teach a tiny mind: make up a character, and the mind learns about it. Or watch a recording of a mind growing up, from babble to stories.'
+      : 'Teach a tiny mind trains one live on stories about a character you invent. Watch a mind grow up replays recordings of that training, from random babble to whole stories, with no waiting.' },
+  { name: 'lookAndHunt', spot: '[data-act="look"]', text: () => kid()
+      ? 'Look inside a mind shows what it is thinking, word by word. Hunt for a hidden fact is a treasure hunt inside a mind.'
+      : 'Look inside a mind shows the words a model is weighing up, layer by layer, and what single neurons respond to. Hunt for a hidden fact is a detective game: find where a mind keeps something, then prove it by switching parts off.' },
+  { name: 'pickOne', spot: '#home .acts', allow: '.act,#modeBtn,#homeExpert', text: () => kid()
+      ? 'Now pick one! A guide is waiting inside each.'
+      : 'Pick one. A guide waits inside each. If you know your way around already, the button at the top right shows every tab and file at once.' },
   ];
 }
 
 function statusText(){
   const t = activeTab();
-  const where = t === 'bay' ? 'the model bay (the "models" tab) \u2014 this very page'
+  const where = t === 'home' ? 'the front door, with its four activity cards \u2014 this very page'
+    : t === 'bay' ? 'the files page (the expert view\'s "files" tab) \u2014 this very page'
     : 'the ' + t + ' room, whose own guide is beside them there';
   return `The visitor is RIGHT NOW looking at ${where}. Never tell them to go where they already are. ` +
     `Rooms booted so far: ${(SH().frames && Object.keys(SH().frames).join(',')) || 'none'}. ` +
     `Shell status: ${($('shellStatus') && $('shellStatus').textContent) || ''}. ` +
-    `Pool (truncated): ${($('pool') && $('pool').textContent.slice(0, 200)) || 'empty'}. ` +
-    `Tokenizers: ${($('tokList') && $('tokList').textContent) || 'none'}.`;
+    `View: ${(SH().uiMode) || 'simple'} (simple = front door; expert = all tabs). ` +
+    `Minds loaded (truncated): ${poolText().slice(0, 200) || 'none yet'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide on the front page of Tiny Mind, a three-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, and a Treasure Hunt for finding where a fact lives. This page is the model bay, where bundles are dropped in. ' +
+  return 'You are the guide on the front page of Tiny Mind, a three-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, and a Treasure Hunt for finding where a fact lives. This page is the front door: four activity cards (Teach a tiny mind, Watch a mind grow up, Look inside a mind, Hunt for a hidden fact); the minds load by themselves, and a button at the top right switches to an expert view with every tab and a files page. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is ten or older: plain, concrete language. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: dropzone, pool, start. Tab names: bay, nursery, microscope, hunt. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: teach, grow, look, hunt, tabs. Tab names: home, nursery, microscope, hunt, files. ' +
     ' A TAB directive only offers: the app asks the visitor to confirm before anything moves, so word it as an offer, and never claim you have already taken them. ' +
     ' The time machine lives in the Nursery, below the training controls. ' +
     ' Never offer to open or point at a view the status marks as already visible \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'switch to the Nursery', escalations: 'load or delete models', safeVerb: 'SHOW' });
 }
-const SHOW = { dropzone: '#dropzone', pool: '#pool', start: '#startNursery' };
+const SHOW = { teach: '[data-act="raise"]', grow: '[data-act="grow"]', look: '[data-act="look"]', hunt: '[data-act="hunt"]', tabs: '#modeBtn' };
+const TAB_ALIAS = { files: 'bay', home: 'home', nursery: 'nursery', microscope: 'microscope', hunt: 'hunt' };
 
 function createGuide(){
   const A = {
     id: 'tm-shell',
     ui: { mascot: '\u{1F9E0}', greeting: () => kid()
-        ? 'Hi! I am the guide. Press start tour and we will catch a brain together.'
-        : 'Welcome to Tiny Mind. Press start tour for the two-minute front door, or ask me anything.',
+        ? 'Hi! I am the guide. Press start tour and I will show you around.'
+        : 'Welcome to Tiny Mind. Press start tour for a one-minute look at the four things you can do, or ask me anything.',
       voiceEnabled: () => prefs.voice, doneStatus: 'Pick a room — a guide waits in each.' },
     layout: { panelWidth: 300, panelMargin: 302, narrowMax: 700, appBreakpoint: 0 },
     takeover: { events: ['pointerdown'],
@@ -15209,10 +15638,9 @@ function createGuide(){
         const st = STEPS()[G.cur]; return !!(st && st.allow && e.target && e.target.closest && e.target.closest(st.allow)); } },
     tour: { steps: STEPS() },
     provenance: {
-      snapshot: () => ({ pool: ($('pool') && $('pool').textContent) || '' }),
+      snapshot: () => ({ pool: poolText() }),
       diffRemark: o => { if (!o) return '';
-        const pool = ($('pool') && $('pool').textContent) || '';
-        if (o.pool !== pool) return 'The bay changed while I was quiet — new minds in the pool.';
+        if (o.pool !== poolText()) return 'More minds arrived while I was quiet.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || inClaude() || !!shellKey(),
@@ -15226,7 +15654,7 @@ function createGuide(){
         if (!c) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
         return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
       },
-      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour and the bay work fine without one.' } },
+      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour works fine without one.' } },
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
       if (/failed to fetch|network|cors|no key/i.test(m) && !shellKey())
         return { log: 'Live AI call failed: ' + m,
@@ -15239,14 +15667,15 @@ function createGuide(){
          Naming the room they are already in is invalid, so the guide
          cannot "take" them where they stand. */
       TAB: { gated: true,
-        validate(p){ const t = (p[0] || '').toLowerCase();
-          return ['bay', 'nursery', 'microscope', 'hunt'].includes(t) && t !== activeTab() && !!SH().selectTab ? t : false; },
-        ratifyText(p, t){ return kid() ? `Shall I take you to the ${t}?` : `Take you to the ${t} tab?`; },
+        validate(p){ const t = TAB_ALIAS[(p[0] || '').toLowerCase()];
+          return t && t !== activeTab() && !!SH().selectTab ? t : false; },
+        ratifyText(p, t){ const n = t === 'bay' ? 'files page' : t === 'home' ? 'front door' : t;
+          return kid() ? `Shall I take you to the ${n}?` : `Take you to the ${n}?`; },
         exec(p, a, t){ SH().selectTab(t); } },
     },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
-    testHook: { app: () => ({ prefs, starter: STARTER() }) },
+    testHook: { app: () => ({ prefs }) },
     init(a){
       api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
       wire((n, p) => a.emit(n, p));
@@ -15272,19 +15701,16 @@ function createGuide(){
       window.addEventListener('message', e => { const m = e.data; if (!m || m.tm !== 'pref') return;
         if (m.key === 'tm-guide-kid') prefs.kid = m.value === '1';
         if (m.key === 'tm-guide-voice') prefs.voice = m.value === '1'; });
-      /* the shell guide belongs to the bay: when a room's frame
-         covers the shell, hide both the panel and the collapsed tab
-         so it never stacks on the room guide's tab */
-      const bay = document.getElementById('bay');
-      if (bay && bay.nodeType === 1) { let wasOpen = false;
-        const upd = () => { const off = bay.classList.contains('hide');
+      /* the shell guide belongs to the front page (home or files): when a
+         room's frame covers the shell, hide both the panel and the collapsed
+         tab so it never stacks on the room guide's tab */
+      { let wasOpen = false;
+        const upd = () => { const off = !onFrontPage();
           for (const id of ['vgPanel', 'vgTab']) { const el = document.getElementById(id); if (el) el.style.display = off ? 'none' : ''; }
-          if (off) { wasOpen = document.body.classList.contains('vg-open');
+          if (off) { if (document.body.classList.contains('vg-open')) wasOpen = true;
             document.body.classList.remove('vg-open');   /* release the reserved margin: no dead strip beside the rooms */
-          } else if (wasOpen) { document.body.classList.add('vg-open'); } };
-        new MutationObserver(upd).observe(bay, { attributes: true, attributeFilter: ['class'] }); upd(); }
-      /* put the copyable starter URL straight into the transcript */
-      a.logAdd('Starter pack: ' + STARTER());
+          } else if (wasOpen) { document.body.classList.add('vg-open'); wasOpen = false; } };
+        new MutationObserver(upd).observe(document.body, { attributes: true, attributeFilter: ['data-view'] }); upd(); }
     },
   };
   window.VoiceGuide.create(A);

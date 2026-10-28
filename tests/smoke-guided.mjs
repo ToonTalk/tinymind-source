@@ -121,7 +121,7 @@ async function main() {
   check('quota-aware failure copy shipped', BUILT.includes('allowance is used up'));
   check('toggle labels unclipped (kid, nowrap)', BUILT.includes('id="vgKid"> kid<') && !BUILT.includes('id="vgKid"> little-kid<'));
   check('provider table shipped (app-key reuse)', BUILT.split('__vgProviders').length - 1 >= 3);
-  check('returning-visitor skip on the starter tour', BUILT.split('skipIf: poolHasModel').length - 1 === 2);
+  check('no drop-the-starter-pack quest left in the shell tour', !BUILT.includes('skipIf: poolHasModel') && !BUILT.includes('catchTheBrain'));
   check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 4);
   check('shellStorage gained list (404-noise fix)', BUILT.includes('async list(prefix)'));
   check('never-offer-visible rule in all four prompts', BUILT.split('talk about what it shows instead').length - 1 >= 4);
@@ -148,7 +148,7 @@ async function main() {
   check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("localStorage.getItem('tm-key-' + p)"));
   check('shell page carries its own LLM helpers', BUILT.includes('if (!window.__vgProviders) window.__vgProviders') && BUILT.includes('if (!window.__vgRememberedKey) window.__vgRememberedKey'));
   check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 4 && BUILT.split("a.on('showBlocked'").length - 1 === 4);
-  check('hosted arcs discover more than one manifest', BUILT.includes("fetch('arc/arcs.json')") && BUILT.includes('manifest.more || []'));
+  check('hosted arcs discover more than one manifest', BUILT.includes("tmGetJson('arc/arcs.json')") && BUILT.includes('manifest.more || []'));
   check('bay names what it remembered', BUILT.includes("recs.map(r => r.name).join(', ')"));
   check('bay arc line no longer prints raw keys', BUILT.includes('m.label || arcKidLabel(m)'));
   check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 4);
@@ -740,86 +740,87 @@ async function main() {
       check('shell finds the ghostwriter key', (w.__vgRememberedKey() || {}).provider === 'openai');
       w.localStorage.removeItem('tm-key-openai');
       const names = G.steps.map(s => s.name);
-      check('starter-pack tour has the 4 signed-off stops',
-        names.join(',') === 'catchTheBrain,dragIn,persisted,pickADoor', names.join(','));
-      check('starter zip URL is in the transcript log', spoke(w, 'Starter pack:'));
-      /* run the tour to the dragIn until, then satisfy it via the pool observer */
+      check('front-door tour has the 4 stops',
+        names.join(',') === 'welcome,makeAndWatch,lookAndHunt,pickOne', names.join(','));
+      const doc = w.document;
+      check('simple view is the default: the front door shows, the tabs wait',
+        doc.body.classList.contains('simple') && w.__tmShell.activeTab === 'home' &&
+        !doc.getElementById('home').classList.contains('hide') && doc.getElementById('bay').classList.contains('hide'));
+      check('the front door offers the four activities',
+        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,hunt');
+      check('no starter-pack quest left on the front door', !spoke(w, 'Starter pack:') && !spoke(w, 'catch the brain'));
       G.start();
-      await until(() => G.cur === 1 && spoke(w, 'browse button'), 6000);
-      await sleep(120);
-      check('tour parks on dragIn awaiting modelLoaded', G.state === 'running' && G.cur === 1);
-      const pool = w.document.getElementById('pool');
-      pool.innerHTML = '<tr><td>stories260K.bin</td><td>260K</td><td>512</td><td>model</td></tr>';
-      await until(() => G.state === 'done' || G.cur >= 2, 12000);
-      check('pool row advances the tour via modelLoaded', G.cur >= 2 || G.state === 'done', 'cur=' + G.cur + ' state=' + G.state);
-      await until(() => spoke(w, 'Caught!'), 3000);
-      check('modelLoaded event line spoken', spoke(w, 'Caught!'));
-      /* shell guide auto-hide: a room frame covering the bay must
+      await until(() => G.state === 'done', 12000);
+      check('front-door tour runs to the end without waiting on a drop', G.state === 'done', 'cur=' + G.cur + ' state=' + G.state);
+      check('tour speaks about the front door', spoke(w, 'front door'));
+      /* shell guide auto-hide: a room covering the front page must
          hide both the panel and the collapsed tab */
-      const bayEl = w.document.getElementById('bay');
-      bayEl.classList.add('hide');
-      await until(() => w.document.getElementById('vgTab').style.display === 'none', 2000);
-      check('shell guide hides with the bay (no stacked Guide tabs)',
-        w.document.getElementById('vgTab').style.display === 'none' &&
-        w.document.getElementById('vgPanel').style.display === 'none');
-      check('reserved margin released while hidden (no dead strip)', !w.document.body.classList.contains('vg-open'));
-      bayEl.classList.remove('hide');
-      await until(() => w.document.getElementById('vgTab').style.display === '', 2000);
-      check('shell guide returns when the bay does', w.document.getElementById('vgTab').style.display === '');
-      check('margin restored with the bay', w.document.body.classList.contains('vg-open'));
+      doc.body.dataset.view = 'nursery';
+      await until(() => doc.getElementById('vgTab').style.display === 'none', 2000);
+      check('shell guide hides inside a room (no stacked Guide tabs)',
+        doc.getElementById('vgTab').style.display === 'none' &&
+        doc.getElementById('vgPanel').style.display === 'none');
+      check('reserved margin released while hidden (no dead strip)', !doc.body.classList.contains('vg-open'));
+      doc.body.dataset.view = 'home';
+      await until(() => doc.getElementById('vgTab').style.display === '', 2000);
+      check('shell guide returns with the front door', doc.getElementById('vgTab').style.display === '');
       /* an inline DO directive must be executed and never shown */
-      w.claude = { complete: async () => 'The pool lives right here. DO: SHOW pool' };
-      w.document.getElementById('vgIn').value = 'where is the pool?';
-      w.document.getElementById('vgGo').click();
-      await until(() => spoke(w, 'The pool lives right here'), 6000);
+      w.claude = { complete: async () => 'Looking inside is this card. DO: SHOW look' };
+      doc.getElementById('vgIn').value = 'where do I look inside?';
+      doc.getElementById('vgGo').click();
+      await until(() => spoke(w, 'Looking inside is this card'), 6000);
       check('inline DO line is stripped from what the visitor reads',
         !logTexts(w).some(t => /DO:/.test(t)), logTexts(w).slice(-1)[0]);
-      check('inline DO line is still executed', w.document.getElementById('pool').classList.contains('vg-spot'));
+      check('inline DO line is still executed', doc.querySelector('[data-act="look"]').classList.contains('vg-spot'));
 
       /* TAB proposes; the visitor countersigns */
       w.claude = { complete: async () => 'The time machine is in the Nursery. DO: TAB nursery' };
-      w.document.getElementById('vgIn').value = 'where is time travel?';
-      w.document.getElementById('vgGo').click();
-      await until(() => w.document.getElementById('vgConfirm') &&
-        /Nursery|nursery/.test(w.document.getElementById('vgConfirmMsg').textContent), 6000);
+      doc.getElementById('vgIn').value = 'where is time travel?';
+      doc.getElementById('vgGo').click();
+      await until(() => doc.getElementById('vgConfirm') &&
+        /Nursery|nursery/.test(doc.getElementById('vgConfirmMsg').textContent), 6000);
       check('TAB asks before it moves the visitor',
-        /nursery/i.test(w.document.getElementById('vgConfirmMsg').textContent));
-      check('nothing moved while the question stood', w.__tmShell.activeTab === 'bay');
-      w.document.getElementById('vgConfirmNo').click();
+        /nursery/i.test(doc.getElementById('vgConfirmMsg').textContent));
+      check('nothing moved while the question stood', w.__tmShell.activeTab === 'home');
+      doc.getElementById('vgConfirmNo').click();
       await sleep(80);
-      check('declining leaves the visitor where they were', w.__tmShell.activeTab === 'bay');
+      check('declining leaves the visitor where they were', w.__tmShell.activeTab === 'home');
       /* naming the room they already stand in is invalid, not a move */
-      w.claude = { complete: async () => 'You are already here. DO: TAB bay' };
-      w.document.getElementById('vgIn').value = 'take me to the bay';
-      w.document.getElementById('vgGo').click();
+      w.claude = { complete: async () => 'You are already here. DO: TAB home' };
+      doc.getElementById('vgIn').value = 'take me to the front door';
+      doc.getElementById('vgGo').click();
       await until(() => spoke(w, 'You are already here'), 6000);
       await sleep(150);
       check('TAB to the current room is a silent no-op',
-        w.__tmShell.activeTab === 'bay' && !/\bbay\b/i.test(w.document.getElementById('vgConfirmMsg').textContent));
+        w.__tmShell.activeTab === 'home' && !/front door/i.test(doc.getElementById('vgConfirmMsg').textContent));
       delete w.claude;
+
+      /* the expert view: every tab plus the files page, remembered per browser */
+      w.__tmShell.setMode('expert');
+      check('expert view shows the files page and the tabs',
+        w.__tmShell.activeTab === 'bay' && doc.body.classList.contains('expert') && !doc.getElementById('bay').classList.contains('hide'));
+      check('the guide stays on the files page', doc.getElementById('vgTab').style.display === '');
+      check('the view choice is remembered', w.localStorage.getItem('tm-ui-mode') === 'expert');
+      w.__tmShell.setMode('simple');
+      check('simple view returns to the front door', w.__tmShell.activeTab === 'home' && w.localStorage.getItem('tm-ui-mode') === 'simple');
 
       check('no unexpected shell page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
     }
   }
 
-  /* ============ SHELL scenario B: returning visitor ============ */
-  console.log('-- shell: returning visitor (pool already full) --');
+  /* ============ SHELL scenario B: returning expert ============ */
+  console.log('-- shell: returning visitor who chose the expert view --');
   {
     const errors = [];
-    const dom = makeDom(BUILT, errors);
+    const dom = makeDom(BUILT, errors, w => { w.localStorage.setItem('tm-ui-mode', 'expert'); });
     const w = dom.window;
     const booted = await until(() => w.__guide && w.__tmShell, 8000);
     check('shell guide boots (scenario B)', booted);
     if (booted) {
-      const G = w.__guide; G.setWordMs(0);
-      w.document.getElementById('pool').innerHTML =
-        '<tr><td>stories260K.bin</td><td>260K</td><td>512</td><td>model</td></tr>';
-      await sleep(80);
-      G.start();
-      await until(() => G.state === 'done', 8000);
-      check('tour skips catch-the-brain when models persist',
-        G.state === 'done' && !spoke(w, 'catch the brain') && !spoke(w, 'Download the starter pack'));
-      check('persisted stop still speaks', spoke(w, 'pool') || spoke(w, 'minds you caught'));
+      check('a remembered expert view opens on the files page',
+        w.__tmShell.activeTab === 'bay' && w.document.body.classList.contains('expert'));
+      check('the files tab is named for files, not models',
+        /files/.test(w.document.querySelector('.tab[data-tab="bay"]').textContent));
     }
   }
 

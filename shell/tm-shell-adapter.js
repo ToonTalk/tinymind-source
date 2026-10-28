@@ -1,12 +1,11 @@
 /* ============================================================
    tm-shell-adapter.js — Tiny Mind shell guide (vg-core v2).
-   Owns the starter-pack "catch the brain" tour (artifact edition's
-   front door) and the master guide/kid/voice toggles, which it
-   persists via shellStorage and rebroadcasts to the frames. The
-   build exposes window.__tmShell = {frames, shellStorage, selectTab,
-   APPS} for this adapter. The starter zip URL is read from
-   window.TM_STARTER_ZIP, defaulting to the confirmed host
-   (toontalk.github.io/misc/).
+   Owns the front-door tour (the four activities on the home page)
+   and the master guide/kid/voice toggles, which it persists via
+   shellStorage and rebroadcasts to the frames. The build exposes
+   window.__tmShell = {frames, shellStorage, selectTab, startActivity,
+   APPS} for this adapter. The minds load by themselves now, so the
+   old "catch the brain" starter-pack quest is gone.
    ============================================================ */
 (function(){
 'use strict';
@@ -75,7 +74,6 @@ if (!window.__vgProviders) window.__vgProviders = {
 };
 
 const SH = () => window.__tmShell || {};
-const STARTER = () => window.TM_STARTER_ZIP || 'https://toontalk.github.io/misc/tiny-mind-starter.zip';
 const prefs = { kid: false, voice: false, on: true };
 let api = null;
 
@@ -99,7 +97,8 @@ function frameKey(){
 }
 const inClaude = () => !!(api && api.inClaude);
 const shellKey = () => frameKey() || (window.__vgRememberedKey && window.__vgRememberedKey());
-const activeTab = () => (SH().activeTab) || 'bay';
+const activeTab = () => (SH().activeTab) || 'home';
+const onFrontPage = () => ['home', 'bay'].includes(document.body.dataset.view || activeTab());   // the shell marks the view on <body data-view>
 
 async function loadPrefs(){
   const st = SH().shellStorage; if (!st) return;
@@ -126,73 +125,62 @@ function setPref(key, value){
 }
 const kid = () => prefs.kid;
 
-/* modelLoaded without app edits: rows appear in the bay's #pool
-   table when a bundle is ingested. Unlatched: any pool change while
-   models are present re-emits, so an until-waiter armed AFTER the
-   drop still resolves (narration stays single via once:true). */
-const poolHasModel = () => { const p = $('pool');
-  return !!p && p.querySelectorAll('tr').length > 0 && !/nothing yet/.test(p.textContent || ''); };
-function wire(emit){
-  const pool = $('pool');
-  if (pool && pool.nodeType === 1) new MutationObserver(() => { if (poolHasModel()) emit('modelLoaded', {}); })
-    .observe(pool, { childList: true, subtree: true });
-}
+/* the pool table still lives on the files page (expert view); a change
+   there is narrated only as a provenance remark, never as a quest */
+const poolText = () => ($('pool') && $('pool').textContent) || '';
+function wire(emit){}
 
-const EVENTS = {
-  modelLoaded: { priority: 'moment', once: true, spot: '#pool',
-    lines: 'Caught! The brain is in the bay. It will still be here next visit — the bay remembers.',
-    kidLines: 'You caught the brain! And it will still be here next time you come back.' },
-};
+const EVENTS = {};
 
 function STEPS(){
   return [
-  { name: 'catchTheBrain', skipIf: poolHasModel, spot: '#dropzone', text: () => kid()
-      ? 'First quest: catch a brain! Ask a grown-up to download the starter pack from the address I put in my log, then drag the file into this drop zone.'
-      : `First, catch the brain. Download the starter pack — I have put the address in my transcript log so you can copy it: ${STARTER()} — then drag the downloaded zip into this drop zone. Everything runs on your machine; nothing is uploaded anywhere.` },
-  { name: 'dragIn', skipIf: poolHasModel, spot: '#dropzone', allow: '#dropzone,#browseBtn,#fileInput',
-    until: 'modelLoaded',
-    text: () => kid()
-      ? 'Drag the file in, or press browse. I will wait right here.'
-      : 'Drag it in, or use the browse button. I will wait — the bay will list every model and tokenizer it finds inside.' },
-  { name: 'persisted', spot: '#pool', text: () => kid()
-      ? 'See the list? Those are the minds you caught. They stay saved, so next time they will already be waiting.'
-      : 'There is your pool: the trainee, its tokenizer, and any recordings. It persists — next time you open this page, the minds will already be here waiting.' },
-  { name: 'pickADoor', spot: '#startNursery', allow: '#startNursery,.tab', text: () => kid()
-      ? 'Now pick a door! The Nursery button starts you raising your very own tiny mind. See you inside!'
-      : 'Now pick a door. The Nursery is the front one — press the start button, or use the tabs along the top: Nursery to raise a mind, Microscope to look inside one, Treasure Hunt to find where a fact lives. A guide is waiting in each room.' },
+  { name: 'welcome', spot: '#home h1', text: () => kid()
+      ? 'Hi! This is the front door of Tiny Mind. Each big button is a different game with a real little computer mind.'
+      : 'This is the front door of Tiny Mind. Each card is one thing you can do with a real, very small language model. The minds load by themselves; nothing leaves your computer.' },
+  { name: 'makeAndWatch', spot: '[data-act="raise"]', text: () => kid()
+      ? 'Teach a tiny mind: make up a character, and the mind learns about it. Or watch a recording of a mind growing up, from babble to stories.'
+      : 'Teach a tiny mind trains one live on stories about a character you invent. Watch a mind grow up replays recordings of that training, from random babble to whole stories, with no waiting.' },
+  { name: 'lookAndHunt', spot: '[data-act="look"]', text: () => kid()
+      ? 'Look inside a mind shows what it is thinking, word by word. Hunt for a hidden fact is a treasure hunt inside a mind.'
+      : 'Look inside a mind shows the words a model is weighing up, layer by layer, and what single neurons respond to. Hunt for a hidden fact is a detective game: find where a mind keeps something, then prove it by switching parts off.' },
+  { name: 'pickOne', spot: '#home .acts', allow: '.act,#modeBtn,#homeExpert', text: () => kid()
+      ? 'Now pick one! A guide is waiting inside each.'
+      : 'Pick one. A guide waits inside each. If you know your way around already, the button at the top right shows every tab and file at once.' },
   ];
 }
 
 function statusText(){
   const t = activeTab();
-  const where = t === 'bay' ? 'the model bay (the "models" tab) \u2014 this very page'
+  const where = t === 'home' ? 'the front door, with its four activity cards \u2014 this very page'
+    : t === 'bay' ? 'the files page (the expert view\'s "files" tab) \u2014 this very page'
     : 'the ' + t + ' room, whose own guide is beside them there';
   return `The visitor is RIGHT NOW looking at ${where}. Never tell them to go where they already are. ` +
     `Rooms booted so far: ${(SH().frames && Object.keys(SH().frames).join(',')) || 'none'}. ` +
     `Shell status: ${($('shellStatus') && $('shellStatus').textContent) || ''}. ` +
-    `Pool (truncated): ${($('pool') && $('pool').textContent.slice(0, 200)) || 'empty'}. ` +
-    `Tokenizers: ${($('tokList') && $('tokList').textContent) || 'none'}.`;
+    `View: ${(SH().uiMode) || 'simple'} (simple = front door; expert = all tabs). ` +
+    `Minds loaded (truncated): ${poolText().slice(0, 200) || 'none yet'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide on the front page of Tiny Mind, a three-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, and a Treasure Hunt for finding where a fact lives. This page is the model bay, where bundles are dropped in. ' +
+  return 'You are the guide on the front page of Tiny Mind, a three-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, and a Treasure Hunt for finding where a fact lives. This page is the front door: four activity cards (Teach a tiny mind, Watch a mind grow up, Look inside a mind, Hunt for a hidden fact); the minds load by themselves, and a button at the top right switches to an expert view with every tab and a files page. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is ten or older: plain, concrete language. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: dropzone, pool, start. Tab names: bay, nursery, microscope, hunt. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: teach, grow, look, hunt, tabs. Tab names: home, nursery, microscope, hunt, files. ' +
     ' A TAB directive only offers: the app asks the visitor to confirm before anything moves, so word it as an offer, and never claim you have already taken them. ' +
     ' The time machine lives in the Nursery, below the training controls. ' +
     ' Never offer to open or point at a view the status marks as already visible \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'switch to the Nursery', escalations: 'load or delete models', safeVerb: 'SHOW' });
 }
-const SHOW = { dropzone: '#dropzone', pool: '#pool', start: '#startNursery' };
+const SHOW = { teach: '[data-act="raise"]', grow: '[data-act="grow"]', look: '[data-act="look"]', hunt: '[data-act="hunt"]', tabs: '#modeBtn' };
+const TAB_ALIAS = { files: 'bay', home: 'home', nursery: 'nursery', microscope: 'microscope', hunt: 'hunt' };
 
 function createGuide(){
   const A = {
     id: 'tm-shell',
     ui: { mascot: '\u{1F9E0}', greeting: () => kid()
-        ? 'Hi! I am the guide. Press start tour and we will catch a brain together.'
-        : 'Welcome to Tiny Mind. Press start tour for the two-minute front door, or ask me anything.',
+        ? 'Hi! I am the guide. Press start tour and I will show you around.'
+        : 'Welcome to Tiny Mind. Press start tour for a one-minute look at the four things you can do, or ask me anything.',
       voiceEnabled: () => prefs.voice, doneStatus: 'Pick a room — a guide waits in each.' },
     layout: { panelWidth: 300, panelMargin: 302, narrowMax: 700, appBreakpoint: 0 },
     takeover: { events: ['pointerdown'],
@@ -200,10 +188,9 @@ function createGuide(){
         const st = STEPS()[G.cur]; return !!(st && st.allow && e.target && e.target.closest && e.target.closest(st.allow)); } },
     tour: { steps: STEPS() },
     provenance: {
-      snapshot: () => ({ pool: ($('pool') && $('pool').textContent) || '' }),
+      snapshot: () => ({ pool: poolText() }),
       diffRemark: o => { if (!o) return '';
-        const pool = ($('pool') && $('pool').textContent) || '';
-        if (o.pool !== pool) return 'The bay changed while I was quiet — new minds in the pool.';
+        if (o.pool !== poolText()) return 'More minds arrived while I was quiet.';
         return ''; } },
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || inClaude() || !!shellKey(),
@@ -217,7 +204,7 @@ function createGuide(){
         if (!c) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
         return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
       },
-      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour and the bay work fine without one.' } },
+      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour works fine without one.' } },
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
       if (/failed to fetch|network|cors|no key/i.test(m) && !shellKey())
         return { log: 'Live AI call failed: ' + m,
@@ -230,14 +217,15 @@ function createGuide(){
          Naming the room they are already in is invalid, so the guide
          cannot "take" them where they stand. */
       TAB: { gated: true,
-        validate(p){ const t = (p[0] || '').toLowerCase();
-          return ['bay', 'nursery', 'microscope', 'hunt'].includes(t) && t !== activeTab() && !!SH().selectTab ? t : false; },
-        ratifyText(p, t){ return kid() ? `Shall I take you to the ${t}?` : `Take you to the ${t} tab?`; },
+        validate(p){ const t = TAB_ALIAS[(p[0] || '').toLowerCase()];
+          return t && t !== activeTab() && !!SH().selectTab ? t : false; },
+        ratifyText(p, t){ const n = t === 'bay' ? 'files page' : t === 'home' ? 'front door' : t;
+          return kid() ? `Shall I take you to the ${n}?` : `Take you to the ${n}?`; },
         exec(p, a, t){ SH().selectTab(t); } },
     },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
-    testHook: { app: () => ({ prefs, starter: STARTER() }) },
+    testHook: { app: () => ({ prefs }) },
     init(a){
       api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
       wire((n, p) => a.emit(n, p));
@@ -263,19 +251,16 @@ function createGuide(){
       window.addEventListener('message', e => { const m = e.data; if (!m || m.tm !== 'pref') return;
         if (m.key === 'tm-guide-kid') prefs.kid = m.value === '1';
         if (m.key === 'tm-guide-voice') prefs.voice = m.value === '1'; });
-      /* the shell guide belongs to the bay: when a room's frame
-         covers the shell, hide both the panel and the collapsed tab
-         so it never stacks on the room guide's tab */
-      const bay = document.getElementById('bay');
-      if (bay && bay.nodeType === 1) { let wasOpen = false;
-        const upd = () => { const off = bay.classList.contains('hide');
+      /* the shell guide belongs to the front page (home or files): when a
+         room's frame covers the shell, hide both the panel and the collapsed
+         tab so it never stacks on the room guide's tab */
+      { let wasOpen = false;
+        const upd = () => { const off = !onFrontPage();
           for (const id of ['vgPanel', 'vgTab']) { const el = document.getElementById(id); if (el) el.style.display = off ? 'none' : ''; }
-          if (off) { wasOpen = document.body.classList.contains('vg-open');
+          if (off) { if (document.body.classList.contains('vg-open')) wasOpen = true;
             document.body.classList.remove('vg-open');   /* release the reserved margin: no dead strip beside the rooms */
-          } else if (wasOpen) { document.body.classList.add('vg-open'); } };
-        new MutationObserver(upd).observe(bay, { attributes: true, attributeFilter: ['class'] }); upd(); }
-      /* put the copyable starter URL straight into the transcript */
-      a.logAdd('Starter pack: ' + STARTER());
+          } else if (wasOpen) { document.body.classList.add('vg-open'); wasOpen = false; } };
+        new MutationObserver(upd).observe(document.body, { attributes: true, attributeFilter: ['data-view'] }); upd(); }
     },
   };
   window.VoiceGuide.create(A);

@@ -634,3 +634,23 @@ nursery `306e7038…` → same, hunt `83bbdd65…` → same, microscope `5e62ca6
 (add `--raw PATH` to keep candidates; `--from-raw PATH` re-encodes in seconds and keeps
 labels whose snippets are unchanged), then `node tools/label-neuron-atlas.js` (incremental;
 `--batch 3` mops up neurons the model skipped), then `node tools/build-release.js`.
+
+# Front door, self-loading models, site and artifact editions (2026-10-27)
+
+- **Simple view by default**: the mega page opens on a front door with four activities
+  (Teach a tiny mind, Watch a mind grow up, Look inside a mind, Hunt for a hidden fact), each
+  going straight into its room with a suitable mind. "Show all tabs" switches to the expert
+  view (the old tabs, with the models page renamed 📁 files); the choice is remembered. A
+  "mind:" menu names the minds in plain words. The shell guide's tour now walks the four
+  activities instead of the old download-and-drop starter quest. Each room's own drop hints
+  (class `tm-file-ctl`) step aside when the room runs inside the mega page.
+- **Models load by themselves**: start-up packs and the small loose models load at once; the
+  big storyteller (stories15M + tokenizer + neuron atlas) only when the Microscope needs it,
+  behind a progress screen; time-machine snapshots one at a time as they are scrubbed to.
+- **Site**: `node tools/build-site.mjs <folder>` lays out toontalk.github.io/tinymind/
+  (repo ToonTalk/tinymind): index.html plus everything it fetches beside it (104 MB).
+- **Artifact**: `node tools/build-artifact.mjs pack <site> <out>` packs the same files into
+  ten JSON parts uploaded to the artifact's asset store; `page <out>` writes the page with
+  `window.__TM_ASSETS__`. Keyless Claude goes through the `sample` capability; saves through
+  `downloads` (a .bin goes out inside a .zip).
+- npm test 155/0 (e2 parity exact), smoke 209/0.

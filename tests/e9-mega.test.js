@@ -27,7 +27,7 @@ export async function run(t) {
   t.check('mega: every app carries an inlined worker',
     (mega.match(/__WORKER_SRC__ = "/g) || []).length === 3);
   t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
-    mega.includes("fetch('arc/arcs.json')") && mega.includes('manifest.more || []'));
+    mega.includes("tmGetJson('arc/arcs.json')") && mega.includes('manifest.more || []'));
   t.check('mega: same-folder runtime packs are manifest-driven with an embedded fallback',
     resourceManifest.version === 1 &&
     resourceManifest.resources.map(r => r.file).join('|') ===
@@ -47,9 +47,9 @@ export async function run(t) {
     mega.includes('tm-shell-adapter.js'));
   t.check('mega: probe-fact branch shipped inside the nursery worker blob',
     mega.includes('probe-fact-done'));
-  t.check('mega: time machine (scrubber) markup + starter URL seam present',
+  t.check('mega: time machine (scrubber) markup present; the minds load by themselves (no starter-pack quest)',
     mega.includes('id=\\"scrubSlider\\"') === false /* worker strings escape quotes */ &&
-    mega.includes('id="scrubSlider"') && mega.includes('window.TM_STARTER_ZIP'));
+    mega.includes('id="scrubSlider"') && !mega.includes('window.TM_STARTER_ZIP') && mega.includes('function ensureBig('));
   t.check('mega: shell keeps the model pool + RPC hub',
     mega.includes('shellIngest') && mega.includes("m.tm === 'rpc'"));
   t.check('mega: ready-made Zog storybook is available without neighboring files',

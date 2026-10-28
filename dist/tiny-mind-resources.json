@@ -29,7 +29,9 @@
     {
       "file": "tiny-mind-neuron-atlas.json",
       "kind": "neuron-atlas",
-      "description": "stories15M neuron examples (both poles) for the Microscope's neuron card"
+      "description": "stories15M neuron examples (both poles) for the Microscope's neuron card",
+      "load": "later",
+      "group": "big"
     }
   ]
 }

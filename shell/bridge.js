@@ -8,6 +8,11 @@
 (function () {
   if (window.parent === window) return;
   window.__tmBridge = true;
+  // inside the combined app the shell's "mind" menu chooses and adds models, so each
+  // room's own drop-a-file hints and load buttons (marked tm-file-ctl) step aside
+  document.documentElement.classList.add('tm-embedded');
+  { const st = document.createElement('style'); st.textContent = '.tm-embedded .tm-file-ctl{display:none !important}';
+    (document.head || document.documentElement).appendChild(st); }
   let seq = 0; const pending = new Map();
   function rpc(method, args) {
     return new Promise((resolve, reject) => {
