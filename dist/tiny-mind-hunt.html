@@ -364,7 +364,7 @@ window.__vgDeferBoot = async function(create){
 })();
 </script>
 <h1>🗺️ Tiny Mind — Treasure Hunt</h1>
-<div class="sub">the model changed inside. Find parts that contribute, and test whether their effects are specific.</div>
+<div class="sub">this mind was taught some facts. Find the parts that help it answer one, then check they matter for that fact and not for everything.</div>
 
 <div class="card">
   <h2>1 · bring your tiny mind</h2>
@@ -398,7 +398,7 @@ window.__vgDeferBoot = async function(create){
     <label class="f">key <input type="password" id="detKey"></label>
     <label class="f">model <input type="text" id="detModel"></label>
   </span>
-  <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone may predict "tree" for anyone, so that prediction may not be name-specific yet. Step 3 measures this with matched name controls.</div>
+  <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone may predict "tree" for anyone, so that prediction may not be name-specific yet. Step 3 checks this by asking the same question about look-alike names.</div>
   <button class="go" id="probeBtn" disabled>🔎 step 1: ask the model</button>
 </div>
 
@@ -2498,7 +2498,7 @@ worker.onmessage = (e) => {
     $('probeBtn').disabled = false;
     buildDiy();
     status(S.arcManifest && Object.keys(S.arcManifest.characters || {}).length > 1
-      ? 'ready — quests and matched name controls loaded for Zog, Mip, Bex and Nia'
+      ? 'ready — quests loaded for Zog, Mip, Bex and Nia, with look-alike names to compare against'
       : 'ready — pick a quest and ask the model');
     speak(kid() ? 'Your tiny mind is here! What shall we hunt for?' : 'Model loaded. Pick a quest.');
   }

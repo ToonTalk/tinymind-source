@@ -657,9 +657,9 @@ window.__vgDeferBoot = async function(create){
     <select id="startFrom"><option value="trained">the trainee</option><option value="random">an empty head</option></select>
   </label>
   <label class="f" style="display:inline-block;width:90px">replay % <input type="number" id="replayPct" value="50" min="0" max="90"></label>
-  <label class="f" style="display:inline-block;width:100px">learning rate <input type="text" id="lr" value="0.0003"></label>
+  <label class="f" style="display:inline-block;width:100px" title="how big a nudge each training step gives the mind: bigger learns faster but can wreck what it knew">learning rate <input type="text" id="lr" value="0.0003"></label>
   <label class="f" style="display:inline-block;width:80px">steps <input type="number" id="maxSteps" value="120" min="10"></label>
-  <div class="hint">replay = mixing in ordinary TinyStories so the model doesn't forget how to talk while it learns your character</div>
+  <div class="hint">replay = mixing in ordinary TinyStories so the model doesn't forget how to talk while it learns your character · learning rate = how big a nudge each step gives it · steps = how many nudges</div>
   <button class="go" id="trainBtn" disabled>🐣 start raising</button>
   <button id="pauseBtn" disabled>pause</button>
   <div id="trainHint" class="hint warn"></div>
@@ -668,7 +668,7 @@ window.__vgDeferBoot = async function(create){
   <button class="alt small" id="restartBtn" disabled title="new training run from the ORIGINAL 260K weights — your storybook is kept">↺ start over from the original 260K</button>
   <span id="arcBadge"></span>
   <div style="margin-top:.5rem"><canvas id="chart" width="900" height="220"></canvas></div>
-  <div class="hint"><b style="color:#ff9ec2">■ pink</b>: how surprised it is by YOUR secret stories · <b style="color:#9ecbff">■ blue</b>: by ordinary stories (up = forgetting) · <span style="color:rgba(221,227,236,0.7)">— thin line</span>: training loss</div>
+  <div class="hint"><b style="color:#ff9ec2">■ pink</b>: how surprised it is by YOUR secret stories · <b style="color:#9ecbff">■ blue</b>: by ordinary stories (up = forgetting) · <span style="color:rgba(221,227,236,0.7)">— thin line</span>: how wrong its guesses are on the stories it is learning from (“training loss”)</div>
   <button class="alt small" id="saveSamples" disabled>💾 save these stories</button>
   <div id="samples"></div>
   <div id="scrub">
@@ -3303,7 +3303,7 @@ worker.onmessage = (e) => {
     const modelName = init && init.modelName;
     if (!arcOrigin) {  // a NEW pair replaced any snapshot base
       S.scrub.base = null;
-      $('restartBtn').textContent = `↺ start over from ${modelName || 'the loaded model'}`;
+      $('restartBtn').textContent = `↺ start over from ${/^stories260K\.bin$/i.test(modelName || '') ? 'the original 260K' : (modelName || 'the loaded model')}`;
       $('restartBtn').title = `new training run from ${modelName || 'the model file that was loaded'} — your storybook is kept`;
     }
     const safeModelName = modelName && String(modelName).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -3407,7 +3407,7 @@ function renderArcPicker() {
   const list = S.arcs.list(), sel = $('scrubArcPick');
   sel.style.display = list.length > 1 ? '' : 'none';
   sel.innerHTML = '';
-  for (const m of list) sel.add(new Option(`${m.arc} — ${arcKidLabel(m)}`, m.arc, false, m.arc === S.scrub.arc));
+  for (const m of list) sel.add(new Option(arcKidLabel(m), m.arc, false, m.arc === S.scrub.arc));
 }
 $('scrubArcPick').onchange = () => selectArc($('scrubArcPick').value);
 
@@ -5647,7 +5647,7 @@ window.__vgDeferBoot = async function(create){
       <div id="bars" class="hint">—</div>
     </div>
     <div class="card">
-      <h2>5 · logit lens <span class="hint">— the guess forming, layer by layer</span></h2>
+      <h2>5 · layer by layer <span class="hint">— the guess taking shape inside the mind (scientists call this a “logit lens”)</span></h2>
       <button class="small" id="lensBtn" disabled>look at selected position</button>
       <div id="lensOut" style="margin-top:.4rem"></div>
     </div>
@@ -5665,15 +5665,15 @@ window.__vgDeferBoot = async function(create){
       <button class="small" id="neuronBtn" disabled>find neurons for selection</button>
       <div id="neuronList" style="margin-top:.3rem"></div>
       <div id="neuronCard"></div>
-      <div class="lesson">pretty highlights are only a CLUE — the ablation lab below is the proof.</div>
+      <div class="lesson">pretty highlights are only a CLUE — the switch-off lab below is the proof.</div>
     </div>
     <div class="card">
-      <h2>8 · ablation lab <span class="hint">— turn heads OFF and re-run. did the guess really change?</span></h2>
+      <h2>8 · switch-off lab <span class="hint">— turn attention heads OFF and run the story again (scientists call this “ablation”). did the guess really change?</span></h2>
       <div id="ablGrid" class="hgrid"></div>
       <button class="small" id="ablRun" disabled>re-run with checked heads OFF</button>
       <button class="small" id="ablClear" disabled>clear</button>
       <div id="ablInfo" class="hint" style="margin-top:.3rem"></div>
-      <div class="lesson">"the picture SUGGESTED it — the ablation PROVED it."</div>
+      <div class="lesson">"the picture SUGGESTED it — switching it off PROVED it."</div>
     </div>
   </div>
 </div>
@@ -7828,8 +7828,8 @@ function setAblActive(active, heads = [], att = null, steer = []) {
   if (b) {
     b.style.display = active ? '' : 'none';
     if (active) b.innerHTML = steer.length
-      ? `🔴 the whole microscope now shows the model with <b>${esc(describeChanges(heads, steer))}</b> — attention, neurons, lens and bars are all the changed model. <span style="opacity:.75">clear the ablation lab (or press "back to normal") to go back.</span>`
-      : `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the ablation lab to go back.</span>`;
+      ? `🔴 the whole microscope now shows the model with <b>${esc(describeChanges(heads, steer))}</b> — attention, neurons, lens and bars are all the changed model. <span style="opacity:.75">clear the switch-off lab (or press "back to normal") to go back.</span>`
+      : `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the switch-off lab to go back.</span>`;
   }
   renderStrip(); renderHeat(); renderBars();
   if (S.lensOpen) requestLens();
@@ -7944,7 +7944,7 @@ worker.onmessage = (e) => {
     $('progress').style.display = 'none';
     $('runBtn').disabled = false;
     $('lensBtn').disabled = $('neuronBtn').disabled = $('ablRun').disabled = $('ablClear').disabled = false;
-    status(`captured ${m.n} pieces (${(m.bytes / 1e6).toFixed(1)} MB of activations)` +
+    status(`read ${m.n} pieces of the story, recording everything every neuron did (${(m.bytes / 1e6).toFixed(1)} MB)` +
       (m.truncated ? ' — story was cut to fit the model window' : ''));
     renderStrip(); renderBars(); renderHeat();
     $('lensOut').innerHTML = ''; $('neuronList').innerHTML = ''; $('ablInfo').textContent = '';
@@ -7966,7 +7966,7 @@ worker.onmessage = (e) => {
       (steer.length ? `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>` : `heads OFF: <b>${m.ablate.join(', ')}</b>`) +
       ` — the model's confidence in the real next piece changed by ` +
       `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average; biggest change <b>${(100 * maxD).toFixed(1)}%</b> ` +
-      `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (pos ${maxAt + 1})`;
+      `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (piece ${maxAt + 1})`;
     status('ablated run done — the whole microscope now shows the damaged model');
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
     setAblActive(true, m.ablate, new Float32Array(m.attention), steer);
@@ -8042,7 +8042,7 @@ function renderBars() {
   const rows = S.run.topK[pos];
   const abl = S.ablRun ? S.ablRun.topK[pos] : null;
   const actualPiece = pos + 1 < S.run.n ? S.run.pieces[pos + 1] : null;
-  let html = `<div class="hint">after ${esc(JSON.stringify(S.run.pieces[pos]))} (pos ${pos}) the model expects:</div>`;
+  let html = `<div class="hint">after ${esc(JSON.stringify(S.run.pieces[pos]))} (piece ${pos}) the model expects:</div>`;
   for (const r of rows.slice(0, 10)) {
     const isActual = actualPiece !== null && pos + 1 < S.run.n && r.token === S.run.ids[pos + 1];
     let ablBar = '';
@@ -9816,7 +9816,7 @@ window.__vgDeferBoot = async function(create){
 })();
 </script>
 <h1>🗺️ Tiny Mind — Treasure Hunt</h1>
-<div class="sub">the model changed inside. Find parts that contribute, and test whether their effects are specific.</div>
+<div class="sub">this mind was taught some facts. Find the parts that help it answer one, then check they matter for that fact and not for everything.</div>
 
 <div class="card">
   <h2>1 · bring your tiny mind</h2>
@@ -9850,7 +9850,7 @@ window.__vgDeferBoot = async function(create){
     <label class="f">key <input type="password" id="detKey"></label>
     <label class="f">model <input type="text" id="detModel"></label>
   </span>
-  <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone may predict "tree" for anyone, so that prediction may not be name-specific yet. Step 3 measures this with matched name controls.</div>
+  <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone may predict "tree" for anyone, so that prediction may not be name-specific yet. Step 3 checks this by asking the same question about look-alike names.</div>
   <button class="go" id="probeBtn" disabled>🔎 step 1: ask the model</button>
 </div>
 
@@ -11950,7 +11950,7 @@ worker.onmessage = (e) => {
     $('probeBtn').disabled = false;
     buildDiy();
     status(S.arcManifest && Object.keys(S.arcManifest.characters || {}).length > 1
-      ? 'ready — quests and matched name controls loaded for Zog, Mip, Bex and Nia'
+      ? 'ready — quests loaded for Zog, Mip, Bex and Nia, with look-alike names to compare against'
       : 'ready — pick a quest and ask the model');
     speak(kid() ? 'Your tiny mind is here! What shall we hunt for?' : 'Model loaded. Pick a quest.');
   }

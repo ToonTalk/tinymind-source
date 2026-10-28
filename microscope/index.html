@@ -127,7 +127,7 @@
       <div id="bars" class="hint">—</div>
     </div>
     <div class="card">
-      <h2>5 · logit lens <span class="hint">— the guess forming, layer by layer</span></h2>
+      <h2>5 · layer by layer <span class="hint">— the guess taking shape inside the mind (scientists call this a “logit lens”)</span></h2>
       <button class="small" id="lensBtn" disabled>look at selected position</button>
       <div id="lensOut" style="margin-top:.4rem"></div>
     </div>
@@ -145,15 +145,15 @@
       <button class="small" id="neuronBtn" disabled>find neurons for selection</button>
       <div id="neuronList" style="margin-top:.3rem"></div>
       <div id="neuronCard"></div>
-      <div class="lesson">pretty highlights are only a CLUE — the ablation lab below is the proof.</div>
+      <div class="lesson">pretty highlights are only a CLUE — the switch-off lab below is the proof.</div>
     </div>
     <div class="card">
-      <h2>8 · ablation lab <span class="hint">— turn heads OFF and re-run. did the guess really change?</span></h2>
+      <h2>8 · switch-off lab <span class="hint">— turn attention heads OFF and run the story again (scientists call this “ablation”). did the guess really change?</span></h2>
       <div id="ablGrid" class="hgrid"></div>
       <button class="small" id="ablRun" disabled>re-run with checked heads OFF</button>
       <button class="small" id="ablClear" disabled>clear</button>
       <div id="ablInfo" class="hint" style="margin-top:.3rem"></div>
-      <div class="lesson">"the picture SUGGESTED it — the ablation PROVED it."</div>
+      <div class="lesson">"the picture SUGGESTED it — switching it off PROVED it."</div>
     </div>
   </div>
 </div>
@@ -210,8 +210,8 @@ function setAblActive(active, heads = [], att = null, steer = []) {
   if (b) {
     b.style.display = active ? '' : 'none';
     if (active) b.innerHTML = steer.length
-      ? `🔴 the whole microscope now shows the model with <b>${esc(describeChanges(heads, steer))}</b> — attention, neurons, lens and bars are all the changed model. <span style="opacity:.75">clear the ablation lab (or press "back to normal") to go back.</span>`
-      : `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the ablation lab to go back.</span>`;
+      ? `🔴 the whole microscope now shows the model with <b>${esc(describeChanges(heads, steer))}</b> — attention, neurons, lens and bars are all the changed model. <span style="opacity:.75">clear the switch-off lab (or press "back to normal") to go back.</span>`
+      : `🔴 the whole microscope now shows the model with <b>${heads.join(', ')}</b> muted — attention, neurons, lens and bars are all the damaged model. <span style="opacity:.75">clear the switch-off lab to go back.</span>`;
   }
   renderStrip(); renderHeat(); renderBars();
   if (S.lensOpen) requestLens();
@@ -326,7 +326,7 @@ worker.onmessage = (e) => {
     $('progress').style.display = 'none';
     $('runBtn').disabled = false;
     $('lensBtn').disabled = $('neuronBtn').disabled = $('ablRun').disabled = $('ablClear').disabled = false;
-    status(`captured ${m.n} pieces (${(m.bytes / 1e6).toFixed(1)} MB of activations)` +
+    status(`read ${m.n} pieces of the story, recording everything every neuron did (${(m.bytes / 1e6).toFixed(1)} MB)` +
       (m.truncated ? ' — story was cut to fit the model window' : ''));
     renderStrip(); renderBars(); renderHeat();
     $('lensOut').innerHTML = ''; $('neuronList').innerHTML = ''; $('ablInfo').textContent = '';
@@ -348,7 +348,7 @@ worker.onmessage = (e) => {
       (steer.length ? `changed: <b>${esc(describeChanges(m.ablate, steer))}</b>` : `heads OFF: <b>${m.ablate.join(', ')}</b>`) +
       ` — the model's confidence in the real next piece changed by ` +
       `<b>${(100 * meanD / nD).toFixed(1)}%</b> on average; biggest change <b>${(100 * maxD).toFixed(1)}%</b> ` +
-      `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (pos ${maxAt + 1})`;
+      `at piece <b>${esc(S.run.pieces[maxAt + 1] ?? '?')}</b> (piece ${maxAt + 1})`;
     status('ablated run done — the whole microscope now shows the damaged model');
     // switch every instrument to the ablated model (this also renders bars/strip/heat/lens/neurons)
     setAblActive(true, m.ablate, new Float32Array(m.attention), steer);
@@ -424,7 +424,7 @@ function renderBars() {
   const rows = S.run.topK[pos];
   const abl = S.ablRun ? S.ablRun.topK[pos] : null;
   const actualPiece = pos + 1 < S.run.n ? S.run.pieces[pos + 1] : null;
-  let html = `<div class="hint">after ${esc(JSON.stringify(S.run.pieces[pos]))} (pos ${pos}) the model expects:</div>`;
+  let html = `<div class="hint">after ${esc(JSON.stringify(S.run.pieces[pos]))} (piece ${pos}) the model expects:</div>`;
   for (const r of rows.slice(0, 10)) {
     const isActual = actualPiece !== null && pos + 1 < S.run.n && r.token === S.run.ids[pos + 1];
     let ablBar = '';
