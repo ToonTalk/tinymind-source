@@ -740,8 +740,10 @@ async function main() {
       check('shell finds the ghostwriter key', (w.__vgRememberedKey() || {}).provider === 'openai');
       w.localStorage.removeItem('tm-key-openai');
       const names = G.steps.map(s => s.name);
-      check('front-door tour has the 4 stops',
-        names.join(',') === 'welcome,makeAndWatch,lookAndHunt,pickOne', names.join(','));
+      check('front-door tour has one stop per card (the spotlight follows the words)',
+        names.join(',') === 'welcome,teach,grow,look,hunt,pickOne', names.join(','));
+      check('each card stop spotlights its own card',
+        ['raise', 'grow', 'look', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
       const doc = w.document;
       check('simple view is the default: the front door shows, the tabs wait',
         doc.body.classList.contains('simple') && w.__tmShell.activeTab === 'home' &&

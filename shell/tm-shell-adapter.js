@@ -137,12 +137,18 @@ function STEPS(){
   { name: 'welcome', spot: '#home h1', text: () => kid()
       ? 'Hi! This is the front door of Tiny Mind. Each big button is a different game with a real little computer mind.'
       : 'This is the front door of Tiny Mind. Each card is one thing you can do with a real, very small language model. The minds load by themselves; nothing leaves your computer.' },
-  { name: 'makeAndWatch', spot: '[data-act="raise"]', text: () => kid()
-      ? 'Teach a tiny mind: make up a character, and the mind learns about it. Or watch a recording of a mind growing up, from babble to stories.'
-      : 'Teach a tiny mind trains one live on stories about a character you invent. Watch a mind grow up replays recordings of that training, from random babble to whole stories, with no waiting.' },
-  { name: 'lookAndHunt', spot: '[data-act="look"]', text: () => kid()
-      ? 'Look inside a mind shows what it is thinking, word by word. Hunt for a hidden fact is a treasure hunt inside a mind.'
-      : 'Look inside a mind shows the words a model is weighing up, layer by layer, and what single neurons respond to. Hunt for a hidden fact is a detective game: find where a mind keeps something, then prove it by switching parts off.' },
+  { name: 'teach', spot: '[data-act="raise"]', text: () => kid()
+      ? 'Teach a tiny mind: make up a character, and watch the mind learn about it.'
+      : 'Teach a tiny mind trains one live, on stories about a character you invent.' },
+  { name: 'grow', spot: '[data-act="grow"]', text: () => kid()
+      ? 'Watch a mind grow up: see a recording of a mind going from babble to stories.'
+      : 'Watch a mind grow up replays recordings of that kind of training, from random babble to whole stories, with no waiting.' },
+  { name: 'look', spot: '[data-act="look"]', text: () => kid()
+      ? 'Look inside a mind shows what it is thinking, word by word.'
+      : 'Look inside a mind shows the words a model is weighing up, layer by layer, and what single neurons respond to.' },
+  { name: 'hunt', spot: '[data-act="hunt"]', text: () => kid()
+      ? 'Hunt for a hidden fact is a treasure hunt inside a mind.'
+      : 'Hunt for a hidden fact is a detective game: find where a mind keeps something, then prove it by switching parts off.' },
   { name: 'pickOne', spot: '#home .acts', allow: '.act,#modeBtn,#homeExpert', text: () => kid()
       ? 'Now pick one! A guide is waiting inside each.'
       : 'Pick one. A guide waits inside each. If you know your way around already, the button at the top right shows every tab and file at once.' },

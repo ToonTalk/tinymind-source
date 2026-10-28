@@ -392,7 +392,8 @@ function create(A){
   const vgEvOnceDone=new Set(), vgEvLastAt=new Map();
   const vgEvDyn={};                         // api.on/off registry, over A.events
   let vgEvWaiters=[], vgEvSweep=null;
-  const vgVoiceOn=()=>{ const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
+  const vgVoiceOn=()=>{ if(window.__vgPrefs&&window.__vgPrefs.active===false) return false;   // a room the shell has hidden never talks out loud
+    const u=A.ui||{}; return u.voiceEnabled?!!u.voiceEnabled():true; };
   function vgEvSpec(name){ return vgEvDyn[name]||((A.events||{})[name]); }
   function vgEvLineOf(spec,payload){
     const mode=(A.lineMode&&A.lineMode())||'default';

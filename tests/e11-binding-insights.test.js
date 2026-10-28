@@ -55,5 +55,6 @@ export async function run(t) {
   t.check('user-facing Hunt source no longer claims an ablation proved storage',
     !/\bPROVED\b|the fact lives here|prove where/i.test(hunt + guide));
   t.check('arc manifests are delivered to both Nursery and Hunt',
-    shell.includes("sendToApp('nursery', { tm: 'arc'") && shell.includes("sendToApp('hunt', { tm: 'arc'"));
+    shell.includes("deliverToApp('nursery', { tm: 'arc'") && shell.includes("deliverToApp('hunt', { tm: 'arc'") &&
+    shell.includes('if (frames[app]) sendToApp(app, msg); else queues[app].push(msg);'));   // held until the room opens
 }

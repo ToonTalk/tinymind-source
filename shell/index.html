@@ -198,6 +198,11 @@ function ensureFrame(app) {
   frames[app] = f;
   return f;
 }
+/* hold a message for a room that has not been opened yet, instead of booting it hidden
+   (a hidden room's guide would narrate to nobody); it is delivered when the room opens */
+function deliverToApp(app, msg) {
+  if (frames[app]) sendToApp(app, msg); else queues[app].push(msg);
+}
 function sendToApp(app, msg) {
   ensureFrame(app);
   if (ready[app]) frames[app].contentWindow.postMessage(msg, '*');
@@ -208,6 +213,7 @@ window.addEventListener('message', async (e) => {
   const app = Object.keys(frames).find(a => frames[a].contentWindow === e.source);
   if (m.tm === 'ready' && app) {
     ready[app] = true;
+    try { e.source.postMessage({ tm: 'vg-tab', active: activeTab === app, tab: activeTab }, '*'); } catch (err) {}   // a room opened behind a loading screen starts out hidden
     for (const q of queues[app].splice(0)) frames[app].contentWindow.postMessage(q, '*');
   } else if (m.tm === 'rpc' && app) {
     let ok = true, value = null, error = '';
@@ -559,8 +565,8 @@ function addModel(name, u8, vocab, origin, meta) {
 const shellArcs = createArcPool();   // arc packs live here, NOT in the model pool
 function takeArc(manifest, extras, source) {
   const entry = shellArcs.add(manifest, extras);
-  sendToApp('nursery', { tm: 'arc', manifest, source });
-  sendToApp('hunt', { tm: 'arc', manifest, source });
+  deliverToApp('nursery', { tm: 'arc', manifest, source });
+  deliverToApp('hunt', { tm: 'arc', manifest, source });
   renderPool();                               // arcs are bay state: list line, nursery card, start button
   return entry;
 }
@@ -695,7 +701,7 @@ async function shellIngest(recs) {
         if (!(rec && rec.origin === 'same-folder')) tmPersistText('json', name, text);
         return;
       }
-      sendToApp('nursery', { tm: 'json', name, text });
+      deliverToApp('nursery', { tm: 'json', name, text });
       tmPersistText('json', name, text);
     },
     unzipError: (name, msg) => say('could not unzip ' + name + ': ' + msg, 'warn'),
