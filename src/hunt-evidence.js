@@ -1,7 +1,25 @@
 // Pure, testable decision helpers for the Treasure Hunt. The browser page owns
 // rendering; these functions own the evidence thresholds and manifest-derived data.
 
+// A one-character Nursery mind carries its character sheet ({name, kind, attr1, attr2});
+// each fact becomes a quest whose answer is its last word, the rule the Nursery's
+// pre-flight uses ("lives in the clouds" -> "Sisi lives in the" / " clouds").
+export function questPresetsFromSheet(sheet) {
+  const name = String(sheet && sheet.name || '').trim();
+  if (!name) return [];
+  const quest = (slot, phrase, lead) => {
+    const words = String(phrase || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length < 2) return null;
+    const answer = words[words.length - 1].replace(/[^\w']/g, '');
+    if (!answer) return null;
+    const probe = `${name} ${lead}${words.slice(0, -1).join(' ')}`;
+    return { name, slot, label: `${probe} …?`, probe, continuation: ` ${answer}` };   // the label is the sentence to finish
+  };
+  return [quest('kind', sheet.kind, 'is '), quest('attr1', sheet.attr1, ''), quest('attr2', sheet.attr2, '')].filter(Boolean);
+}
+
 export function questPresetsFromManifest(manifest) {
+  if (manifest && manifest.sheet) return questPresetsFromSheet(manifest.sheet);
   const chars = manifest && manifest.characters;
   if (!chars || typeof chars !== 'object') return [];
   const slots = ['kind', 'food', 'home', 'food'];

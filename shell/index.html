@@ -74,6 +74,7 @@ body[data-view="home"] #simpleBar .inApp{display:none}
     <button id="homeBtn" class="inApp">← all activities</button>
     <span id="actTitle" class="inApp"></span>
     <label class="inApp small" id="mindPickWrap">mind: <select id="mindPick" aria-label="which mind"></select></label>
+    <span id="actNote" class="inApp small" style="display:none;color:#e9c46a;max-width:420px"></span>
   </span>
   <span id="tabsBar">
     <div class="tab on" data-tab="bay">📁 files</div>
@@ -277,6 +278,16 @@ const fresh260  = () => pool.models.find(isBase260);
 const zog260    = () => pool.models.find(isLegacyZog);
 const baseName  = m => String((m && m.name) || '').split(/[\\/]/).pop();
 const binding260 = () => pool.models.find(m => is512(m) && /^stories260k-binding\.bin$/i.test(baseName(m)));
+const raisedLatest = () => pool.models.filter(m => is512(m) && /^(trained|export)$/.test(m.origin)).pop();
+/* the character being written in the Nursery, if any (the frames are same-origin srcdoc) */
+function nurseryCharacter() {
+  try { const d = frames.nursery && frames.nursery.contentDocument; const n = d && d.getElementById('chName');
+    return n && n.value.trim() ? n.value.trim() : ''; } catch (e) { return ''; }
+}
+function raisedFor(name) {
+  return pool.models.some(m => /^(trained|export)$/.test(m.origin) && m.meta && m.meta.storyWorld &&
+    (m.meta.storyWorld.sheet && m.meta.storyWorld.sheet.name === name || (m.meta.storyWorld.characters && name in m.meta.storyWorld.characters)));
+}
 
 /* Plain names for the minds, so nobody has to know a file name to choose one. */
 function mindName(m) {
@@ -295,7 +306,7 @@ const ACTS = {
   raise: { app: 'nursery', title: '🐣 Teach a tiny mind', pick: () => fresh260() },
   grow:  { app: 'nursery', title: '⏪ Watch a mind grow up', arc: true },
   look:  { app: 'microscope', title: '🔬 Look inside a mind', pick: () => specimen(), big: true },
-  hunt:  { app: 'hunt', title: '🎯 Hunt for a hidden fact', pick: () => binding260() || zog260() || fresh260() },
+  hunt:  { app: 'hunt', title: '🎯 Hunt for a hidden fact', pick: () => raisedLatest() || binding260() || zog260() || fresh260() },
 };
 const APP_TITLES = { nursery: '🐣 Nursery', microscope: '🔬 Microscope', hunt: '🎯 Hunt' };
 let currentAct = null;
@@ -315,6 +326,12 @@ function refreshBar() {
   const app = APPS.includes(activeTab) ? activeTab : null;
   $('actTitle').textContent = app ? ((currentAct && ACTS[currentAct].app === app) ? ACTS[currentAct].title : APP_TITLES[app]) : '';
   renderMindPick();
+  // the Hunt can only look for a character inside a mind trained on it
+  const who = app === 'hunt' ? nurseryCharacter() : '';
+  const showing = app === 'hunt' && frameModel.hunt && pool.models.find(m => m.name === frameModel.hunt);
+  const note = who && !raisedFor(who) && !(showing && /^(trained|export)$/.test(showing.origin))
+    ? `${who} is not in a mind yet: train one in 🐣 Teach a tiny mind, then come back. Until then, hunt in a ready-made mind.` : '';
+  $('actNote').textContent = note; $('actNote').style.display = note ? '' : 'none';
 }
 /* the "mind:" menu: every mind this room can use, by its plain name */
 function renderMindPick() {

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  questPresetsFromManifest, controlNamesForManifest, nameSpecificityVerdict,
+  questPresetsFromManifest, questPresetsFromSheet, controlNamesForManifest, nameSpecificityVerdict,
   causalVerdict,
 } from '../src/hunt-evidence.js';
 import { languageQualityStats } from '../tools/binding-eval-lib.js';
@@ -13,6 +13,13 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export async function run(t) {
   const manifest = JSON.parse(await readFile(join(ROOT, 'arc', 'binding', 'arc-manifest.json'), 'utf8'));
+  // a one-character Nursery mind: quests come from its sheet (last word = the answer)
+  const sisi = questPresetsFromManifest({ sheet: { name: 'Sisi', kind: 'a small unicorn', attr1: 'lives in the clouds', attr2: 'enjoys candy' } });
+  t.check('one-character mind: quests come from its own character sheet',
+    sisi.length === 3 && sisi[0].probe === 'Sisi is a small' && sisi[0].continuation === ' unicorn' &&
+    sisi[1].probe === 'Sisi lives in the' && sisi[1].continuation === ' clouds' && sisi[2].label === 'Sisi enjoys …?');
+  t.check('one-character sheet with one-word facts gives no broken quests',
+    questPresetsFromSheet({ name: 'Bo', kind: 'cat', attr1: '', attr2: 'sings' }).length === 0);
   const quests = questPresetsFromManifest(manifest);
   t.check('arcC generates one quick quest for each trained character',
     quests.length === 4 && quests.map(q => q.name).join() === 'Zog,Mip,Bex,Nia');

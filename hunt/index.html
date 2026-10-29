@@ -203,6 +203,8 @@ function questManifestForModel(checkpoint) {
   const world = checkpoint && checkpoint.meta && checkpoint.meta.storyWorld;
   if (world && world.characters && Object.keys(world.characters).length)
     return { arc: 'trained-model', characters: world.characters, storyWorld: world };
+  if (world && world.mode === 'single' && world.sheet && world.sheet.name)   // a one-character Nursery mind
+    return { arc: 'trained-model', characters: {}, sheet: world.sheet, storyWorld: world };
   const filename = String(checkpoint && checkpoint.name || '').split(/[\\/]/).pop();
   if (/^(?:stories260k-binding(?:-max)?|four-character-binding-260k|zog-mip-bex-nia-binding-260k)\.bin$/i.test(filename))
     return { arc: 'trained-binding-model', characters: KNOWN_BINDING_CHARACTERS };
@@ -255,8 +257,10 @@ worker.onmessage = (e) => {
     $('modelInfo').textContent = `${S.modelName ? S.modelName + ' · ' : ''}${m.config.nLayers} layers · ${m.config.nHeads} heads · ${m.config.hiddenDim} neurons/layer`;
     $('probeBtn').disabled = false;
     buildDiy();
-    status(S.arcManifest && Object.keys(S.arcManifest.characters || {}).length > 1
-      ? 'ready — quests loaded for Zog, Mip, Bex and Nia, with look-alike names to compare against'
+    const cast = S.arcManifest && (S.arcManifest.sheet ? [S.arcManifest.sheet.name] : Object.keys(S.arcManifest.characters || {}));
+    const castText = cast && cast.length ? (cast.length > 1 ? cast.slice(0, -1).join(', ') + ' and ' + cast[cast.length - 1] : cast[0]) : '';
+    status(castText
+      ? `ready — quests loaded for ${castText}, with look-alike names to compare against`
       : 'ready — pick a quest and ask the model');
     speak(kid() ? 'Your tiny mind is here! What shall we hunt for?' : 'Model loaded. Pick a quest.');
   }
