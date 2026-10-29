@@ -291,7 +291,7 @@
 </div>
 
 <script type="module">
-import { words, unsmart, whitelistFor, checkStory, storyPrompt, parseStories, repairPrompt, isRepairable } from '../src/ghostwriter.js';
+import { words, unsmart, whitelistFor, checkStory, storyPrompt, parseStories, repairStories } from '../src/ghostwriter.js';
 import { callLLM as llmCall, PROVIDERS, keylessAvailable } from '../src/llm.js';
 import { createStore, makeDeliverFile, makeInlineWorker, fetchFirst } from '../src/app-shims.js';
 import { unzip, looksLikeZip, tokenizerEntryCount, checkpointVocab, collectDrop, expandZips } from '../src/ingest.js';
@@ -704,21 +704,16 @@ $('genBtn').onclick = async () => {
   $('genOut').textContent = 'the ghostwriter is writing…';
   try {
     const stories = parseStories(await callProvider(buildPrompt(8)));
-    const fine = [], broken = [];
-    for (const s of stories) {
-      const v = validateStory(s);
-      (v.probs.length ? broken : fine).push({ s, v });
-    }
-    const repairable = broken.filter(b => isRepairable(b.v));   // only a few unknown words: one repair try
-    let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
-    if (repairable.length) {
-      $('genOut').textContent = `${fine.length} good on the first try — repairing ${repairable.length} that used ${repairable.length === 1 ? 'a big word' : 'big words'}…`;
-      try {
-        final = [...fine.map(f => f.s), ...parseStories(await callProvider(repairPrompt(repairable))),
-                 ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
-      } catch { final = stories; /* repair call failed: fall back to first batch */ }
-    }
-    addStories(final, 'ghostwriter');
+    const checked = stories.map(s => ({ s, v: validateStory(s) }));
+    const fine = checked.filter(c => !c.v.probs.length).length;
+    // stories with only a few unknown words get a repair try, and a second if needed
+    const { checked: final } = await repairStories(callProvider, checked, { check: validateStory, wordlist: S.wordlist,
+      onTry: (attempt, n) => {
+        $('genOut').textContent = attempt === 1
+          ? `${fine} good on the first try — repairing ${n} that used ${n === 1 ? 'a big word' : 'big words'}…`
+          : `${n} still used ${n === 1 ? 'a big word' : 'big words'} — one more repair try…`;
+      } });
+    addStories(final.map(c => c.s), 'ghostwriter');
   } catch (err) {
     $('genOut').innerHTML = '<span class="err">' + String(err).replace(/</g, '&lt;') + '</span>';
   }

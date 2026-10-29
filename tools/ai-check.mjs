@@ -92,8 +92,8 @@ async function ghostPart() {
       for (const b of bad) for (const p of b.v.probs) { const k = p.replace(/:.*$/, '').replace(/^\d+ words long.*/, 'too short or too long').replace(/^(a sentence is too long).*/, '$1')
         .replace(/^(leaves out "[^"]*").*/, '$1').replace(/^(never says|never uses).*/, '$1').trim(); why[k] = (why[k] || 0) + 1; }
       const unknown = [...new Set(bad.flatMap(b => b.v.offList))];
-      say(`| ${sh.name} | ${round} | ${res.firstTry.total} | ${res.firstTry.fine} | ${res.repaired} of ${res.firstTry.repairable} | **${ok.length}** | ${bad.length} | ${Object.entries(why).map(([k, n]) => `${k} ×${n}`).join('; ')}${unknown.length ? ` (words: ${unknown.slice(0, 12).join(', ')})` : ''} |`);
-      out.push({ sheet: sh, round, ...res.firstTry, repaired: res.repaired, accepted: ok.length, rejected: bad.length, why, unknown,
+      say(`| ${sh.name} | ${round} | ${res.firstTry.total} | ${res.firstTry.fine} | ${res.repaired} of ${res.firstTry.repairable}${res.tries.length > 1 ? ` (tries: ${res.tries.map(t => `${t.fixed}/${t.sent}`).join(' + ')})` : ''} | **${ok.length}** | ${bad.length} | ${Object.entries(why).map(([k, n]) => `${k} ×${n}`).join('; ')}${unknown.length ? ` (words: ${unknown.slice(0, 12).join(', ')})` : ''} |`);
+      out.push({ sheet: sh, round, ...res.firstTry, repaired: res.repaired, tries: res.tries, accepted: ok.length, rejected: bad.length, why, unknown,
         secs: (Date.now() - t0) / 1000, sample: ok[0] ? ok[0].s : (bad[0] ? bad[0].s : '') });
       // what the Nursery folds into the next prompt (addStories' feedback)
       feedback = { offList: new Set(unknown), missing: new Set(bad.flatMap(b => b.v.missing)), shortCounts: bad.filter(b => b.v.wordCount < 100).map(b => b.v.wordCount) };

@@ -3176,7 +3176,9 @@ function checkStory(text, sh, wordlist) {
   return { probs, offList, missing, wordCount: w.length };
 }
 
-// a story whose ONLY problem is a few (at most four) unknown words gets one repair try
+// a story whose ONLY problem is a few (at most four) unknown words gets a repair try, and
+// a second one if the fix still uses words the mind never met
+const REPAIR_TRIES = 2;
 const isRepairable = v => v.offList.length > 0 && v.offList.length <= 4 && v.probs.every(p => p.startsWith(UNKNOWN_WORDS));
 
 // feedback: { shortCounts: [n], offList: Set, missing: Set } from the last batch, or null
@@ -3244,29 +3246,53 @@ function parseStories(text) {
   return t.split(/\n\s*\n/).map(s => s.trim()).filter(s => words(s).length >= 60);
 }
 
-// items: [{ s: story, v: checkStory(...) }]
-function repairPrompt(items) {
-  return `These children's stories are almost perfect. Each one uses a few banned words. Rewrite each story so it no longer contains ANY banned word: swap each banned word for a very simple word or phrase a 4-year-old knows (for example, "slept" could become "was asleep"). Change nothing else. Output ONLY the fixed stories, numbered to match. Do not repeat a banned word anywhere.\n\n` +
+// items: [{ s: story, v: checkStory(...) }]. The second try says the first fix missed and
+// hands over the allowed words (the swaps the first try picked were often unknown too)
+function repairPrompt(items, { attempt = 1, wordlist = null } = {}) {
+  const again = attempt > 1
+    ? `You already fixed these stories once, but your fix still used banned words. Try again, more carefully. `
+    : '';
+  const allowed = attempt > 1 && wordlist
+    ? `\n\nEvery replacement word must come from this list of words the reader knows (or be a form of the character's own words):\n${[...wordlist].join(' ')}`
+    : '';
+  return `${again}These children's stories are almost perfect. Each one uses a few banned words. Rewrite each story so it no longer contains ANY banned word: swap each banned word for a very simple word or phrase a 4-year-old knows (for example, "slept" could become "was asleep"). Change nothing else. Output ONLY the fixed stories, numbered to match. Do not repeat a banned word anywhere.${allowed}\n\n` +
     items.map((it, i) => `${i + 1}. (banned: ${it.v.offList.join(', ')})\n${it.s}`).join('\n\n');
 }
 
+// repair what can be repaired: up to REPAIR_TRIES tries, each on the stories that still
+// fail only on unknown words. checked: [{ s, v }]; check(s) -> checkStory result;
+// onTry(attempt, n) lets the page say what is happening.
+// Returns { checked: [{ s, v }] (fine first, then the rest), tries: [{ sent, back, fixed }] }
+async function repairStories(call, checked, { check, wordlist = null, onTry } = {}) {
+  let pending = checked.filter(c => isRepairable(c.v));
+  const done = checked.filter(c => !pending.includes(c));
+  const tries = [];
+  for (let attempt = 1; attempt <= REPAIR_TRIES && pending.length; attempt++) {
+    onTry?.(attempt, pending.length);
+    let fixed;
+    try { fixed = parseStories(await call(repairPrompt(pending, { attempt, wordlist }))); }
+    catch { break; }                 // the call failed: keep the versions we have
+    if (!fixed.length) break;
+    const again = fixed.map(s => ({ s, v: check(s) }));
+    tries.push({ sent: pending.length, back: fixed.length, fixed: again.filter(c => !c.v.probs.length).length });
+    pending = again.filter(c => isRepairable(c.v));
+    done.push(...again.filter(c => !pending.includes(c)));
+  }
+  done.push(...pending);             // still a few unknown words after the last try
+  return { checked: [...done.filter(c => !c.v.probs.length), ...done.filter(c => c.v.probs.length)], tries };
+}
+
 // the whole ghostwriter round: ask, split, check, repair what can be repaired.
-// call(prompt) -> reply text. Returns { stories: [final texts], firstTry, repaired }.
+// call(prompt) -> reply text. Returns { stories: [final texts], firstTry, repaired, tries }.
 async function ghostwrite(call, count, sh, opts = {}) {
   const stories = parseStories(await call(storyPrompt(count, sh, opts)));
-  const checked = stories.map(s => ({ s, v: checkStory(s, sh, opts.wordlist) }));
-  const fine = checked.filter(c => !c.v.probs.length), broken = checked.filter(c => c.v.probs.length);
-  const repairable = broken.filter(b => isRepairable(b.v));
-  let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
-  let repaired = 0;
-  if (repairable.length) {
-    try {
-      const fixed = parseStories(await call(repairPrompt(repairable)));
-      repaired = fixed.length;
-      final = [...fine.map(f => f.s), ...fixed, ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
-    } catch (e) { final = stories; /* repair call failed: fall back to the first batch */ }
-  }
-  return { stories: final, firstTry: { total: stories.length, fine: fine.length, repairable: repairable.length }, repaired };
+  const check = s => checkStory(s, sh, opts.wordlist);
+  const checked = stories.map(s => ({ s, v: check(s) }));
+  const fine = checked.filter(c => !c.v.probs.length).length;
+  const repairable = checked.filter(c => isRepairable(c.v)).length;
+  const { checked: final, tries } = await repairStories(call, checked, { check, wordlist: opts.wordlist });
+  return { stories: final.map(c => c.s), firstTry: { total: stories.length, fine, repairable },
+    repaired: tries.reduce((n, t) => n + t.fixed, 0), tries };
 }
 
 const llmCall = callLLM;
@@ -3686,21 +3712,16 @@ $('genBtn').onclick = async () => {
   $('genOut').textContent = 'the ghostwriter is writing…';
   try {
     const stories = parseStories(await callProvider(buildPrompt(8)));
-    const fine = [], broken = [];
-    for (const s of stories) {
-      const v = validateStory(s);
-      (v.probs.length ? broken : fine).push({ s, v });
-    }
-    const repairable = broken.filter(b => isRepairable(b.v));   // only a few unknown words: one repair try
-    let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
-    if (repairable.length) {
-      $('genOut').textContent = `${fine.length} good on the first try — repairing ${repairable.length} that used ${repairable.length === 1 ? 'a big word' : 'big words'}…`;
-      try {
-        final = [...fine.map(f => f.s), ...parseStories(await callProvider(repairPrompt(repairable))),
-                 ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
-      } catch { final = stories; /* repair call failed: fall back to first batch */ }
-    }
-    addStories(final, 'ghostwriter');
+    const checked = stories.map(s => ({ s, v: validateStory(s) }));
+    const fine = checked.filter(c => !c.v.probs.length).length;
+    // stories with only a few unknown words get a repair try, and a second if needed
+    const { checked: final } = await repairStories(callProvider, checked, { check: validateStory, wordlist: S.wordlist,
+      onTry: (attempt, n) => {
+        $('genOut').textContent = attempt === 1
+          ? `${fine} good on the first try — repairing ${n} that used ${n === 1 ? 'a big word' : 'big words'}…`
+          : `${n} still used ${n === 1 ? 'a big word' : 'big words'} — one more repair try…`;
+      } });
+    addStories(final.map(c => c.s), 'ghostwriter');
   } catch (err) {
     $('genOut').innerHTML = '<span class="err">' + String(err).replace(/</g, '&lt;') + '</span>';
   }

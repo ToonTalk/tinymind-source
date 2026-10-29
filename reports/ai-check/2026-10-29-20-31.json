@@ -1,0 +1,242 @@
+{
+  "date": "2026-10-29T20:29:46.339Z",
+  "models": {
+    "app": "gpt-5.4-mini",
+    "guide": [
+      "gpt-5.4-mini"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-5.4-mini": {
+      "in": 38349,
+      "out": 14727,
+      "calls": 18
+    }
+  },
+  "ghost": [
+    {
+      "sheet": {
+        "name": "Zog",
+        "kind": "a small dragon",
+        "attr1": "eats clouds",
+        "attr2": "lives behind the moon"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 0,
+      "repairable": 7,
+      "repaired": 6,
+      "tries": [
+        {
+          "sent": 7,
+          "back": 7,
+          "fixed": 6
+        },
+        {
+          "sent": 1,
+          "back": 1,
+          "fixed": 0
+        }
+      ],
+      "accepted": 6,
+      "rejected": 2,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 2
+      },
+      "unknown": [
+        "silver",
+        "row",
+        "oars",
+        "neat",
+        "curled",
+        "banned",
+        "wing"
+      ],
+      "secs": 19.363,
+      "sample": "Zog was a small dragon. He lived behind the moon. He ate clouds each day. He liked the soft white ones best. One day, he saw a very big cloud. It was stuck on a star. Zog looked sad. \"Oh no,\" he said. \"That cloud cannot go home.\" He flew up slow and careful. He used his little hands. He pulled the cloud free. Then he ate a small bite. The cloud was sweet and cool. It made Zog smile. He went back behind the moon. There, he sat on his moon rock. The sky was dark and nice. Soon, he saw three tiny clouds go by. Zog ate them too. He felt full and happy. Then he fell asleep by the moon."
+    },
+    {
+      "sheet": {
+        "name": "Zog",
+        "kind": "a small dragon",
+        "attr1": "eats clouds",
+        "attr2": "lives behind the moon"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 1,
+      "repairable": 6,
+      "repaired": 6,
+      "tries": [
+        {
+          "sent": 6,
+          "back": 6,
+          "fixed": 0
+        },
+        {
+          "sent": 6,
+          "back": 6,
+          "fixed": 6
+        }
+      ],
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "plates",
+        "bowls",
+        "roof",
+        "softer",
+        "meowed",
+        "rubbed",
+        "laid"
+      ],
+      "secs": 22.543,
+      "sample": "Zog was a small dragon. He lived behind the moon. He ate clouds, and that was his best food. One day, he saw a bright red kite going up in the sky. A girl named Lily held the string, but the kite got stuck near the moon. Lily looked sad. Zog flew over and said, \"I can help.\" He ate the cloud by the kite. Then he ate one more cloud. The kite moved free and danced in the air. Lily clapped and jumped. \"Good Zog!\" she said. Zog smiled. The kite flew back to Lily's yard. She ran home and told her mom. Zog went behind the moon again. He found a soft cloud and ate it slowly. The moon was quiet. Zog felt proud and warm. He liked helping, and he liked his moon home."
+    },
+    {
+      "sheet": {
+        "name": "Sisi",
+        "kind": "a little cloud",
+        "attr1": "lives in the sky",
+        "attr2": "likes to sing songs"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 5,
+      "repairable": 3,
+      "repaired": 2,
+      "tries": [
+        {
+          "sent": 3,
+          "back": 3,
+          "fixed": 2
+        },
+        {
+          "sent": 1,
+          "back": 1,
+          "fixed": 0
+        }
+      ],
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "names",
+        "below"
+      ],
+      "secs": 14.823,
+      "sample": "Sisi was a little cloud. Sisi lived in the sky. Sisi liked to sing songs. One day, Sisi saw a bird in the sky. The bird looked sad. It had lost a toy star. Sisi smiled. \"I can help,\" said Sisi. Sisi sang a soft song. The song was kind and warm. The bird heard the song and looked up. It saw the toy star on a high tree. Sisi and the bird went down to the tree. The bird got its toy star back. It was happy now. It smiled big. \"Thank you,\" said the bird. Sisi sang one more song. The bird sang too. Then they went back in the sky. Sisi felt very happy. The sky was bright and nice. Sisi kept singing songs all day."
+    },
+    {
+      "sheet": {
+        "name": "Sisi",
+        "kind": "a little cloud",
+        "attr1": "lives in the sky",
+        "attr2": "likes to sing songs"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 5,
+      "repairable": 3,
+      "repaired": 2,
+      "tries": [
+        {
+          "sent": 3,
+          "back": 3,
+          "fixed": 2
+        },
+        {
+          "sent": 1,
+          "back": 1,
+          "fixed": 0
+        }
+      ],
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "glow"
+      ],
+      "secs": 15.16,
+      "sample": "Sisi was a little cloud. Sisi lived in the sky. Sisi liked to sing songs.  \nOne day, Sisi saw a bird. The bird looked sad.  \n\"Why are you sad?\" said Sisi.  \nThe bird said, \"I lost my song.\"  \nSisi felt sad too. Then Sisi had an idea.  \n\"Let us sing together,\" said Sisi.  \nSo Sisi sang a soft song. The bird sang too.  \nThe song went up and up in the sky.  \nA small smile came to the bird.  \n\"Now I feel good,\" said the bird.  \nSisi smiled. They sang one more song.  \nThe sky felt warm and nice.  \nThe bird flew home, happy.  \nSisi stayed in the sky and sang songs all day."
+    },
+    {
+      "sheet": {
+        "name": "Pip",
+        "kind": "a tiny robot",
+        "attr1": "loves red apples",
+        "attr2": "sleeps in a teapot"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 3,
+      "repairable": 5,
+      "repaired": 4,
+      "tries": [
+        {
+          "sent": 5,
+          "back": 5,
+          "fixed": 4
+        },
+        {
+          "sent": 1,
+          "back": 1,
+          "fixed": 0
+        }
+      ],
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "quick"
+      ],
+      "secs": 15.922,
+      "sample": "Pip was a tiny robot. Pip loved red apples. Pip slept in a teapot.  \nOne day Pip went to the park. He saw a big tree. Under the tree was a red apple. Pip looked so happy.  \nHe ran to it, but a bird was there too. The bird looked at Pip. Pip said, \"Hello, bird.\"  \nThe bird did not move. Pip sat down. He was kind and wait. Then the bird pushed the apple a little. Pip smiled.  \nPip took the red apple and said, \"Thank you.\" He ate it all up. It was very yummy.  \nThen Pip went back home. At home, he put his little body in the teapot. He felt warm and safe.  \nPip smiled and slept very well."
+    },
+    {
+      "sheet": {
+        "name": "Pip",
+        "kind": "a tiny robot",
+        "attr1": "loves red apples",
+        "attr2": "sleeps in a teapot"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 3,
+      "repairable": 5,
+      "repaired": 4,
+      "tries": [
+        {
+          "sent": 5,
+          "back": 5,
+          "fixed": 2
+        },
+        {
+          "sent": 3,
+          "back": 3,
+          "fixed": 2
+        }
+      ],
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "feelings"
+      ],
+      "secs": 16.994,
+      "sample": "Pip was a tiny robot. Pip loved red apples. Pip slept in a teapot.  \nOne day, Pip went to the yard. Pip saw a red apple on the ground. Pip felt very happy.  \n\"Mine!\" said Pip. But a bird flew by and took the apple. Pip looked sad.  \nThen Pip found a small box with three red apples. Pip smiled.  \nPip shared one apple with a mouse friend. The mouse said, \"Thank you.\"  \nPip and the mouse sat by a tree. They ate the red apples and laughed.  \nWhen it was dark, Pip went home. Pip climbed into the teapot and slept.  \nPip felt warm and safe. The next day would be good."
+    }
+  ]
+}

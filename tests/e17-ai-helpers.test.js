@@ -2,7 +2,7 @@
 // against a real model: the ghostwriter's checks and story splitting (src/ghostwriter.js)
 // and the detective's reply parsing (src/hunt-evidence.js). Each check here is a bug the
 // real-model run found.
-import { checkStory, parseStories, isRepairable, whitelistFor, storyPrompt } from '../src/ghostwriter.js';
+import { checkStory, parseStories, isRepairable, whitelistFor, storyPrompt, repairStories } from '../src/ghostwriter.js';
 import { parseHypotheses, detectivePrompt } from '../src/hunt-evidence.js';
 import { EMBEDDED_WORDLIST } from '../src/embed-data.js';
 
@@ -20,6 +20,24 @@ export async function run(t) {
   const off = checkStory(s.replace('He was happy.', 'He was jubilant and ebullient.'), pip, wl);
   t.check('unknown words are still turned away, and that alone is repairable', off.offList.join() === 'jubilant,ebullient' && isRepairable(off));
   t.check('a story that drops a fact is not repairable', !isRepairable(checkStory(s.replace(/teapot/g, 'box'), pip, wl)));
+
+  // the second repair try: the first fix swapped in another unknown word, the second
+  // (which gets the allowed words) clears it; a story beyond repair is never sent
+  const bad1 = s.replace('He was happy.', 'He was jubilant.'), bad2 = s.replace('He was happy.', 'He was elated.');
+  const prompts = [];
+  const replies = ['1. ' + bad2, '1. ' + s];
+  const call = async p => { prompts.push(p); return replies.shift(); };
+  const check = x => checkStory(x, pip, wl);
+  const dropped = s.replace(/teapot/g, 'box');
+  const { checked, tries } = await repairStories(call, [bad1, dropped, s].map(x => ({ s: x, v: check(x) })), { check, wordlist: wl });
+  t.check('repair: a fix that still uses an unknown word gets a second try, which clears it',
+    prompts.length === 2 && tries.map(x => x.fixed).join() === '0,1' && checked.filter(c => !c.v.probs.length).length === 2,
+    JSON.stringify(tries));
+  t.check('repair: only the second try lists the allowed words; the dropped-fact story is kept, not sent',
+    !/must come from this list/.test(prompts[0]) && /already fixed/.test(prompts[1]) && /must come from this list/.test(prompts[1])
+    && !prompts.some(p => p.includes('slept in a box')) && checked.some(c => c.s === dropped));
+  const failing = await repairStories(async () => { throw new Error('offline'); }, [{ s: bad1, v: check(bad1) }], { check, wordlist: wl });
+  t.check('repair: a failed call keeps the story as it was', failing.checked.length === 1 && failing.checked[0].s === bad1 && !failing.tries.length);
 
   const eight = Array.from({ length: 8 }, (_, i) => `${i + 1}. ` + story(14, 'It was a nice day.')).join(' ');
   t.check('stories numbered inside one paragraph are split ("…day. 2. Pip…")', parseStories(eight).length === 8);
