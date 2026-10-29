@@ -127,8 +127,9 @@
       <div id="bars" class="hint">—</div>
     </div>
     <div class="card">
-      <h2>5 · layer by layer <span class="hint">— the guess taking shape inside the mind (scientists call this a “logit lens”)</span></h2>
+      <h2>5 · layer by layer, and thinking ahead <span class="hint">— the guess taking shape inside the mind (scientists call this a “logit lens”), and the words it is already leaning toward further on</span></h2>
       <button class="small" id="lensBtn" disabled>look at selected position</button>
+      <div id="aheadNote" class="hint" style="margin-top:.3rem"></div>
       <div id="lensOut" style="margin-top:.4rem"></div>
     </div>
   </div>
@@ -317,6 +318,10 @@ worker.onmessage = (e) => {
     S.run = null; S.att = null; S.ablRun = null; S.neuron = null;
     S.fingerprint = m.fingerprint || null; S.steer = []; S.card = null; S.cont = null;
     S.lensLayers = m.lensLayers || [];
+    // say up front whether this mind can show thinking ahead (only the minds a J-lens was fitted for)
+    $('aheadNote').innerHTML = S.lensLayers.length
+      ? `<b style="color:var(--gold)">✨ this mind can think ahead:</b> pick a piece in the story, press the button, and the gold <span class="vg-chip" data-vg-explain="ahead" style="cursor:help;border-bottom:1px dotted currentColor" title="click to ask the guide">thinking ahead</span> column shows words it expects <i>further on</i>, not only next (layers ${S.lensLayers.join(', ')}).`
+      : `<span class="vg-chip" data-vg-explain="ahead" style="cursor:help;border-bottom:1px dotted currentColor" title="click to ask the guide">Thinking ahead</span> (words further on, not only the next one) works with the Big and Giant Storytellers — choose one from the mind menu at the top.`;
     $('neuronCard').innerHTML = '';
     loadAtlas();
     $('modelInfo').innerHTML =

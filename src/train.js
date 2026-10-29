@@ -8,6 +8,11 @@
 //
 // Weight names/shapes match bin-reader.js, so trainer params drop straight into
 // model.js (generation from the fine-tuned net) and writeCheckpoint (saving).
+//
+// A step's gradient is the sum of each sequence's own gradient, added in sequence order
+// (step / evalLoss below). That lets TrainPool hand sequences to worker threads, one
+// core each, and still produce exactly the same numbers as working through them here
+// one by one — the same model, bit for bit, whatever the number of cores (E15).
 
 // --- deterministic RNG (mulberry32) for reproducible batches/experiments.
 // getState/setState expose the 32-bit internal state so long runs can checkpoint
@@ -135,13 +140,38 @@ export class Trainer {
   }
 
   // ---- building blocks -----------------------------------------------------
-  // matmul / matmulBackward are register-blocked (4 output rows at a time): V8 keeps
-  // the 4 accumulators in registers and streams the weight rows, ~3x over the naive loop.
+  // matmul / matmulBackward are register-blocked: four weight rows against three input
+  // rows at a time, so each value loaded is used three or four times. Every output is
+  // still the same sum in the same order as the plain loop, so results don't change.
 
   // out[N,O] = in[N,C] @ W[O,C]^T
   static matmul(out, inp, W, N, C, O) {
-    const O4 = O - (O % 4);
-    for (let n = 0; n < N; n++) {
+    const O4 = O - (O % 4), N3 = N - (N % 3);
+    for (let n = 0; n < N3; n += 3) {   // three input rows at a time (each output's sum unchanged)
+      const ia = n * C, ib = ia + C, ic = ib + C, oa = n * O, ob = oa + O, oc = ob + O;
+      let o = 0;
+      for (; o < O4; o += 4) {
+        const w0 = o * C, w1 = w0 + C, w2 = w1 + C, w3 = w2 + C;
+        let a0 = 0, a1 = 0, a2 = 0, a3 = 0, b0 = 0, b1 = 0, b2 = 0, b3 = 0, c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+        for (let i = 0; i < C; i++) {
+          const u = inp[ia + i], v = inp[ib + i], x = inp[ic + i];
+          const p0 = W[w0 + i], p1 = W[w1 + i], p2 = W[w2 + i], p3 = W[w3 + i];
+          a0 += u * p0; a1 += u * p1; a2 += u * p2; a3 += u * p3;
+          b0 += v * p0; b1 += v * p1; b2 += v * p2; b3 += v * p3;
+          c0 += x * p0; c1 += x * p1; c2 += x * p2; c3 += x * p3;
+        }
+        out[oa + o] = a0; out[oa + o + 1] = a1; out[oa + o + 2] = a2; out[oa + o + 3] = a3;
+        out[ob + o] = b0; out[ob + o + 1] = b1; out[ob + o + 2] = b2; out[ob + o + 3] = b3;
+        out[oc + o] = c0; out[oc + o + 1] = c1; out[oc + o + 2] = c2; out[oc + o + 3] = c3;
+      }
+      for (; o < O; o++) {
+        const wb = o * C;
+        let a = 0, b = 0, c = 0;
+        for (let i = 0; i < C; i++) { a += inp[ia + i] * W[wb + i]; b += inp[ib + i] * W[wb + i]; c += inp[ic + i] * W[wb + i]; }
+        out[oa + o] = a; out[ob + o] = b; out[oc + o] = c;
+      }
+    }
+    for (let n = N3; n < N; n++) {
       const ib = n * C, ob = n * O;
       let o = 0;
       for (; o < O4; o += 4) {
@@ -165,8 +195,28 @@ export class Trainer {
 
   // dIn[N,C] += dOut @ W ; dW[O,C] += dOut^T @ in  (two streaming passes)
   static matmulBackward(dOut, inp, W, dIn, dW, N, C, O) {
-    const O4 = O - (O % 4);
-    for (let n = 0; n < N; n++) {
+    const O4 = O - (O % 4), N3 = N - (N % 3);
+    for (let n = 0; n < N3; n += 3) {   // dIn, three rows at a time (each row's updates unchanged)
+      const ia = n * C, ib = ia + C, ic = ib + C, oa = n * O, ob = oa + O, oc = ob + O;
+      let o = 0;
+      for (; o < O4; o += 4) {
+        const a0 = dOut[oa + o], a1 = dOut[oa + o + 1], a2 = dOut[oa + o + 2], a3 = dOut[oa + o + 3];
+        const b0 = dOut[ob + o], b1 = dOut[ob + o + 1], b2 = dOut[ob + o + 2], b3 = dOut[ob + o + 3];
+        const c0 = dOut[oc + o], c1 = dOut[oc + o + 1], c2 = dOut[oc + o + 2], c3 = dOut[oc + o + 3];
+        const w0 = o * C, w1 = w0 + C, w2 = w1 + C, w3 = w2 + C;
+        for (let i = 0; i < C; i++) {
+          const p0 = W[w0 + i], p1 = W[w1 + i], p2 = W[w2 + i], p3 = W[w3 + i];
+          dIn[ia + i] += a0 * p0 + a1 * p1 + a2 * p2 + a3 * p3;
+          dIn[ib + i] += b0 * p0 + b1 * p1 + b2 * p2 + b3 * p3;
+          dIn[ic + i] += c0 * p0 + c1 * p1 + c2 * p2 + c3 * p3;
+        }
+      }
+      for (; o < O; o++) {
+        const a = dOut[oa + o], b = dOut[ob + o], c = dOut[oc + o], wb = o * C;
+        for (let i = 0; i < C; i++) { dIn[ia + i] += a * W[wb + i]; dIn[ib + i] += b * W[wb + i]; dIn[ic + i] += c * W[wb + i]; }
+      }
+    }
+    for (let n = N3; n < N; n++) {
       const ib = n * C, ob = n * O;
       let o = 0;
       for (; o < O4; o += 4) {
@@ -398,7 +448,7 @@ export class Trainer {
 
     // softmax CE; overwrite logits with dLogits if computeGrads
     let loss = 0;
-    const invN = 1 / N;
+    const invN = this.invN ?? 1 / N;   // a one-sequence helper scales by the whole batch's N
     for (let n = 0; n < N; n++) {
       const b = (n / T) | 0, t = n % T;
       const target = batch[b * (T + 1) + t + 1];
@@ -600,18 +650,78 @@ export class Trainer {
     return norm;
   }
 
+  // a B=1 helper sharing this trainer's weights: it works out one sequence at a time
+  seqTrainer() {
+    if (!this._seq) {
+      this._seq = new Trainer({ config: this.c, weights: this.params }, { B: 1, T: this.T, f64: this.AT === Float64Array });
+      this._seq.params = this.params;   // shared, so it always sees the current weights
+    }
+    return this._seq;
+  }
+
+  // sequence b of batch: its gradient into tr.grads; returns its share of the mean loss
+  static seqGrad(tr, batch, b, Bn) {
+    const T = tr.T, seq = batch.subarray(b * (T + 1), (b + 1) * (T + 1));
+    tr.invN = 1 / (Bn * T);
+    tr.zeroGrads();
+    const loss = tr.forwardLoss(seq, true);
+    tr.backward(seq);
+    return loss;
+  }
+
+  // grads += one sequence's gradient: a trainer's grads, or a flat array in PARAM order
+  addGrads(src) {
+    let off = 0;
+    for (const key of Object.keys(this.grads)) {
+      const g = this.grads[key], s = src instanceof Float32Array || src instanceof Float64Array
+        ? src.subarray(off, off + g.length) : src[key];
+      for (let i = 0; i < g.length; i++) g[i] += s[i];
+      off += g.length;
+    }
+  }
+
   // one full training step; returns { loss, gradNorm, ms }
   step(batch) {
     const t0 = performance.now();
     this.zeroGrads();
-    const loss = this.forwardLoss(batch, true);
-    this.backward(batch);
+    const seq = this.seqTrainer(), Bn = batch.length / (this.T + 1);
+    let loss = 0;
+    for (let b = 0; b < Bn; b++) { loss += Trainer.seqGrad(seq, batch, b, Bn); this.addGrads(seq.grads); }
     const norm = this.adamw();
     return { loss, gradNorm: norm, ms: performance.now() - t0 };
   }
 
-  // eval-only mean CE loss on a batch (no grads, no optimizer state touched)
-  evalLoss(batch) { return this.forwardLoss(batch, false); }
+  // the same step with the sequences worked on by a TrainPool; identical numbers
+  async stepWith(pool, batch) {
+    const t0 = performance.now();
+    this.zeroGrads();
+    const parts = await pool.grads(this, batch);   // per sequence, in sequence order
+    let loss = 0;
+    for (const p of parts) { loss += p.loss; this.addGrads(p.grads); }
+    const norm = this.adamw();
+    return { loss, gradNorm: norm, ms: performance.now() - t0 };
+  }
+
+  // eval-only mean CE loss on a batch (no grads, no optimizer state touched): the sum of
+  // each sequence's share, in order. A one-sequence trainer runs it on itself, so its
+  // activations (act.logits) hold the evaluated sequence afterwards.
+  evalLoss(batch) {
+    const Bn = batch.length / (this.T + 1);
+    const tr = this.B === 1 && Bn === 1 ? this : this.seqTrainer();
+    let loss = 0;
+    for (let b = 0; b < Bn; b++) {
+      tr.invN = 1 / (Bn * this.T);
+      loss += tr.forwardLoss(batch.subarray(b * (this.T + 1), (b + 1) * (this.T + 1)), false);
+    }
+    if (tr === this) this.invN = undefined;
+    return loss;
+  }
+
+  async evalLossWith(pool, batch) {
+    let loss = 0;
+    for (const p of await pool.losses(this, batch)) loss += p.loss;
+    return loss;
+  }
 
   // weights dict compatible with model.js createModel / bin-reader writeCheckpoint
   modelWeights() {
@@ -623,4 +733,139 @@ export class Trainer {
     w.wcls = w.tokenEmbedding;
     return w;
   }
+}
+
+// ---- TrainPool: sequences of a batch worked on by worker threads ---------------------
+// Each worker holds a one-sequence Trainer (built from this file's own code via
+// Function.prototype.toString, so no separate worker file). Per step it gets the current
+// weights and some sequence numbers, and sends back each sequence's loss share and
+// gradient; the main trainer adds them up in sequence order (stepWith), exactly as step()
+// does alone. Sequence b goes to worker b % K.
+function trainPoolMain(self) {
+  let tr = null;
+  const flat = (o) => { let n = 0; for (const k in o) n += o[k].length; const out = new Float32Array(n); let p = 0; for (const k in o) { out.set(o[k], p); p += o[k].length; } return out; };
+  const setFlat = (o, a) => { let p = 0; for (const k in o) { o[k].set(a.subarray(p, p + o[k].length)); p += o[k].length; } };
+  self.onmessage = (e) => {
+    const q = e.data;
+    try {
+      if (q.op === 'init') {
+        const shapes = PARAM_SHAPES(q.config), weights = {};
+        let p = 0;
+        for (const k of Object.keys(shapes)) { weights[k] = q.params.subarray(p, p + shapes[k]); p += shapes[k]; }
+        tr = new Trainer({ config: q.config, weights }, { B: 1, T: q.T });
+        self.postMessage({ id: q.id });
+        return;
+      }
+      setFlat(tr.params, q.params);
+      const out = [], transfers = [];
+      for (const b of q.seqs) {
+        if (q.op === 'grads') {
+          const loss = Trainer.seqGrad(tr, q.batch, b, q.Bn);
+          const grads = flat(tr.grads);
+          out.push({ b, loss, grads }); transfers.push(grads.buffer);
+        } else {
+          tr.invN = 1 / (q.Bn * q.T);
+          out.push({ b, loss: tr.forwardLoss(q.batch.subarray(b * (q.T + 1), (b + 1) * (q.T + 1)), false) });
+        }
+      }
+      self.postMessage({ id: q.id, out }, transfers);
+    } catch (err) {
+      self.postMessage({ id: q.id, error: String((err && err.stack) || err) });
+    }
+  };
+}
+
+export function trainPoolSource() {
+  return 'const PARAM_SHAPES = ' + PARAM_SHAPES.toString() + ';\n' +
+    'const DECAYED = new Set(' + JSON.stringify([...DECAYED]) + ');\n' +
+    Trainer.toString() + '\n(' + trainPoolMain.toString() + ')(self);\n';
+}
+
+export class TrainPool {
+  // spawn() -> a Worker-like object running trainPoolSource(); by default a blob worker.
+  // Resolves to null wherever workers can't start (training then runs on one core).
+  static async create(trainer, { K = null, spawn = null, timeoutMs = 8000 } = {}) {
+    if (!K) {
+      // the fewest workers that finish a batch as soon as the most we could use would:
+      // 8 sequences on 7 spare cores take two rounds either way, so 4 workers do it
+      const hc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4;
+      const most = Math.min(trainer.B, Math.max(2, hc - 1)), rounds = Math.ceil(trainer.B / most);
+      K = Math.ceil(trainer.B / rounds);
+    }
+    let make = spawn;
+    if (!make) {
+      if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) return null;
+      let url;
+      try { url = URL.createObjectURL(new Blob([trainPoolSource()], { type: 'text/javascript' })); } catch (e) { return null; }
+      make = () => new Worker(url);
+    }
+    const pool = new TrainPool(trainer, K);
+    try {
+      for (let k = 0; k < K; k++) {
+        const wk = make();
+        wk.onmessage = (e) => pool._reply(e.data);
+        wk.onerror = (e) => pool._failAll(new Error('train worker failed: ' + ((e && e.message) || 'error')));
+        pool.workers.push(wk);
+      }
+      const params = pool._params(trainer);
+      const init = Promise.all(pool.workers.map(wk => pool._call(wk, { op: 'init', config: trainer.c, T: trainer.T, params })));
+      let timer;
+      const late = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('train pool: workers did not start')), timeoutMs); });
+      try { await Promise.race([init, late]); } finally { clearTimeout(timer); }
+      return pool;
+    } catch (e) {
+      pool.dispose();
+      return null;
+    }
+  }
+
+  constructor(trainer, K) {
+    this.K = K; this.T = trainer.T; this.workers = []; this.pending = new Map(); this._id = 0;
+  }
+  _params(trainer) {
+    let n = 0;
+    for (const k in trainer.params) n += trainer.params[k].length;
+    const out = new Float32Array(n);
+    let p = 0;
+    for (const k in trainer.params) { out.set(trainer.params[k], p); p += trainer.params[k].length; }
+    return out;
+  }
+  _call(wk, msg) {
+    return new Promise((res, rej) => {
+      const id = ++this._id;
+      this.pending.set(id, { res, rej });
+      msg.id = id;
+      wk.postMessage(msg);
+    });
+  }
+  _reply(d) {
+    const p = d && this.pending.get(d.id);
+    if (!p) return;
+    this.pending.delete(d.id);
+    d.error ? p.rej(new Error(d.error)) : p.res(d);
+  }
+  _failAll(err) {
+    for (const p of this.pending.values()) p.rej(err);
+    this.pending.clear();
+    this.broken = true;
+  }
+  dispose() {
+    for (const wk of this.workers) { try { wk.terminate(); } catch (e) { /* gone already */ } }
+    this.workers = []; this._failAll(new Error('train pool disposed'));
+  }
+  async _run(op, trainer, batch) {
+    if (this.broken) throw new Error('train pool is broken');
+    if (trainer.T !== this.T) throw new Error('train pool: sequence length changed');
+    const Bn = batch.length / (this.T + 1), params = this._params(trainer);
+    const replies = await Promise.all(this.workers.map((wk, k) => {
+      const seqs = [];
+      for (let b = k; b < Bn; b += this.K) seqs.push(b);
+      return seqs.length ? this._call(wk, { op, params, batch, Bn, T: this.T, seqs }) : { out: [] };
+    }));
+    const all = [];
+    for (const r of replies) for (const o of r.out) all[o.b] = o;
+    return all;
+  }
+  grads(trainer, batch) { return this._run('grads', trainer, batch); }
+  losses(trainer, batch) { return this._run('loss', trainer, batch); }
 }

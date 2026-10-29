@@ -1,16 +1,32 @@
 // nursery/worker.js — Session B: training-room engine. Holds the tokenizer, the data
 // streams, and a live Trainer; runs the fine-tune loop cooperatively (one step per
-// macrotask) so pause/sample/export messages interleave cleanly.
+// macrotask) so pause/sample/export messages interleave cleanly. Where the browser allows,
+// each step's sequences are worked on by a TrainPool of worker threads (src/train.js),
+// which gives exactly the same weights as training on this thread alone.
 // Start points: the pretrained 260K trainee, or "empty head" (random init) for the
 // full gibberish→grammar developmental arc.
 import { readCheckpoint, writeCheckpoint } from '../src/bin-reader.js';
 import { Tokenizer } from '../src/tokenizer.js';
 import { createModel, generateGreedy, forward } from '../src/model.js';
-import { Trainer, rng, packStories } from '../src/train.js';
+import { Trainer, TrainPool, rng, packStories } from '../src/train.js';
 import { EMBEDDED_BASE_STORIES } from '../src/embed-data.js';
 
 let tok = null, config = null, baseCkpt = null;
 let trainer = null, trainOpts = null, rand = null;
+let pool = null;   // TrainPool for the current trainer, or null (one core)
+function dropPool() { if (pool) pool.dispose(); pool = null; }
+// a step / eval on the pool, falling back to this thread for good if the pool fails
+async function trainStep(tr, batch) {
+  const p = pool;
+  if (p) { try { return await tr.stepWith(p, batch); } catch (e) { if (pool === p) dropPool(); } }
+  return tr.step(batch);
+}
+async function evalLoss(batch) {
+  const p = pool, tr = trainer;
+  if (p) { try { return await tr.evalLossWith(p, batch); } catch (e) { if (pool === p) dropPool(); } }
+  return tr.evalLoss(batch);
+}
+let loopGen = 0;   // a fresh start begins a new loop; an older one stops at its next await
 let zogStream = null, replayStream = null, zogEval = null, baseEval = null;
 let running = false, step = 0, samplePromptIndex = 0;
 let zogHeldMin = Infinity, evalsAboveMin = 0;
@@ -69,10 +85,10 @@ function nextTrainingPrompt() {
   return prompt;
 }
 
-function doEval() {
+async function doEval() {
   const out = { type: 'eval', step };
-  if (zogEval) out.zogHeld = trainer.evalLoss(zogEval);
-  if (baseEval) out.base = trainer.evalLoss(baseEval);
+  if (zogEval) out.zogHeld = await evalLoss(zogEval);
+  if (baseEval) out.base = await evalLoss(baseEval);
   if (out.zogHeld !== undefined) {
     if (out.zogHeld < zogHeldMin - 1e-4) { zogHeldMin = out.zogHeld; evalsAboveMin = 0; }
     else if (out.zogHeld > zogHeldMin + 0.02) evalsAboveMin++;
@@ -84,23 +100,26 @@ function doEval() {
 }
 
 async function loop() {
+  const gen = ++loopGen;
   const { B, T, replayRatio, maxSteps, evalEvery, sampleEvery } = trainOpts;
-  while (running && step < maxSteps) {
+  while (running && step < maxSteps && gen === loopGen) {
     const batch = new Int32Array(B * (T + 1));
     for (let b = 0; b < B; b++) {
       const src = (replayStream && rand() < replayRatio) ? replayStream : zogStream;
       const start = Math.floor(rand() * (src.length - T - 1));
       batch.set(src.subarray(start, start + T + 1), b * (T + 1));
     }
-    const r = trainer.step(batch);
+    const tr = trainer, r = await trainStep(tr, batch);
+    if (gen !== loopGen || tr !== trainer) return;   // a fresh start took over while this step ran
     step++;
-    self.postMessage({ type: 'step', step, loss: r.loss, ms: r.ms, gradNorm: r.gradNorm });
-    if (step % evalEvery === 0 || step === maxSteps) doEval();
+    self.postMessage({ type: 'step', step, loss: r.loss, ms: r.ms, gradNorm: r.gradNorm, cores: pool ? pool.K : 1 });
+    if (step % evalEvery === 0 || step === maxSteps) await doEval();
     if (step % sampleEvery === 0 || step === maxSteps) {
       self.postMessage({ type: 'sample', step, text: sampleText(nextTrainingPrompt()) });
     }
     await new Promise(res => setTimeout(res, 0)); // let pause/export messages in
   }
+  if (gen !== loopGen) return;
   running = false;
   self.postMessage({ type: 'idle', step });
 }
@@ -112,7 +131,7 @@ self.onmessage = async (e) => {
       baseCkpt = readCheckpoint(m.ckptBuf);
       config = baseCkpt.config;
       tok = new Tokenizer(m.tokBuf, config.vocabSize);
-      trainer = null; step = 0; running = false;
+      trainer = null; step = 0; running = false; dropPool();
       self.postMessage({ type: 'ready', config: { dim: config.dim, nLayers: config.nLayers,
         nHeads: config.nHeads, hiddenDim: config.hiddenDim, vocabSize: config.vocabSize,
         seqLen: config.seqLen, maxTokenLength: tok.maxTokenLength } });
@@ -147,10 +166,12 @@ self.onmessage = async (e) => {
           ? { config, weights: randomWeights(config, 123) }
           : baseCkpt;
         trainer = new Trainer(start, { B: m.opts.B, T: m.opts.T, lr: m.opts.lr });
+        dropPool();
+        pool = await TrainPool.create(trainer).catch(() => null);
         rand = rng(m.opts.seed ?? 7);
         samplePromptIndex = 0;
         step = 0; zogHeldMin = Infinity; evalsAboveMin = 0;
-        doEval();
+        await doEval();
         self.postMessage({ type: 'sample', step: 0, text: sampleText(nextTrainingPrompt()) });
       } else {
         trainer.opt.lr = m.opts.lr; // allow live lr tweak on resume

@@ -124,6 +124,7 @@ const MIC_TERMS = {
   vocab: { label: 'vocabulary', note: 'how many different pieces this mind can read and write — its whole alphabet.', kidNote: 'all the different little pieces of words this mind knows.' },
   guessometer: { label: 'guess-o-meter', note: 'how sure the mind is about each possible next piece after the selected one; bar length is the chance.', kidNote: 'how sure the mind is about what comes next. Longer bar means more sure.' },
   logitlens: { label: 'layer by layer', note: 'a peek at the guess forming layer by layer — what it would say if it stopped at each layer.', kidNote: 'a peek at the mind’s guess as it thinks, step by step.' },
+  ahead: { label: 'thinking ahead', note: 'the gold column in layer by layer: words a middle layer is already leaning toward further on in the story, not just next. A map fitted to this mind (a “J-lens”) reads them out; only the Big and Giant Storytellers have one.', kidNote: 'the gold words show what the mind is already thinking about for later in the story, not just the next word.' },
 };
 
 const EVENTS = {
@@ -166,8 +167,23 @@ function STEPS(){
       : 'Neuron contrast ranks which hidden units light up over a span you select. And here is the lab rule that keeps everyone honest: contrast suggests, switching off decides. In the switch-off lab, switch a suspect off and watch whether the prediction actually breaks.' },
   { name: 'explore', text: () => kid()
       ? 'The lab is yours now! Try the layer lens too — it shows what the mind would guess if it stopped thinking early.'
-      : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
+      : aheadLayers().length
+        ? 'The lab is yours. Try layer by layer on a piece — the gold thinking ahead column shows words this mind is already leaning toward further on in the story, not only next. Ask me anything as you go.'
+        : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
   ];
+}
+
+// the layers this mind's thinking-ahead lens reads (from the page's note), [] if it has none
+function aheadLayers(){
+  const t = ($('aheadNote') && $('aheadNote').textContent) || '';
+  const m = t.match(/layers ([\d, ]+)\)/);
+  return m ? m[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+}
+function aheadRows(){
+  const out = $('lensOut');
+  if (!out) return '';
+  return [...out.querySelectorAll('tr')].map(r => [...r.children]).filter(c => c.length > 4 && c[0].tagName === 'TD' && c[3].textContent.trim())
+    .map(c => `layer ${c[0].textContent.trim()}: ${c[3].textContent.trim()}`).join('; ');
 }
 
 function statusText(){
@@ -179,13 +195,14 @@ function statusText(){
     `Ablation info: ${($('ablInfo') && $('ablInfo').textContent) || 'none'}. ` +
     `Visible views right now \u2014 attention heatmap: ${vis('heat') ? 'OPEN' : 'not shown'}, ` +
     `layer by layer view: ${vis('lensOut') ? 'OPEN' : 'not shown'}, ` +
+    `thinking ahead: ${aheadLayers().length ? `this mind HAS it (layers ${aheadLayers().join(', ')}; the gold column of layer by layer)${aheadRows() ? ' showing ' + aheadRows() : ''}` : 'this mind does NOT have it (only the Big and Giant Storytellers do)'}, ` +
     `neuron list: ${vis('neuronList') ? 'OPEN' : 'not shown'}, ` +
     `prediction bars: ${vis('bars') ? 'OPEN' : 'not shown'}. ` +
     `Neuron card (what does this neuron do? both sides from real stories, plus turn it up / mute it and see the story go on): ` +
     `${($('neuronCard') && $('neuronCard').textContent.replace(/\s+/g, ' ').trim().slice(0, 600)) || 'closed'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, the "layer by layer" view (what scientists call a logit lens), and the "switch-off lab" (ablation: switching heads or neurons off). Always call the views by the names on the page: "layer by layer" and "switch-off lab"; mention the scientific names only if asked. When the visitor switches parts off, the switch-off lab shows how the story goes on with the normal mind and with the switched-off one. ' +
+  return 'You are the guide beside the Tiny Mind Microscope, an interpretability lab where a visitor inspects a small language model: attention heatmaps, neuron activations, the "layer by layer" view (what scientists call a logit lens), "thinking ahead" (the gold column in layer by layer, what scientists call a J-lens: words a middle layer is already leaning toward further on in the story, not only the next word, read out by a map fitted to that mind; only the Big and Giant Storytellers have one), and the "switch-off lab" (ablation: switching heads or neurons off). Always call the views by the names on the page: "layer by layer", "thinking ahead" and "switch-off lab"; mention the scientific names only if asked. When the visitor asks about predicting further than the next word, that is exactly what thinking ahead shows: if the status says this mind has it, point them at layer by layer (pick a piece, press the button, read the gold column); if not, tell them to choose the Big or Giant Storyteller from the mind menu. When the visitor switches parts off, the switch-off lab shows how the story goes on with the normal mind and with the switched-off one. ' +
     'You are honestly an A I yourself — a much bigger mind whose own insides are not this visible — and may say so. ' +
     'Core pedagogy: attention and contrast are correlational evidence; ablation is the arbiter. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; technical vocabulary is fine once they use it. ') +
@@ -194,7 +211,7 @@ function systemPrompt(){
     ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: story, run, attention, neurons, ablation, lens, bars. ' +
     ' Never offer to open or point at a view the status marks as OPEN already \u2014 talk about what it shows instead. ' +
     ' A view marked "not shown" cannot be shown yet: say which button makes it first, rather than promising to display it. ' +
-    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the layer by layer view is an early peek at what it would say if it stopped thinking halfway. ' +
+    ' For a young visitor, never name a view without explaining it in a few words: the prediction bars are the guess bars, how sure the mind is about each next word; the layer by layer view is an early peek at what it would say if it stopped thinking halfway; thinking ahead is the gold words it is already planning for later in the story. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the attention view', escalations: 'run captures or ablations', safeVerb: 'SHOW' });
 }
 /* every view that only exists after a capture names the control that
