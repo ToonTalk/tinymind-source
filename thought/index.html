@@ -476,6 +476,7 @@ function onSwapStory(m) {
     return;
   }
   S.writing = false;
+  document.body.dataset.swapped = '1';   // the guide's status says whether a swap has been run
   markDiff('swapWith', `rewritten, with “${S.swap.words[0]}” swapped for “${S.swap.words[1]}”`, text, S.swap.noText);
   markDiff('swapNo', 'rewritten, no swap', S.swap.noText, text);
   // the swapped story becomes the one on show, so its thoughts can be looked at too

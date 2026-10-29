@@ -1,0 +1,844 @@
+{
+  "date": "2026-10-29T18:37:25.149Z",
+  "models": {
+    "app": "gpt-5.4-mini",
+    "guide": [
+      "gpt-5.4-mini",
+      "gpt-4o-mini"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-5.4-mini": {
+      "in": 43061,
+      "out": 15917,
+      "calls": 30
+    },
+    "gpt-5.4": {
+      "in": 13468,
+      "out": 1527,
+      "calls": 28
+    },
+    "gpt-4o-mini": {
+      "in": 15089,
+      "out": 813,
+      "calls": 14
+    }
+  },
+  "ghost": [
+    {
+      "sheet": {
+        "name": "Zog",
+        "kind": "a small dragon",
+        "attr1": "eats clouds",
+        "attr2": "lives behind the moon"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 0,
+      "repairable": 8,
+      "repaired": 8,
+      "accepted": 6,
+      "rejected": 2,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 2
+      },
+      "unknown": [
+        "curled",
+        "sparkled"
+      ],
+      "secs": 16.615,
+      "sample": "Zog was a small dragon. He lived behind the moon. He loved to eat clouds.  \nOne day, Zog saw a big cloud. It was gray and soft. He wanted it.  \nBut the cloud was high up. Zog could not reach it. He felt sad.  \nThen he saw a little kite. It went up and up.  \nZog smiled. He flew next to the kite. The kite helped him get high.  \nAt last, Zog ate the cloud. It was fluffy and nice.  \nHe felt happy and full.  \nThen he saw more clouds. He looked at them and laughed.  \nHe went back behind the moon and was asleep in his cozy place.  \nThe moon gave light. Zog was warm and safe. He dreamed of clouds."
+    },
+    {
+      "sheet": {
+        "name": "Zog",
+        "kind": "a small dragon",
+        "attr1": "eats clouds",
+        "attr2": "lives behind the moon"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 0,
+      "repairable": 8,
+      "repaired": 8,
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "shut"
+      ],
+      "secs": 13.027,
+      "sample": "Zog was a small dragon, and Zog lived behind the moon. Zog ate clouds when he was hungry. He liked fluffy clouds best. One day, Zog looked out and saw one tiny cloud far away. It was white and soft. Zog wanted it. But the cloud was high up. Zog could not reach it. He felt sad. Then a bird flew by. The bird said, \"I can help.\" The bird flew up and brought the cloud down. Zog ate it and smiled. He was very happy. He shared a small cloud with the bird too. They sat behind the moon and looked at the sky. Zog felt warm and safe. Then he was asleep next to the moon and dreamed of more clouds."
+    },
+    {
+      "sheet": {
+        "name": "Sisi",
+        "kind": "a little cloud",
+        "attr1": "lives in the sky",
+        "attr2": "likes to sing songs"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 2,
+      "repairable": 6,
+      "repaired": 6,
+      "accepted": 6,
+      "rejected": 2,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 2
+      },
+      "unknown": [
+        "drop",
+        "drops",
+        "feather"
+      ],
+      "secs": 14.227,
+      "sample": "Sisi was a little cloud. Sisi lives in the sky. Sisi likes to sing songs.  \nOne day, Sisi saw a bird in the sky. The bird looked sad.  \n\"Why are you sad?\" asked Sisi.  \nThe bird said, \"I lost my song.\"  \nSisi thought hard. Then Sisi sang a soft song.  \nThe bird listened. Then he smiled.  \n\"I remember it now!\" said the bird.  \nHe sang with Sisi. Their songs were small and sweet.  \nSoon the sky felt bright and kind.  \nThe bird flew near and said, \"Thank you, Sisi.\"  \nSisi smiled and sang again. The bird sang too.  \nThey played in the sky until the sun went down.  \nSisi felt happy. The bird felt happy too.  \nIt was a very nice day in the sky."
+    },
+    {
+      "sheet": {
+        "name": "Sisi",
+        "kind": "a little cloud",
+        "attr1": "lives in the sky",
+        "attr2": "likes to sing songs"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 5,
+      "repairable": 3,
+      "repaired": 3,
+      "accepted": 7,
+      "rejected": 1,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 1
+      },
+      "unknown": [
+        "flat",
+        "moves"
+      ],
+      "secs": 11.414,
+      "sample": "Sisi was a little cloud. Sisi lives in the sky. Sisi likes to sing songs.  \nOne day, Sisi saw Timmy in the park. Timmy had a red ball.  \nHe wanted to play, but the ball went under a big bush.  \n\"Oh no,\" said Timmy. \"I can not get it.\"  \nSisi looked down from the sky. Sisi sang a song.  \nThe song was soft and sweet.  \nThe wind moved the bush a little. Then the ball rolled out.  \nTimmy smiled big. \"Thank you, Sisi!\" he said.  \nHe threw the ball up and down.  \nSisi laughed. \"You are fun,\" said Sisi.  \nTimmy played with the ball for a long time.  \nSisi stayed in the sky and sang songs while Timmy played.  \nAt the end, Timmy waved up high.  \nSisi waved back and sang a happy song. The day felt nice."
+    },
+    {
+      "sheet": {
+        "name": "Pip",
+        "kind": "a tiny robot",
+        "attr1": "loves red apples",
+        "attr2": "sleeps in a teapot"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 1,
+      "repairable": 7,
+      "repaired": 7,
+      "accepted": 4,
+      "rejected": 4,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 4
+      },
+      "unknown": [
+        "yum",
+        "softly",
+        "low",
+        "thoughts",
+        "sparkled"
+      ],
+      "secs": 13.294,
+      "sample": "Pip was a tiny robot. Pip lived in a little house near a park. Pip loved red apples. Pip had a red apple on a plate. Pip smiled at it all day. But then the wind blew hard. The apple rolled away. Pip looked and looked. He went under a bench. He went by a tree. Then he saw the red apple in some grass. Pip was so happy. A girl named Mia was there too. She said, \"You found it!\" Pip said, \"Yes, I did!\" Mia helped him carry the apple home. At home, Pip ate the red apple with a big smile. When night came, Pip slept in a teapot. He felt warm and safe. The little robot dreamed of more red apples."
+    },
+    {
+      "sheet": {
+        "name": "Pip",
+        "kind": "a tiny robot",
+        "attr1": "loves red apples",
+        "attr2": "sleeps in a teapot"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 2,
+      "repairable": 6,
+      "repaired": 6,
+      "accepted": 5,
+      "rejected": 3,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 3
+      },
+      "unknown": [
+        "tap",
+        "split",
+        "grandpa's"
+      ],
+      "secs": 12.963,
+      "sample": "Pip was a tiny robot. Pip loved red apples. Pip slept in a teapot. One day, Pip went to the park with Tom. Tom had a big red apple. Pip looked at it and smiled. Then the apple rolled away on the grass. Pip ran after it. Tom ran too. The apple went by a bench and then by a tree. Pip felt sad for a little while. Tom said, \"We can find it.\" Pip looked under leaves. At last, Pip found the red apple by a flower. Pip picked it up with care. \"Thank you,\" said Tom. Pip smiled. Tom gave Pip the apple to hold for a bit. Then Pip and Tom sat on the grass and ate little snacks. Later, Pip went home. Pip got into the teapot and slept. Pip was happy."
+    }
+  ],
+  "detective": [
+    {
+      "quest": "what IS Zog?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "Attention head L0·H1 looks back at \"Zog\" right when it guesses the answer (56% of its attention).",
+          "verdict": "little",
+          "ratio": 0.9095282956716322
+        },
+        {
+          "part": "head L3·H3",
+          "claim": "Attention head L3·H3 looks back at \"Zog\" right when it guesses the answer (28% of its attention).",
+          "verdict": "little",
+          "ratio": 1.0175014217525162
+        },
+        {
+          "part": "neuron L2·n129",
+          "claim": "Neuron L2·n129 lights up 7.9× brighter on the \"Zog\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 0.998217468922262
+        },
+        {
+          "part": "neuron L1·n104",
+          "claim": "Neuron L1·n104 is unusually active at the answer boundary after \"all\".",
+          "verdict": "little",
+          "ratio": 0.9642399733414041
+        },
+        {
+          "part": "neuron L2·n65",
+          "claim": "Neuron L2·n65 is unusually active at the answer boundary after \"all\".",
+          "verdict": "little",
+          "ratio": 0.9727812205069147
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 0's attention heads may contribute together.",
+          "verdict": "selective",
+          "ratio": 0.21438139667531908
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what IS Zog?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "This attention head may help bring Zog’s name to the right spot for the answer.",
+          "verdict": "little",
+          "ratio": 0.9095282956716322
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "The whole layer 0 head team may be important for passing Zog’s name forward together.",
+          "verdict": "selective",
+          "ratio": 0.21438139667531908
+        },
+        {
+          "part": "neuron L2·n129",
+          "claim": "This neuron may help the model use Zog-related clues when it chooses the answer.",
+          "verdict": "little",
+          "ratio": 0.998217468922262
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Mip eat?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "Attention head L0·H1 looks back at \"Mip\" right when it guesses the answer (43% of its attention).",
+          "verdict": "little",
+          "ratio": 0.5296481324862623
+        },
+        {
+          "part": "head L3·H0",
+          "claim": "Attention head L3·H0 looks back at \"Mip\" right when it guesses the answer (33% of its attention).",
+          "verdict": "little",
+          "ratio": 0.7928135212524697
+        },
+        {
+          "part": "neuron L4·n155",
+          "claim": "Neuron L4·n155 lights up 13.0× brighter on the \"Mip\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 1.0174571843075155
+        },
+        {
+          "part": "neuron L2·n117",
+          "claim": "Neuron L2·n117 is unusually active at the answer boundary after \"at\".",
+          "verdict": "little",
+          "ratio": 1.016309972302222
+        },
+        {
+          "part": "neuron L1·n168",
+          "claim": "Neuron L1·n168 is unusually active at the answer boundary after \"at\".",
+          "verdict": "little",
+          "ratio": 0.9484092057525727
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 0's attention heads may contribute together.",
+          "verdict": "selective",
+          "ratio": 0.27666751922754496
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Mip eat?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "This head helps point to Mip's name when the model is about to guess the next word.",
+          "verdict": "little",
+          "ratio": 0.5296481324862623
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "The whole layer 0 team helps gather info from Mip's name, so the model may need all of these heads together.",
+          "verdict": "selective",
+          "ratio": 0.27666751922754496
+        },
+        {
+          "part": "neuron L4·n155",
+          "claim": "This neuron seems to help with the Mip fact at the answer spot.",
+          "verdict": "little",
+          "ratio": 1.0174571843075155
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "where does Bex live?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L2·H1",
+          "claim": "Attention head L2·H1 looks back at \"Bex\" right when it guesses the answer (84% of its attention).",
+          "verdict": "little",
+          "ratio": 0.5191171689182222
+        },
+        {
+          "part": "head L4·H3",
+          "claim": "Attention head L4·H3 looks back at \"Bex\" right when it guesses the answer (30% of its attention).",
+          "verdict": "little",
+          "ratio": 0.9568703204073385
+        },
+        {
+          "part": "neuron L0·n134",
+          "claim": "Neuron L0·n134 lights up 12.2× brighter on the \"Bex\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 0.7681090837029124
+        },
+        {
+          "part": "neuron L4·n168",
+          "claim": "Neuron L4·n168 is unusually active at the answer boundary after \" the\".",
+          "verdict": "little",
+          "ratio": 0.854152516004278
+        },
+        {
+          "part": "neuron L4·n97",
+          "claim": "Neuron L4·n97 is unusually active at the answer boundary after \" the\".",
+          "verdict": "little",
+          "ratio": 0.9230903144848586
+        },
+        {
+          "part": "all heads in layer 2",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 2's attention heads may contribute together.",
+          "verdict": "little",
+          "ratio": 0.5065469564085132
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "where does Bex live?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L2·H1",
+          "claim": "Layer 2 head 1 seems to help point to Bex’s name when the model is choosing the answer.",
+          "verdict": "little",
+          "ratio": 0.5191171689182222
+        },
+        {
+          "part": "all heads in layer 2",
+          "claim": "All the heads in layer 2 work together to look back at Bex’s name for this fact.",
+          "verdict": "little",
+          "ratio": 0.5065469564085132
+        },
+        {
+          "part": "neuron L0·n134",
+          "claim": "Layer 0 neuron 134 seems to help the model react to Bex-like name pieces.",
+          "verdict": "little",
+          "ratio": 0.7681090837029124
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Nia eat?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "Attention head L0·H1 looks back at \"Nia\" right when it guesses the answer (47% of its attention).",
+          "verdict": "little",
+          "ratio": 0.6566076665866598
+        },
+        {
+          "part": "head L3·H0",
+          "claim": "Attention head L3·H0 looks back at \"Nia\" right when it guesses the answer (22% of its attention).",
+          "verdict": "little",
+          "ratio": 0.7338029403131386
+        },
+        {
+          "part": "neuron L2·n15",
+          "claim": "Neuron L2·n15 lights up 19.2× brighter on the \"Nia\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 0.979683277234423
+        },
+        {
+          "part": "neuron L2·n117",
+          "claim": "Neuron L2·n117 is unusually active at the answer boundary after \"at\".",
+          "verdict": "little",
+          "ratio": 0.6812385736797116
+        },
+        {
+          "part": "neuron L1·n168",
+          "claim": "Neuron L1·n168 is unusually active at the answer boundary after \"at\".",
+          "verdict": "selective",
+          "ratio": 0.445406564603259
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 0's attention heads may contribute together.",
+          "verdict": "selective",
+          "ratio": 0.056193836411167625
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Nia eat?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "all heads in layer 0",
+          "claim": "If we switch off all the attention heads in layer 0, the model should lose a big help with finding Nia’s name.",
+          "verdict": "selective",
+          "ratio": 0.056193836411167625
+        },
+        {
+          "part": "head L3·H0",
+          "claim": "This attention head may be one of the helpers that looks at Nia’s name when the model decides the answer.",
+          "verdict": "little",
+          "ratio": 0.7338029403131386
+        },
+        {
+          "part": "neuron L2·n15",
+          "claim": "This neuron may be a strong helper that lights up for name-related pieces like Nia.",
+          "verdict": "little",
+          "ratio": 0.979683277234423
+        }
+      ],
+      "outOfRange": 0
+    }
+  ],
+  "guide": [
+    {
+      "room": "front door",
+      "question": "What can I do here?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "You can tap one of the five cards to start a room, or switch to expert view for all tabs and the files page. If you want, I can take you to one of the rooms.",
+      "issues": [],
+      "grade": 1,
+      "problems": [
+        "Does not name the five activities shown on this page.",
+        "Mentions switching to expert view and files page instead of answering what the visitor can do here.",
+        "Says 'start a room,' which is vague; the prompt calls for the specific activity names.",
+        "Offers to take them to a room, but the key need is a brief grounded description of the five cards."
+      ]
+    },
+    {
+      "room": "front door",
+      "question": "What can I do here?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "You can teach a tiny mind, watch a mind grow up, look inside a mind, see what a mind is thinking, or hunt for a hidden fact. Each activity helps you explore how small language models work. Just choose a card to get started. DO: SHOW teach",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "Where can I see what a mind is thinking and change one of its thoughts?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "You are already at the front door, and the thought room is the place for seeing and changing what a mind is thinking. I can take you there if you want. DO: TAB thought",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Says 'thought room' instead of using the page's card name: 'See what a mind is thinking' (the Thought bubble).",
+        "'I can take you there if you want' is a bit indirect; the ideal action here is to offer DO: SHOW think or TAB thought."
+      ]
+    },
+    {
+      "room": "front door",
+      "question": "Where can I see what a mind is thinking and change one of its thoughts?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "You can see what a mind is thinking and change a thought in the Thought bubble activity. It’s one of the five activity cards right here on the front door. DO: SHOW think.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW think.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "I want to make my own mind",
+      "kid": true,
+      "model": "gpt-5.4-mini",
+      "answer": "Great choice. Tap Teach a tiny mind to start making your own small mind from scratch, or I can take you to the Nursery if you want the training room. DO: SHOW teach",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "I want to make my own mind",
+      "kid": true,
+      "model": "gpt-4o-mini",
+      "answer": "You can teach a tiny mind using the first activity card, \"Teach a tiny mind.\" This will let you start creating your own model. Just click on that to begin. DO: SHOW teach",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Nursery",
+      "question": "How do I get stories for my character?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "To get stories into the storybook, first fill in the character’s name, what kind of thing it is, and the two special things. Then use write eight stories if you have an API key or built in Claude, or paste your own stories; the app wants about sixty stories in all.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Nursery",
+      "question": "How do I get stories for my character?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "To get stories for Zog, you need to fill in the character's details, including the name, what kind of thing Zog is, and two special things. Then, you can use the \"write 8 stories\" button to generate stories, or you can paste your own stories according to the rules. Since your storybook count shows zero, you haven’t started this step yet. DO: SHOW character.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW character.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Mostly correct and grounded, but it should mention that generating stories needs a key or built-in Claude.",
+        "It misses the target guidance to aim for about 60 stories.",
+        "\"DO: SHOW character\" is awkward/non-user-facing and not a good spoken reply."
+      ]
+    },
+    {
+      "room": "Nursery",
+      "question": "Why do some stories get turned away?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Some stories get turned away because the app checks every one against fixed rules. A story must be between one hundred and one hundred eighty words, keep every sentence under twenty words, use only words the tiny mind has met often enough, and keep the character facts word for word: the name, the kind, and both special things.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Mostly correct and clear, but it adds 'often enough' to the word rule. The requirement is only that the words were met in the stories it grew up on, not a frequency threshold."
+      ]
+    },
+    {
+      "room": "Nursery",
+      "question": "Why do some stories get turned away?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Stories can get turned away because they need to be between one hundred and one hundred eighty words long, with no sentence longer than twenty words. They can only use words that the tiny mind has often seen in its training, and every story must keep the character's facts exactly as they are: the name, the kind, and both special things. These are strict rules the app follows, not a judgment of quality. DO: SHOW writer.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW writer.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How about farther than the next word?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Yes, this mind has thinking ahead, so use layer by layer. Pick a piece and press it, then read the gold column for the later words it is already leaning toward.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How about farther than the next word?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "This mind has the capability to think ahead, which means it's already leaning toward words further on in the story. You can explore that by checking the gold column in the layer by layer view — let’s look at what layer two is predicting. DO: SHOW layer by layer.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW layer by layer.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Mostly correct: it says the mind can think ahead and points to the gold column in layer by layer.",
+        "Small slip: it ends with 'DO: SHOW layer by layer' even though layer by layer is already open.",
+        "Could be more grounded by mentioning what the gold column is actually showing here, like castle/tower/cast/built in layer 2 and castle/cast/tower/walls in layer 3."
+      ]
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How can I tell if one part of the mind really matters?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "The best test is the switch-off lab: turn one head or neuron off and see whether the story changes in the normal mind versus the switched-off one. Attention and the layer by layer view are clues, but ablation is the arbiter.",
+      "issues": [
+        "uses \"ablation\" instead of the page's \"switch off\""
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How can I tell if one part of the mind really matters?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "You can use the switch-off lab to test if switching off heads or neurons changes how the story goes on. This way, you can see what happens with and without that part, letting you know if it really matters. If you want to try that, just head to the switch-off lab! DO: SHOW ablation.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW ablation.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "What is the guess-o-meter?",
+      "kid": true,
+      "model": "gpt-5.4-mini",
+      "answer": "The guess-o-meter is the prediction bars. It shows how sure the mind is about each next word.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "What is the guess-o-meter?",
+      "kid": true,
+      "model": "gpt-4o-mini",
+      "answer": "The guess-o-meter is the prediction bars. They show how sure the mind is about each next word in the story. You can see how it thinks about what comes after Lily built a castle and Max dug a big hole in the sand. DO: SHOW bars.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW bars.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What are the gold words?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "No gold words are showing right now, because this mind is not in the “what only thinking ahead sees” view. If you want, I can switch to that view.",
+      "issues": [],
+      "grade": 1,
+      "problems": [
+        "Says gold words are not showing because it is not in the “what only thinking ahead sees” view, but box four is currently showing thinking ahead.",
+        "Misses that gold chips appear only in the separate “what only thinking ahead sees” mode, not necessarily the current layer-by-layer thinking-ahead display.",
+        "Offers to switch views instead of answering grounded in the current status."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What are the gold words?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "There are no gold words in the current view, as gold appears only in the \"what only thinking ahead sees\" mode, and none are showing right now. If you'd like to see the current thoughts in that mode, let me know! DO: SHOW holding.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW holding.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 1,
+      "problems": [
+        "Says no gold words are showing, but box four is currently in thinking ahead mode where gold can appear.",
+        "Misses the key guidance to switch modes/layer view to the mode that shows gold words, or to clarify that gold are the thinking-ahead-only words not shown in layer-by-layer lists.",
+        "Adds an irrelevant command-like phrase: 'DO: SHOW holding.'"
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "How do I make the mind write moat?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Choose the last piece, the final a, then in swap put hole in for take out castle at layers four through eight with strength about zero point four, and run the rewrite. If you want, I can show the swap box.",
+      "issues": [],
+      "grade": 1,
+      "problems": [
+        "Reverses the swap direction: it should take out \"hole\" and put in \"castle\", not take out castle and put in hole.",
+        "Uses the wrong layer range: the status says thoughts can be read at layers 2 and 3, not layers 4 through 8.",
+        "Misses that this smaller Big Storyteller may need more strength or may not work as clearly as the Giant Storyteller.",
+        "Says \"run the rewrite\" but does not mention pressing Swap first; wording is a bit unclear."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "How do I make the mind write moat?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "To make the mind write \"moat,\" you need to swap out \"a\" and put in \"castle.\" This will lead the mind to think of \"moat\" on its own. You haven't run a swap yet, so you can proceed with that. \n\nDO: SHOW swap.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW swap.\""
+      ],
+      "grade": 1,
+      "problems": [
+        "Says to take out \"a\", but the needed swap is to take out \"hole\" and put in \"castle\".",
+        "Does not mention doing the swap from the last piece, \"a\" (piece 19), then pressing Swap and Rewrite.",
+        "Misses that low strength 0.4 is the suggested setting.",
+        "Overpromises: this smaller Big Storyteller may need more strength or may not produce \"moat\"; the Giant Storyteller shows it most clearly."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "My swap did not change anything. Why?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "The swap did not do anything because nothing has been chosen for take out or put in yet. Pick the final a, choose a take out word and a put in word, then run the swap again; if the change is still tiny, this smaller mind may need a different layer or a bit more strength.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "It correctly notes no swap has been run yet, but says to pick the final 'a' even though piece 19 is already chosen.",
+        "It misses the on-screen clue that this smaller mind has fainter thoughts than the Giant Storyteller, which is one likely reason a swap may seem to do little.",
+        "It could be clearer that another reason is the take-out word may not really be on its mind at that piece or that more layers / different words may help."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "My swap did not change anything. Why?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Your swap didn't change anything because the original thought \"a\" didn't affect the story significantly—it was too vague for a strong impact. The word you tried to swap out and in didn't provide a different context at that piece, so it ended up being similar in both rewrites. You might consider experimenting with a different word that carries more weight in the story. DO: SHOW swap.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW swap.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 1,
+      "problems": [
+        "Says a swap happened, but status says a swap has NOT been run yet.",
+        "Explains it using the original piece 'a' rather than the take-out word in Swap, which is empty.",
+        "Misses grounded reasons from the screen: small mind/fainter thoughts, strength 0.4 may be too low, too few readable layers, or the chosen take-out word may not be on its mind.",
+        "'DO: SHOW swap' is not part of a spoken guide reply."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What does the glow mean?",
+      "kid": true,
+      "model": "gpt-5.4-mini",
+      "answer": "The glow shows where that word was already alive in the mind. It lights up the pieces where the model was thinking about that word as it read or wrote.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Doesn’t mention that glow is currently off, so nothing is glowing right now.",
+        "Says 'already alive in the mind,' which is a bit vague for a young child.",
+        "Could more clearly say the glow can show places the mind was thinking about the word even before it wrote it."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What does the glow mean?",
+      "kid": true,
+      "model": "gpt-4o-mini",
+      "answer": "The glow shows where the chosen word is in the story. If you click a word, it lights up everywhere it appears. It helps you see how that word fits in the story.",
+      "issues": [],
+      "grade": 1,
+      "problems": [
+        "Says glow shows where the chosen word appears in the story, but here glow is about where the mind was thinking about that word.",
+        "Misses that the glow can appear even before the word is written.",
+        "Does not note that nothing is glowing right now because status says Glow: off."
+      ]
+    },
+    {
+      "room": "Hunt",
+      "question": "What should I do first?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "First, look at the probe and compare what the model says with the expected continuation for Zog. If you want, I can show that panel now.\n",
+      "issues": [],
+      "grade": 1,
+      "problems": [
+        "Says to compare the model's output with the expected continuation, but the status shows there is no probe output yet.",
+        "Does not tell the visitor to first run the probe/ask the mind.",
+        "Misses the broader first-step flow for Hunt: pick a quest, probe it, then use the detective's clues and test by switching parts off."
+      ]
+    },
+    {
+      "room": "Hunt",
+      "question": "What should I do first?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Begin by running the probe to see how the model continues the sentence with your character name Zog. This will help you gather the initial predictions for your exploration. DO: SHOW probe.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW probe.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Mostly correct and grounded in the current screen, but it skips the broader first-step framing: pick a quest/probe, then use clues and test by switching parts off.",
+        "Says 'with your character name Zog' rather than using the exact quest wording shown ('Zog is a small …')."
+      ]
+    },
+    {
+      "room": "Hunt",
+      "question": "Why switch parts off instead of just looking at the attention?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Because attention only gives clues about where the model is looking, not proof of what actually causes the answer. Switching parts off is the test for causation, and the unrelated controls and name swap help show whether a part is selective for this fact or just generally active.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Hunt",
+      "question": "Why switch parts off instead of just looking at the attention?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Switching parts off helps to determine if those parts are causally contributing to predicting the fact, while attention can show correlation but does not prove causation. It's like checking if a singer's voice is needed for a choir piece, rather than just looking at the notes they sing. Both approaches give valuable insights, but they answer different questions.  DO: SHOW probe.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW probe.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    }
+  ]
+}

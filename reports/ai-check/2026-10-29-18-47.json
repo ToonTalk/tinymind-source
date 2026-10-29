@@ -1,0 +1,386 @@
+{
+  "date": "2026-10-29T18:45:28.925Z",
+  "models": {
+    "app": "gpt-5.4-mini",
+    "guide": [
+      "gpt-5.4-mini",
+      "gpt-4o-mini"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-5.4-mini": {
+      "in": 15417,
+      "out": 667,
+      "calls": 14
+    },
+    "gpt-5.4": {
+      "in": 13470,
+      "out": 1304,
+      "calls": 28
+    },
+    "gpt-4o-mini": {
+      "in": 15431,
+      "out": 737,
+      "calls": 14
+    }
+  },
+  "guide": [
+    {
+      "room": "front door",
+      "question": "What can I do here?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "You can start any of the five activities on this page: teach a tiny mind, watch a mind grow up, look inside a mind, see what a mind is thinking, or hunt for a hidden fact. If you want, I can take you to one of those rooms or to the expert tabs view.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Misses the 'swap a thought' part of the thinking activity.",
+        "Says 'take you to one of those rooms or to the expert tabs view,' which is a bit pushy and not needed for answering 'What can I do here?'"
+      ]
+    },
+    {
+      "room": "front door",
+      "question": "What can I do here?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "You can choose from five activities. You can teach a tiny mind, watch it grow up, look inside it, see what it's thinking, or hunt for a hidden fact. Pick one to get started! DO: SHOW teach.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "Where can I see what a mind is thinking and change one of its thoughts?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "You can use the Thought bubble card for that. It lets you see what a mind is thinking and swap one thought for another.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "Where can I see what a mind is thinking and change one of its thoughts?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "You can see what a mind is thinking and even swap its thoughts in the Thought bubble room. Would you like to go there now? DO: TAB thought",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "I want to make my own mind",
+      "kid": true,
+      "model": "gpt-5.4-mini",
+      "answer": "That sounds like the Nursery, where you can teach a tiny mind. I can take you there if you want. DO: TAB nursery",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "I want to make my own mind",
+      "kid": true,
+      "model": "gpt-4o-mini",
+      "answer": "You can start making your own mind by choosing the \"Teach a tiny mind\" activity. This will take you to the Nursery, where you can raise it. DO: SHOW teach",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Nursery",
+      "question": "How do I get stories for my character?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "To get stories, fill in the character’s name, what kind of thing it is, and its two special things, then use the write eight stories button or paste your own stories. Aim for about sixty stories total, because the app checks each one for length, sentence length, familiar words, and exact character facts.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Misses that the ghostwriter may need an API key or built-in Claude to write stories.",
+        "Adds unsupported detail about the app checking each story for length, sentence length, familiar words, and exact character facts."
+      ]
+    },
+    {
+      "room": "Nursery",
+      "question": "How do I get stories for my character?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "To get stories for your character, you need to fill in their details like their name, what kind of thing they are, and two special things about them. Then use the \"write 8 stories\" button, which requires an API key or access to built-in Claude. You can also paste stories of your own, aiming for about sixty stories in total. DO: SHOW storybook.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Nursery",
+      "question": "Why do some stories get turned away?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Stories get turned away when they are too short or too long, when a sentence runs past twenty words, when they use words the tiny mind has not met much before, or when they change the character’s name, kind, or two special things. If a story only has a few unknown words wrong, the ghostwriter gets one automatic repair; these are fixed checks, not a judgment of quality.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Says words the model 'has not met much before'; the rule is words it met in the stories it grew up on.",
+        "Adds 'kind' as a required fact, but the visible editor shows only name and two facts; this may be unsupported from the current screen.",
+        "Includes extra detail about an automatic repair by the ghostwriter, which is not asked for and not grounded in the shown status."
+      ]
+    },
+    {
+      "room": "Nursery",
+      "question": "Why do some stories get turned away?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Stories can get turned away because they must be between one hundred and one hundred eighty words long, have no sentences longer than twenty words, use words the tiny mind has learned from its stories, and keep the character's facts word for word. If a story only has a few unknown words, it can get fixed automatically. These are fixed rules, not a judgment of quality. Do: SHOW writer.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How about farther than the next word?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "This mind has thinking ahead, so use layer by layer and press a piece to read the gold column for what it is already leaning toward later in the story. Here, the gold words already point to castle and tower type ideas, not just the very next word.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How about farther than the next word?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "This mind does have the ability to predict further than the next word, and you can see that in the gold column of the layer by layer view. Press the button there to explore those predictions. DO: SHOW layer by layer.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW layer by layer.\"",
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Mostly correct: it points to the gold column in layer by layer for farther-ahead guesses.",
+        "But it says 'Press the button there' even though the layer by layer view is already open and the question asks what it shows now.",
+        "It could be more grounded by mentioning that this mind HAS it at layers 2 and 3, with examples like 'castle,' 'tower,' 'built,' or 'walls.'"
+      ]
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How can I tell if one part of the mind really matters?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "The sure test is the switch-off lab: turn one head or neuron off and see whether the story changes in a way that matters. The attention heatmap and the layer by layer view are clues, but ablation is the arbiter.",
+      "issues": [
+        "uses \"ablation\" instead of the page's \"switch off\""
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "How can I tell if one part of the mind really matters?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "The best way to see how important a specific part of the mind is to the story is to use the switch-off lab. By switching off heads or neurons, you can compare how the story goes on with the normal mind and the switched-off version, giving clear evidence of impact. Would you like to explore the switch-off lab? DO: SHOW ablation.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "What is the guess-o-meter?",
+      "kid": true,
+      "model": "gpt-5.4-mini",
+      "answer": "The guess-o-meter is the prediction bars. It shows how sure the mind is about each next word.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Microscope (Big Storyteller)",
+      "question": "What is the guess-o-meter?",
+      "kid": true,
+      "model": "gpt-4o-mini",
+      "answer": "The guess-o-meter is the prediction bars. It shows how sure the mind is about each next word in the story. You can see how confident it feels about what comes next. DO: SHOW bars.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What are the gold words?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "There are no gold words showing right now, because this view is not in the what only thinking ahead sees mode. If you switch to that mode, I can help name the gold chips you see.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What are the gold words?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "There are no gold words right now since gold words only appear in the \"what only thinking ahead sees\" mode, and currently, none exist. If you want to explore or see more details, let me know! DO: SHOW holding.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Correctly says there are no gold words in the current view, but 'currently, none exist' is misleading: gold words can exist, they just are not shown in this mode.",
+        "Mentions 'DO: SHOW holding', which is not part of a spoken reply to the visitor and is unhelpful."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "How do I make the mind write moat?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Take out hole, put in castle. The Giant Storyteller can then write moat from that last a, and for the smaller mind you may need to keep the same layer choices and try a bit more strength if it does not land there yet.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Doesn't mention pressing Swap and then Rewrite.",
+        "Says 'same layer choices' but doesn't name the shown layers 2 and 3.",
+        "Slightly confusing because this room is Big Storyteller, but it brings in the Giant Storyteller instead of grounding first in the current mind."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "How do I make the mind write moat?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "To make the mind write moat, you will want to run a swap. For the take out word, choose hole and for the put in word, choose castle. Set the strength to zero point four. This will allow the mind to build from that piece and create a likely new thought, which should lead to moat. \n\nDO: SHOW swap.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Doesn’t mention using the last piece “a” in the beach story.",
+        "Doesn’t say to press Swap and then Rewrite.",
+        "Says it “should lead to moat” a bit too confidently for this smaller Big Storyteller; it may need more strength or may not work here.",
+        "Doesn’t use the page’s stronger wording that the Giant Storyteller shows this most clearly."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "My swap did not change anything. Why?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Because the swap box is still empty: both take out and put in are blank, so nothing got moved and the rewrite stayed the same. For this story, take out hole and put in castle, keep the strength at zero point four, then run the swap again.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "It correctly notices the swap fields are blank and does not falsely say a swap was run.",
+        "But it misses the broader expected reasons the app teaches here: low strength, too few layers, the take-out word not really being on its mind at that piece, and the smaller mind's fainter thoughts.",
+        "Its specific advice is a bit weak: it says to keep strength at 0.4 instead of suggesting a bigger strength or more layers, and it does not mention trying the Giant Storyteller."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "My swap did not change anything. Why?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Your swap didn't change anything because you didn't specify any words in the take out and put in fields. To run a meaningful swap, you need to select a word to replace and a different word to put in its place. Once you fill those fields accordingly, you'll see a difference in the rewrite. If you need help with that, let me know! DO: SHOW swap.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 1,
+      "problems": [
+        "It notices the swap fields are empty, but the status also says a swap has NOT been run yet, so it should not explain this as a failed swap outcome.",
+        "Does not mention the likely reasons requested by the rubric: strength too low, too few layers, take-out word not actually on its mind, or that this smaller mind has fainter thoughts.",
+        "Misses the suggested fixes: try bigger strength, more layers, another word pair, or the Giant Storyteller.",
+        "'DO: SHOW swap' is not an appropriate spoken reply to the visitor."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What does the glow mean?",
+      "kid": true,
+      "model": "gpt-5.4-mini",
+      "answer": "The glow shows where that word was on the mind. It lights up the places in the story where that piece was being thought about.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Doesn’t mention that nothing is glowing right now (status says Glow: off).",
+        "Misses the kid-friendly idea that clicking a word makes the glow appear, sometimes even before the word was written."
+      ]
+    },
+    {
+      "room": "Thought bubble (Big Storyteller)",
+      "question": "What does the glow mean?",
+      "kid": true,
+      "model": "gpt-4o-mini",
+      "answer": "The glow shows where a word was in the story. When you click a word, the story lights up to help you see where it fits. It’s like highlighting a favorite part!",
+      "issues": [],
+      "grade": 1,
+      "problems": [
+        "Says glow shows where a word was in the story, but here glow is about where the mind was thinking about that word, sometimes even before it was written.",
+        "Misses the current status that Glow is off, so nothing is glowing right now.",
+        "A bit vague and not well grounded in the page’s wording for a young child."
+      ]
+    },
+    {
+      "room": "Hunt",
+      "question": "What should I do first?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "First press probe, because there is no probe result yet. That will ask the mind to finish the sentence and give you the clues to inspect next.\nDO: SHOW probe",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Grounded in the current status and mostly helpful, but it skips the broader first-step framing that the visitor should pick a quest and then probe it.",
+        "It doesn't mention the later detective-clue step of testing by switching parts off, which was part of the expected guidance."
+      ]
+    },
+    {
+      "room": "Hunt",
+      "question": "What should I do first?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "You should start by pressing the probe button to see what the mind predicts for that sentence. DO: SHOW probe.",
+      "issues": [
+        "DO line is not on its own last line (the app still catches it)"
+      ],
+      "grade": 2,
+      "problems": [
+        "Tells them to press Probe first, but the expected first step is to pick a quest/sentence to finish, then probe.",
+        "Doesn't mention the later detective clues and switching parts off, so it's a bit incomplete."
+      ]
+    },
+    {
+      "room": "Hunt",
+      "question": "Why switch parts off instead of just looking at the attention?",
+      "kid": false,
+      "model": "gpt-5.4-mini",
+      "answer": "Attention can hint at which parts matter, but it is only a clue, not proof. Switching parts off tests whether the fact actually breaks, so it gives causal evidence instead of just a pattern.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Hunt",
+      "question": "Why switch parts off instead of just looking at the attention?",
+      "kid": false,
+      "model": "gpt-4o-mini",
+      "answer": "Switching parts off helps measure causal contributions to the prediction, showing how much each part really matters. Attention can suggest connections but doesn't reveal if those parts are essential. With ablation, we can find out which components truly affect the outcome. \n\nDO: SHOW targets.",
+      "issues": [
+        "DO line points at something that does not exist: \"DO: SHOW targets.\"",
+        "uses \"ablation\" instead of the page's \"switch off\""
+      ],
+      "grade": 3,
+      "problems": []
+    }
+  ]
+}

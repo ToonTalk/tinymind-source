@@ -440,7 +440,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      model = model || 'gpt-4o-mini';
+      model = model || 'gpt-5.4-mini';   // tools/ai-check.mjs: it answers the guide questions better than gpt-4o-mini
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -506,7 +506,7 @@ window.__vgShowBlockedEvent = {
    under tm-key-<provider>; srcdoc frames share the shell's origin, so
    any guide can find a key the visitor already gave the app. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -2872,6 +2872,77 @@ function causalVerdict(targetRatio, controlRatios = []) {
   return { kind: 'little', label: 'little measured effect', targetDamage, medianControlDamage, selectivity };
 }
 
+// ---- the detectives --------------------------------------------------------------
+// The built-in detective turns the probe's evidence (the hunt worker's probe-done: head
+// attention to the name, name-piece and answer-boundary neurons) into clues, ending
+// with a whole-layer "team" clue, since knowledge is usually shared.
+function builtinHypotheses(m, { name, continuation, nHeads }) {
+  const out = [];
+  for (const h of m.headScores.slice(0, 2)) {
+    if (h.score < 0.02) break;
+    out.push({ kind: 'head', layer: h.layer, index: h.head,
+      source: 'name attention',
+      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of m.neuronTop.slice(0, 1)) {
+    if (nr.score < 1) break;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
+    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
+      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${continuation}" more than unrelated completions.` });
+  }
+  // the team hypothesis: knowledge is usually SHARED — single parts are often
+  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
+  const layerTotals = {};
+  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
+  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
+  out.push({ kind: 'team', layer: bestLayer,
+    source: 'layer team',
+    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
+    prediction: `Switch off ALL ${nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
+  return out;
+}
+
+// The language-model detective: the prompt it gets (the same evidence as JSON), and the
+// clues kept from its reply (a JSON array of heads / neurons with integer places, or
+// "team" clues: every head of one layer).
+function detectivePrompt({ probe, continuation, name, config, m }) {
+  const evidence = {
+    task: `The tiny language model completes "${probe}" with "${continuation}" (probability ${m.contProb}).`,
+    character: name,
+    modelShape: config,
+    topGuesses: m.top,
+    headAttentionToName_atAnswerPosition: m.headScores,
+    // the whole-layer picture, for team hypotheses: every head's attention to the name, summed per layer
+    attentionToName_perLayer: (() => {
+      const t = {};
+      for (const h of m.allHeadScores || m.headScores || []) t[h.layer] = (t[h.layer] || 0) + h.score;
+      return Object.entries(t).map(([layer, total]) => ({ layer: +layer, total: +total.toFixed(3) })).sort((a, b) => b.total - a.total);
+    })(),
+    neuronContrast_onNamePieces: m.neuronTop,
+    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
+  };
+  return `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes. In a mind this small, knowledge is often shared: a single head or neuron is frequently redundant while a whole layer is not, so at least one hypothesis should be a "team" (every attention head of one layer switched off together). For a team, pick the layer whose heads pay the most attention to the name in total (attentionToName_perLayer), not the layer you would expect to hold facts in a big model.
+
+Evidence (JSON):
+${JSON.stringify(evidence)}
+
+Answer with ONLY a JSON array, no prose:
+[{"kind":"head"|"neuron"|"team","layer":<int>,"index":<int, omitted for a team>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+}
+function parseHypotheses(raw) {
+  const jsonText = String(raw).match(/\[[\s\S]*\]/)?.[0];
+  const arr = JSON.parse(jsonText);
+  return arr.filter(h => Number.isInteger(h.layer) &&
+    ((h.kind === 'head' || h.kind === 'neuron') && Number.isInteger(h.index) || h.kind === 'team')).slice(0, 3);
+}
+
 // ---- inlined src/ingest.js ----
 // ingest.js — universal drop/bundle ingestion, merged back from the mega/artifact
 // edition (2026-07-06; three-phase core from the audit-v2 session, 2026-07-08).
@@ -3014,7 +3085,192 @@ const EMBEDDED_WORDLIST = ["the","and","to","a","was","he","she","it","they","he
 
 const EMBEDDED_BASE_STORIES = ["Once upon a time, there was a little girl named Lily. She had a red ball. She liked to play with it in the park. One day the ball rolled into a puddle. Lily was sad, but her mom helped her wash it. Then Lily was happy again.","Tom had a small dog named Max. Max liked to run and jump. Every morning Tom and Max went for a walk. They saw birds in the trees. Max wagged his tail and Tom laughed. They were good friends.","Ben found a shiny rock by the pond. It was smooth and gray. He wanted to show his mom. He ran home fast. His mom smiled and said it was very pretty. Ben put the rock on his shelf.","Sara and her brother made a cake. They mixed the flour and the eggs. The cake smelled so good. When it was done, they gave a piece to their dad. He said it was the best cake ever. Everyone was happy.","There was a cat named Mia. Mia liked to sleep in the warm sun. One day it started to rain. Mia ran inside and hid under the bed. When the sun came back, she went out to play again.","A little boy named Sam had a blue kite. He took it to the hill on a windy day. The kite went up, up, up into the sky. Sam held the string tight and watched it fly. He was so proud.","Anna wanted to help her grandma in the garden. They planted seeds in the dirt and gave them water. Every day Anna checked the plants. After many days, little green leaves came up. Anna was very glad.","One day a duck went to the pond. She saw a frog on a big green leaf. The frog said hello. The duck and the frog played all day. When the sun went down, they said goodbye and went home.","Timmy lost his teddy bear. He looked under the bed and behind the door. He could not find it. He was very sad. Then his mom found it in the car. Timmy hugged his bear and smiled.","A girl named Lucy had a new dress. It was yellow with white flowers. She wore it to the party. All her friends said it was pretty. Lucy danced and laughed. It was a very fun day.","There was a big tree in the yard. A small bird made a nest in it. Soon there were three little eggs. The mother bird kept them warm. One day the eggs opened and baby birds came out.","Jack and Emma went to the beach. They made a castle in the sand. The waves came and washed it away. But they were not sad. They just made a new castle. They played until it was time to go.","A little mouse was very hungry. He looked for food in the kitchen. He found a piece of cheese under the table. He was so happy. He ate it all up and then went back to his cozy hole.","Molly had a red bike. She wanted to ride it, but she was scared. Her dad held the bike and helped her. Soon Molly could ride all by herself. She felt brave and strong. She rode all around the park.","One morning the sun was bright. A boy named Leo went outside to play. He saw a butterfly with pretty wings. It landed on a flower. Leo watched it very quietly. Then it flew away into the sky.","Sue baked cookies with her mom. They put them on a plate to cool. The cookies were warm and sweet. Sue gave one to her little sister. Her sister smiled and said thank you. They ate them together.","A dog named Rex liked to dig in the yard. One day he dug a big hole. He found an old bone in the dirt. He was so happy. He picked it up and ran to show the other dogs.","There was a little fish in the sea. She liked to swim near the rocks. One day she met a crab. The crab was funny and kind. They swam and played all day. The little fish was not lonely anymore.","Kate had a balloon at the fair. It was big and round and red. She held the string very tight. The wind was strong, but she did not let go. She kept her balloon all the way home.","A boy named Max helped his mom clean the house. He put his toys away in the box. He wiped the table and swept the floor. His mom said he was a big help. Max felt very proud of himself."];
 
+// ---- inlined src/ghostwriter.js ----
+// ghostwriter.js — the Nursery's storybook ghostwriter, minus the page: the prompt it
+// sends a language model, how it splits the reply into stories, the mechanical checks a
+// story must pass to go in the storybook (with plain-language reasons), and the repair
+// prompt for stories whose only problem is a few unknown words. The Nursery page and
+// tools/ai-check.mjs (testing against a real model) both use this module, so the test
+// exercises exactly what visitors get. DOM-free; Node + browser.
+//
+// sheet: { name, kind, attr1, attr2 } (the character a child invented); wordlist: Set
+// of words the tiny mind met often enough to learn (corpus/wordlist.json).
+
+const unsmart = t => t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+const words = t => [...unsmart(t).toLowerCase().matchAll(/[a-z]+(?:'[a-z]+)?/g)].map(m => m[0]);
+
+// the character's own words are always allowed, in every form: possessive, and the
+// family the fact check accepts ("sleeps in a teapot" -> sleep, slept, sleeping…), or a
+// story telling the fact in the past tense would be turned away for using "slept"
+function whitelistFor(sh) {
+  const ws = new Set();
+  for (const f of Object.values(sh)) for (const w of words(f)) { ws.add(w + "'s"); for (const x of familyOf(w)) ws.add(x); }
+  return ws;
+}
+// glue words never required by the attribute check (modals, articles, pronouns, degree
+// words). Position words (behind, under, over…) are NOT here — they carry meaning.
+const STOP = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'to', 'is', 'it', 'its',
+  'can', 'could', 'will', 'would', 'may', 'might', 'must', 'should', 'do', 'does', 'did',
+  'has', 'have', 'had', 'be', 'been', 'was', 'were', 'are', 'am', 'he', 'she', 'they',
+  'his', 'her', 'their', 'very', 'really', 'always', 'only', 'likes', 'loves', 'that',
+  // dwelling verbs are linking words — "lives behind the moon" is about the moon
+  // ("home is behind the moon" must pass; Phase 0 checked the place phrase only)
+  'live', 'lives', 'lived', 'living']);
+// irregular kid-verbs: attribute matching accepts any form of the word's family
+const IRREG = {
+  eat: ['ate', 'eaten'], fly: ['flew', 'flown', 'flies'], go: ['went', 'gone', 'goes'],
+  run: ['ran'], swim: ['swam', 'swum'], sleep: ['slept', 'asleep'], sing: ['sang', 'sung'],
+  see: ['saw', 'seen'], say: ['said'], give: ['gave', 'given'], get: ['got'],
+  make: ['made'], ride: ['rode', 'ridden'], hide: ['hid', 'hidden'], sit: ['sat'],
+  stand: ['stood'], drink: ['drank', 'drunk'], fall: ['fell', 'fallen'], feel: ['felt'],
+  find: ['found'], keep: ['kept'], know: ['knew', 'known'], leave: ['left'],
+  tell: ['told'], think: ['thought'], bring: ['brought'], catch: ['caught'],
+  come: ['came'], draw: ['drew', 'drawn'], grow: ['grew', 'grown'], hold: ['held'],
+  put: [], read: [], take: ['took', 'taken'], wear: ['wore', 'worn'], blow: ['blew', 'blown'],
+};
+function familyOf(w) {
+  const bases = new Set([w]);
+  if (w.endsWith('ies')) bases.add(w.slice(0, -3) + 'y');
+  if (w.endsWith('es')) bases.add(w.slice(0, -2));
+  if (w.endsWith('s')) bases.add(w.slice(0, -1));
+  const out = new Set();
+  for (const b of bases) {
+    out.add(b); out.add(b + 's'); out.add(b + 'es'); out.add(b + 'ed'); out.add(b + 'd');
+    out.add(b + 'ing');
+    if (b.endsWith('e')) out.add(b.slice(0, -1) + 'ing');
+    if (b.endsWith('y')) out.add(b.slice(0, -1) + 'ies');
+    for (const x of IRREG[b] ?? []) out.add(x);
+  }
+  return out;
+}
+
+const UNKNOWN_WORDS = 'uses words the tiny mind hardly ever met';
+// checkStory -> { probs: [plain reasons], offList: [unknown words], missing: [facts left out], wordCount }
+function checkStory(text, sh, wordlist) {
+  const probs = [], offList = [], missing = [];
+  const w = words(text);
+  const wset = new Set(w);
+  if (w.length < 100 || w.length > 180) probs.push(`${w.length} words long — stories need 100 to 180 words, so the mind gets enough (but not too much) to learn from`);
+  if (wordlist) {
+    const wl = whitelistFor(sh);
+    const off = [...new Set(w.filter(x => !wordlist.has(x) && !wl.has(x)))];
+    if (off.length) { probs.push(UNKNOWN_WORDS + ' in the stories it grew up on, so it cannot learn them well: ' + off.join(', ')); offList.push(...off); }
+  }
+  for (const s of text.split(/[.!?]+/)) {
+    const n = (s.match(/[a-z']+/gi) || []).length;
+    if (n > 20) probs.push(`a sentence is too long for a tiny mind (${n} words; 20 at most): "${s.trim().slice(0, 40)}…"`);
+  }
+  const lower = unsmart(text).toLowerCase();
+  const kindPhrase = sh.kind.replace(/^(a|an|the)\s+/i, '').toLowerCase();
+  if (!lower.includes(kindPhrase)) { probs.push(`never says ${sh.name || 'the character'} is "${sh.kind}" — every story must use exactly those words`); missing.push(`is ${sh.kind}`); }
+  for (const attr of [sh.attr1, sh.attr2]) {
+    for (const cw of words(attr).filter(x => !STOP.has(x) && x.length > 2)) {
+      const fam = familyOf(cw);
+      if (![...fam].some(f => wset.has(f))) {
+        probs.push(`leaves out "${cw}" (from "${attr}") — every story must keep both special things`); missing.push(attr);
+        break;
+      }
+    }
+  }
+  if (!lower.includes(sh.name.toLowerCase())) probs.push(`never uses the name "${sh.name}"`);
+  return { probs, offList, missing, wordCount: w.length };
+}
+
+// a story whose ONLY problem is a few (at most four) unknown words gets one repair try
+const isRepairable = v => v.offList.length > 0 && v.offList.length <= 4 && v.probs.every(p => p.startsWith(UNKNOWN_WORDS));
+
+// feedback: { shortCounts: [n], offList: Set, missing: Set } from the last batch, or null
+function storyPrompt(count, sh, { wordlist = null, strict = false, feedback = null } = {}) {
+  return `You are writing tiny stories for a 4-year-old, in the exact style of the TinyStories dataset: very simple words, short sentences, a small story arc with a warm ending.
+
+Character (invented by a child — keep every detail exactly consistent):
+- Name: ${sh.name}
+- Kind: ${sh.kind} (always this exact phrase)
+- Special thing 1: ${sh.name} ${sh.attr1} — never anything else
+- Special thing 2: ${sh.name} ${sh.attr2} — always
+
+Rules:
+1. Write ${count} separate stories. Number them "1.", "2.", ... Each story must be
+   120-170 words. NEVER fewer than 110 words — count carefully, short stories are rejected.
+2. Every story must say, in natural story language: that ${sh.name} is ${sh.kind}, that ${sh.name} ${sh.attr1}, and that ${sh.name} ${sh.attr2}. Never contradict these.
+3. Vocabulary of a 4-year-old only. No sentence longer than 20 words.
+4. Vary everything else: friends, places, small problems, feelings, weather.
+5. Simple dialogue with quotation marks is good. A gentle happy ending is good.`
+  + allowedWordsBlock(wordlist, strict) + feedbackBlock(feedback);
+}
+function allowedWordsBlock(wordlist, strict) {
+  if (!wordlist || !strict) return '';
+  return `\n\nALLOWED WORDS — every word you write must be on this list, or be a form of the character words above. If a word you want is not here, pick a simpler one that is:\n` +
+    [...wordlist].join(' ');
+}
+function feedbackBlock(fb) {
+  if (!fb) return '';
+  const lines = [];
+  if (fb.shortCounts.length) {
+    lines.push(`- Your stories were TOO SHORT (${fb.shortCounts.join(', ')} words). Every story must be at least 120 words. Add more little events and dialogue.`);
+  }
+  if (fb.offList.size) {
+    lines.push(`- These words were too hard for the reader — do NOT use them or words like them: ${[...fb.offList].join(', ')}. Use the simplest possible words instead.`);
+  }
+  if (fb.missing.size) {
+    lines.push(`- Some stories forgot to say these clearly — every single story must state them: ${[...fb.missing].map(m => `"${m}"`).join(', ')}.`);
+  }
+  return lines.length
+    ? `\n\nIMPORTANT — your previous batch had rejects. Fix these:\n${lines.join('\n')}`
+    : '';
+}
+
+function parseStories(text) {
+  // tolerate markdown numbering: "1.", "**2.**", "### Story 3:", "3)"…
+  const t = unsmart(text);
+  const splitter = /^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):]?[*_\s]*$|^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):][*_]*\s*/gim;
+  const parts = t.split(splitter).map(s => s.replace(/^[#*_\s]+/, '').trim()).filter(s => words(s).length >= 60);
+  // stories numbered inside one paragraph ("…the end. 2. Zog woke up…") come out as one
+  // long part: split it at "2.", "3.", … in order
+  if (parts.length === 1 && words(parts[0]).length > 240) {
+    const inline = [];
+    let rest = parts[0];
+    for (let n = 2; ; n++) {
+      const m = new RegExp(`(?:^|[\\s.!?"'])${n}[.)]\\s+(?=["A-Z])`).exec(rest);
+      if (!m) break;
+      inline.push(rest.slice(0, m.index + (m[0].match(/^[\s.!?"']/) ? 1 : 0)).trim());
+      rest = rest.slice(m.index + m[0].length);
+    }
+    inline.push(rest.trim());
+    const ok = inline.filter(s => words(s).length >= 60);
+    if (ok.length > 1) return ok;
+  }
+  if (parts.length) return parts;
+  return t.split(/\n\s*\n/).map(s => s.trim()).filter(s => words(s).length >= 60);
+}
+
+// items: [{ s: story, v: checkStory(...) }]
+function repairPrompt(items) {
+  return `These children's stories are almost perfect. Each one uses a few banned words. Rewrite each story so it no longer contains ANY banned word: swap each banned word for a very simple word or phrase a 4-year-old knows (for example, "slept" could become "was asleep"). Change nothing else. Output ONLY the fixed stories, numbered to match. Do not repeat a banned word anywhere.\n\n` +
+    items.map((it, i) => `${i + 1}. (banned: ${it.v.offList.join(', ')})\n${it.s}`).join('\n\n');
+}
+
+// the whole ghostwriter round: ask, split, check, repair what can be repaired.
+// call(prompt) -> reply text. Returns { stories: [final texts], firstTry, repaired }.
+async function ghostwrite(call, count, sh, opts = {}) {
+  const stories = parseStories(await call(storyPrompt(count, sh, opts)));
+  const checked = stories.map(s => ({ s, v: checkStory(s, sh, opts.wordlist) }));
+  const fine = checked.filter(c => !c.v.probs.length), broken = checked.filter(c => c.v.probs.length);
+  const repairable = broken.filter(b => isRepairable(b.v));
+  let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
+  let repaired = 0;
+  if (repairable.length) {
+    try {
+      const fixed = parseStories(await call(repairPrompt(repairable)));
+      repaired = fixed.length;
+      final = [...fine.map(f => f.s), ...fixed, ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
+    } catch (e) { final = stories; /* repair call failed: fall back to the first batch */ }
+  }
+  return { stories: final, firstTry: { total: stories.length, fine: fine.length, repairable: repairable.length }, repaired };
+}
+
 const llmCall = callLLM;
+
 
 
 
@@ -3175,85 +3431,14 @@ window.addEventListener('drop', async e => {
 });
 
 // ---------- character + validator ----------
-const unsmart = t => t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
-const words = t => [...unsmart(t).toLowerCase().matchAll(/[a-z]+(?:'[a-z]+)?/g)].map(m => m[0]);
+// prompt, story splitting, checks and repair live in src/ghostwriter.js (shared with
+// tools/ai-check.mjs, which tests them against a real model)
 function sheet() {
   return { name: $('chName').value.trim(), kind: $('chKind').value.trim(),
            attr1: $('chAttr1').value.trim(), attr2: $('chAttr2').value.trim() };
 }
-function whitelist() {
-  const ws = new Set();
-  for (const f of Object.values(sheet())) for (const w of words(f)) {
-    ws.add(w); ws.add(w + 's'); ws.add(w + "'s");
-  }
-  return ws;
-}
-// glue words never required by the attribute check (modals, articles, pronouns, degree
-// words). Position words (behind, under, over…) are NOT here — they carry meaning.
-const STOP = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'to', 'is', 'it', 'its',
-  'can', 'could', 'will', 'would', 'may', 'might', 'must', 'should', 'do', 'does', 'did',
-  'has', 'have', 'had', 'be', 'been', 'was', 'were', 'are', 'am', 'he', 'she', 'they',
-  'his', 'her', 'their', 'very', 'really', 'always', 'only', 'likes', 'loves', 'that',
-  // dwelling verbs are linking words — "lives behind the moon" is about the moon
-  // ("home is behind the moon" must pass; Phase 0 checked the place phrase only)
-  'live', 'lives', 'lived', 'living']);
-// irregular kid-verbs: attribute matching accepts any form of the word's family
-const IRREG = {
-  eat: ['ate', 'eaten'], fly: ['flew', 'flown', 'flies'], go: ['went', 'gone', 'goes'],
-  run: ['ran'], swim: ['swam', 'swum'], sleep: ['slept'], sing: ['sang', 'sung'],
-  see: ['saw', 'seen'], say: ['said'], give: ['gave', 'given'], get: ['got'],
-  make: ['made'], ride: ['rode', 'ridden'], hide: ['hid', 'hidden'], sit: ['sat'],
-  stand: ['stood'], drink: ['drank', 'drunk'], fall: ['fell', 'fallen'], feel: ['felt'],
-  find: ['found'], keep: ['kept'], know: ['knew', 'known'], leave: ['left'],
-  tell: ['told'], think: ['thought'], bring: ['brought'], catch: ['caught'],
-  come: ['came'], draw: ['drew', 'drawn'], grow: ['grew', 'grown'], hold: ['held'],
-  put: [], read: [], take: ['took', 'taken'], wear: ['wore', 'worn'], blow: ['blew', 'blown'],
-};
-function familyOf(w) {
-  const bases = new Set([w]);
-  if (w.endsWith('ies')) bases.add(w.slice(0, -3) + 'y');
-  if (w.endsWith('es')) bases.add(w.slice(0, -2));
-  if (w.endsWith('s')) bases.add(w.slice(0, -1));
-  const out = new Set();
-  for (const b of bases) {
-    out.add(b); out.add(b + 's'); out.add(b + 'es'); out.add(b + 'ed'); out.add(b + 'd');
-    out.add(b + 'ing');
-    if (b.endsWith('e')) out.add(b.slice(0, -1) + 'ing');
-    if (b.endsWith('y')) out.add(b.slice(0, -1) + 'ies');
-    for (const x of IRREG[b] ?? []) out.add(x);
-  }
-  return out;
-}
-function validateStory(text) {
-  const probs = [], offList = [], missing = [];
-  const w = words(text);
-  const wset = new Set(w);
-  if (w.length < 100 || w.length > 180) probs.push(`${w.length} words long — stories need 100 to 180 words, so the mind gets enough (but not too much) to learn from`);
-  if (S.wordlist) {
-    const wl = whitelist();
-    const off = [...new Set(w.filter(x => !S.wordlist.has(x) && !wl.has(x)))];
-    if (off.length) { probs.push('uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well: ' + off.join(', ')); offList.push(...off); }
-  }
-  for (const s of text.split(/[.!?]+/)) {
-    const n = (s.match(/[a-z']+/gi) || []).length;
-    if (n > 20) probs.push(`a sentence is too long for a tiny mind (${n} words; 20 at most): "${s.trim().slice(0, 40)}…"`);
-  }
-  const lower = unsmart(text).toLowerCase();
-  const sh = sheet();
-  const kindPhrase = sh.kind.replace(/^(a|an|the)\s+/i, '').toLowerCase();
-  if (!lower.includes(kindPhrase)) { probs.push(`never says ${sh.name || 'the character'} is "${sh.kind}" — every story must use exactly those words`); missing.push(`is ${sh.kind}`); }
-  for (const attr of [sh.attr1, sh.attr2]) {
-    for (const cw of words(attr).filter(x => !STOP.has(x) && x.length > 2)) {
-      const fam = familyOf(cw);
-      if (![...fam].some(f => wset.has(f))) {
-        probs.push(`leaves out "${cw}" (from "${attr}") — every story must keep both special things`); missing.push(attr);
-        break;
-      }
-    }
-  }
-  if (!lower.includes(sh.name.toLowerCase())) probs.push(`never uses the name "${sh.name}"`);
-  return { probs, offList, missing, wordCount: w.length };
-}
+const whitelist = () => whitelistFor(sheet());
+const validateStory = text => checkStory(text, sheet(), S.wordlist);
 
 // ---------- corpus management ----------
 S.feedback = null; // rejection summary of the LAST batch — folded into the next prompt
@@ -3488,63 +3673,10 @@ $('apiKey').addEventListener('change', () => {
   const p = $('provider').value;
   if ($('rememberKey').checked && p !== 'manual') Store.set('tm-key-' + p, $('apiKey').value.trim());
 });
-function buildPrompt(count) {
-  const sh = sheet();
-  return `You are writing tiny stories for a 4-year-old, in the exact style of the TinyStories dataset: very simple words, short sentences, a small story arc with a warm ending.
-
-Character (invented by a child — keep every detail exactly consistent):
-- Name: ${sh.name}
-- Kind: ${sh.kind} (always this exact phrase)
-- Special thing 1: ${sh.name} ${sh.attr1} — never anything else
-- Special thing 2: ${sh.name} ${sh.attr2} — always
-
-Rules:
-1. Write ${count} separate stories. Number them "1.", "2.", ... Each story must be
-   120-170 words. NEVER fewer than 110 words — count carefully, short stories are rejected.
-2. Every story must say, in natural story language: that ${sh.name} is ${sh.kind}, that ${sh.name} ${sh.attr1}, and that ${sh.name} ${sh.attr2}. Never contradict these.
-3. Vocabulary of a 4-year-old only. No sentence longer than 20 words.
-4. Vary everything else: friends, places, small problems, feelings, weather.
-5. Simple dialogue with quotation marks is good. A gentle happy ending is good.`
-  + allowedWordsBlock() + feedbackBlock();
-}
-function allowedWordsBlock() {
-  if (!S.wordlist || !$('strictWords').checked) return '';
-  return `\n\nALLOWED WORDS — every word you write must be on this list, or be a form of the character words above. If a word you want is not here, pick a simpler one that is:\n` +
-    [...S.wordlist].join(' ');
-}
-function feedbackBlock() {
-  const fb = S.feedback;
-  if (!fb) return '';
-  const lines = [];
-  if (fb.shortCounts.length) {
-    lines.push(`- Your stories were TOO SHORT (${fb.shortCounts.join(', ')} words). Every story must be at least 120 words. Add more little events and dialogue.`);
-  }
-  if (fb.offList.size) {
-    lines.push(`- These words were too hard for the reader — do NOT use them or words like them: ${[...fb.offList].join(', ')}. Use the simplest possible words instead.`);
-  }
-  if (fb.missing.size) {
-    lines.push(`- Some stories forgot to say these clearly — every single story must state them: ${[...fb.missing].map(m => `"${m}"`).join(', ')}.`);
-  }
-  return lines.length
-    ? `\n\nIMPORTANT — your previous batch had rejects. Fix these:\n${lines.join('\n')}`
-    : '';
-}
-function parseStories(text) {
-  // tolerate markdown numbering: "1.", "**2.**", "### Story 3:", "3)"…
-  const t = unsmart(text);
-  const splitter = /^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):]?[*_\s]*$|^\s*[#*_>\-\s]*(?:story\s*)?\d+\s*[\.\):][*_]*\s*/gim;
-  const parts = t.split(splitter).map(s => s.replace(/^[#*_\s]+/, '').trim()).filter(s => words(s).length >= 60);
-  if (parts.length) return parts;
-  return t.split(/\n\s*\n/).map(s => s.trim()).filter(s => words(s).length >= 60);
-}
+const buildPrompt = count => storyPrompt(count, sheet(), { wordlist: S.wordlist, strict: $('strictWords').checked, feedback: S.feedback });
 function callProvider(content) {
   return llmCall({ provider: $('provider').value, key: $('apiKey').value.trim(),
     model: $('apiModel').value.trim(), prompt: content });
-}
-// a story is auto-repairable if its ONLY problem is a few off-list words
-function repairPrompt(items) {
-  return `These children's stories are almost perfect. Each one uses a few banned words. Rewrite each story so it no longer contains ANY banned word: swap each banned word for a very simple word or phrase a 4-year-old knows (for example, "slept" could become "was asleep"). Change nothing else. Output ONLY the fixed stories, numbered to match. Do not repeat a banned word anywhere.\n\n` +
-    items.map((it, i) => `${i + 1}. (banned: ${it.v.offList.join(', ')})\n${it.s}`).join('\n\n');
 }
 $('genBtn').onclick = async () => {
   if ($('provider').value !== 'keyless' && !$('apiKey').value.trim()) {
@@ -3559,9 +3691,7 @@ $('genBtn').onclick = async () => {
       const v = validateStory(s);
       (v.probs.length ? broken : fine).push({ s, v });
     }
-    const repairable = broken.filter(b =>
-      b.v.offList.length > 0 && b.v.offList.length <= 4 &&
-      b.v.probs.every(p => p.startsWith('words too big')));
+    const repairable = broken.filter(b => isRepairable(b.v));   // only a few unknown words: one repair try
     let final = [...fine.map(f => f.s), ...broken.filter(b => !repairable.includes(b)).map(b => b.s)];
     if (repairable.length) {
       $('genOut').textContent = `${fine.length} good on the first try — repairing ${repairable.length} that used ${repairable.length === 1 ? 'a big word' : 'big words'}…`;
@@ -4946,7 +5076,7 @@ function create(A){
     const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
     if(!m) return {text:s.trim(),act:null};
     const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
-    return {text,act:{verb:m[1],args:m[2].trim()}};
+    return {text,act:{verb:m[1],args:m[2].trim().replace(/[.!?,;:]+$/,'')}};   // "DO: SHOW train." still means train
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -5520,8 +5650,10 @@ function systemPrompt(){
     'The exact base checkpoint stories260K.bin is pretrained on TinyStories patterns but has not learned the visitor\'s custom characters. A restored storybook is training data, not a memory in the model weights. Never claim that facts from an earlier storybook can shine through a fresh base model. If the loaded filename is a custom exported model, say that it may already contain its earlier training. Do not invent or paraphrase model-choice cards you cannot see. ' +
     'The authoritative time-machine manifest in the status is the ONLY source for saying who or what a recording trained on. Never infer an arc\'s subject from the character editor, saved storybook, loaded model, latest sample, or the fact that it ends at step 600. Arc B and Arc C both end at step 600 but are different recordings: arcB is the Zog-only recording; arcC is the four-character Zog, Mip, Bex and Nia recording. If Sisi appears only in the separate editor or model context, explicitly say that this does not make the selected arc a Sisi arc. Never describe arcC as Sisi\'s training. ' +
     'Time-machine checkpoints are independent of storybook mode and of how many characters are in the storybook. Never say that single-character or storybook mode prevents access to a time-machine moment. When the visitor asks why a moment or checkpoint cannot be reached, use the Time machine context in the status: name the selected moment and the exact Start/Moment, Previous, and Next controls that are actually available. The overview slider is optional. If a moment is already loading, a new button choice is queued rather than discarded. ' +
+    'How stories get into the storybook: the visitor fills in the character (name, what kind of thing it is, and two special things), then the ghostwriter writes eight stories at a time (the "write 8 stories" button; it needs an API key, or built-in Claude inside a claude.ai artifact), or they paste stories of their own; aim for about 60 stories. ' +
+    'Why a story is turned away (the app checks every one; say these rules plainly when asked): it must be 100 to 180 words long; no sentence longer than 20 words; only words the tiny mind met often in the stories it grew up on (the character\'s own words are always allowed); and every story must keep the character\'s facts word for word: the name, the kind, and both special things. The ghostwriter is then told exactly what went wrong, and a story whose only problem is a few unknown words gets one automatic repair. These are fixed rules, not a judgment of quality. ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, storybook, chart, train, sample, export, timemachine. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, writer, storybook, chart, train, sample, export, timemachine. ' +
     ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the chart', escalations: 'start or stop training', safeVerb: 'SHOW' });
 }
@@ -5534,7 +5666,7 @@ const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
 };
 
 const SHOW = {
-  character: '#chName', chart: '#chart', train: '#trainBtn',
+  character: '#chName', writer: '#genBtn', chart: '#chart', train: '#trainBtn',
   sample: '#sampleBtn', export: '#exportBtn',
   storybook: { sel: '#storyList', needs: '#genBtn',
     why: 'The storybook is still empty. Ghostwrite or paste some stories first — the button I am pointing at.',
@@ -5850,7 +5982,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      model = model || 'gpt-4o-mini';
+      model = model || 'gpt-5.4-mini';   // tools/ai-check.mjs: it answers the guide questions better than gpt-4o-mini
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -5916,7 +6048,7 @@ window.__vgShowBlockedEvent = {
    under tm-key-<provider>; srcdoc frames share the shell's origin, so
    any guide can find a key the visitor already gave the app. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -8189,6 +8321,77 @@ function causalVerdict(targetRatio, controlRatios = []) {
   return { kind: 'little', label: 'little measured effect', targetDamage, medianControlDamage, selectivity };
 }
 
+// ---- the detectives --------------------------------------------------------------
+// The built-in detective turns the probe's evidence (the hunt worker's probe-done: head
+// attention to the name, name-piece and answer-boundary neurons) into clues, ending
+// with a whole-layer "team" clue, since knowledge is usually shared.
+function builtinHypotheses(m, { name, continuation, nHeads }) {
+  const out = [];
+  for (const h of m.headScores.slice(0, 2)) {
+    if (h.score < 0.02) break;
+    out.push({ kind: 'head', layer: h.layer, index: h.head,
+      source: 'name attention',
+      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of m.neuronTop.slice(0, 1)) {
+    if (nr.score < 1) break;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
+    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
+      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${continuation}" more than unrelated completions.` });
+  }
+  // the team hypothesis: knowledge is usually SHARED — single parts are often
+  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
+  const layerTotals = {};
+  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
+  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
+  out.push({ kind: 'team', layer: bestLayer,
+    source: 'layer team',
+    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
+    prediction: `Switch off ALL ${nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
+  return out;
+}
+
+// The language-model detective: the prompt it gets (the same evidence as JSON), and the
+// clues kept from its reply (a JSON array of heads / neurons with integer places, or
+// "team" clues: every head of one layer).
+function detectivePrompt({ probe, continuation, name, config, m }) {
+  const evidence = {
+    task: `The tiny language model completes "${probe}" with "${continuation}" (probability ${m.contProb}).`,
+    character: name,
+    modelShape: config,
+    topGuesses: m.top,
+    headAttentionToName_atAnswerPosition: m.headScores,
+    // the whole-layer picture, for team hypotheses: every head's attention to the name, summed per layer
+    attentionToName_perLayer: (() => {
+      const t = {};
+      for (const h of m.allHeadScores || m.headScores || []) t[h.layer] = (t[h.layer] || 0) + h.score;
+      return Object.entries(t).map(([layer, total]) => ({ layer: +layer, total: +total.toFixed(3) })).sort((a, b) => b.total - a.total);
+    })(),
+    neuronContrast_onNamePieces: m.neuronTop,
+    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
+  };
+  return `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes. In a mind this small, knowledge is often shared: a single head or neuron is frequently redundant while a whole layer is not, so at least one hypothesis should be a "team" (every attention head of one layer switched off together). For a team, pick the layer whose heads pay the most attention to the name in total (attentionToName_perLayer), not the layer you would expect to hold facts in a big model.
+
+Evidence (JSON):
+${JSON.stringify(evidence)}
+
+Answer with ONLY a JSON array, no prose:
+[{"kind":"head"|"neuron"|"team","layer":<int>,"index":<int, omitted for a team>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+}
+function parseHypotheses(raw) {
+  const jsonText = String(raw).match(/\[[\s\S]*\]/)?.[0];
+  const arr = JSON.parse(jsonText);
+  return arr.filter(h => Number.isInteger(h.layer) &&
+    ((h.kind === 'head' || h.kind === 'neuron') && Number.isInteger(h.index) || h.kind === 'team')).slice(0, 3);
+}
+
 // ---- inlined src/ingest.js ----
 // ingest.js — universal drop/bundle ingestion, merged back from the mega/artifact
 // edition (2026-07-06; three-phase core from the audit-v2 session, 2026-07-08).
@@ -9705,7 +9908,7 @@ function create(A){
     const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
     if(!m) return {text:s.trim(),act:null};
     const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
-    return {text,act:{verb:m[1],args:m[2].trim()}};
+    return {text,act:{verb:m[1],args:m[2].trim().replace(/[.!?,;:]+$/,'')}};   // "DO: SHOW train." still means train
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -10457,7 +10660,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      model = model || 'gpt-4o-mini';
+      model = model || 'gpt-5.4-mini';   // tools/ai-check.mjs: it answers the guide questions better than gpt-4o-mini
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -10523,7 +10726,7 @@ window.__vgShowBlockedEvent = {
    under tm-key-<provider>; srcdoc frames share the shell's origin, so
    any guide can find a key the visitor already gave the app. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -12794,6 +12997,77 @@ function causalVerdict(targetRatio, controlRatios = []) {
   return { kind: 'little', label: 'little measured effect', targetDamage, medianControlDamage, selectivity };
 }
 
+// ---- the detectives --------------------------------------------------------------
+// The built-in detective turns the probe's evidence (the hunt worker's probe-done: head
+// attention to the name, name-piece and answer-boundary neurons) into clues, ending
+// with a whole-layer "team" clue, since knowledge is usually shared.
+function builtinHypotheses(m, { name, continuation, nHeads }) {
+  const out = [];
+  for (const h of m.headScores.slice(0, 2)) {
+    if (h.score < 0.02) break;
+    out.push({ kind: 'head', layer: h.layer, index: h.head,
+      source: 'name attention',
+      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of m.neuronTop.slice(0, 1)) {
+    if (nr.score < 1) break;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
+    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
+      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${continuation}" more than unrelated completions.` });
+  }
+  // the team hypothesis: knowledge is usually SHARED — single parts are often
+  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
+  const layerTotals = {};
+  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
+  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
+  out.push({ kind: 'team', layer: bestLayer,
+    source: 'layer team',
+    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
+    prediction: `Switch off ALL ${nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
+  return out;
+}
+
+// The language-model detective: the prompt it gets (the same evidence as JSON), and the
+// clues kept from its reply (a JSON array of heads / neurons with integer places, or
+// "team" clues: every head of one layer).
+function detectivePrompt({ probe, continuation, name, config, m }) {
+  const evidence = {
+    task: `The tiny language model completes "${probe}" with "${continuation}" (probability ${m.contProb}).`,
+    character: name,
+    modelShape: config,
+    topGuesses: m.top,
+    headAttentionToName_atAnswerPosition: m.headScores,
+    // the whole-layer picture, for team hypotheses: every head's attention to the name, summed per layer
+    attentionToName_perLayer: (() => {
+      const t = {};
+      for (const h of m.allHeadScores || m.headScores || []) t[h.layer] = (t[h.layer] || 0) + h.score;
+      return Object.entries(t).map(([layer, total]) => ({ layer: +layer, total: +total.toFixed(3) })).sort((a, b) => b.total - a.total);
+    })(),
+    neuronContrast_onNamePieces: m.neuronTop,
+    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
+  };
+  return `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes. In a mind this small, knowledge is often shared: a single head or neuron is frequently redundant while a whole layer is not, so at least one hypothesis should be a "team" (every attention head of one layer switched off together). For a team, pick the layer whose heads pay the most attention to the name in total (attentionToName_perLayer), not the layer you would expect to hold facts in a big model.
+
+Evidence (JSON):
+${JSON.stringify(evidence)}
+
+Answer with ONLY a JSON array, no prose:
+[{"kind":"head"|"neuron"|"team","layer":<int>,"index":<int, omitted for a team>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+}
+function parseHypotheses(raw) {
+  const jsonText = String(raw).match(/\[[\s\S]*\]/)?.[0];
+  const arr = JSON.parse(jsonText);
+  return arr.filter(h => Number.isInteger(h.layer) &&
+    ((h.kind === 'head' || h.kind === 'neuron') && Number.isInteger(h.index) || h.kind === 'team')).slice(0, 3);
+}
+
 // ---- inlined src/ingest.js ----
 // ingest.js — universal drop/bundle ingestion, merged back from the mega/artifact
 // edition (2026-07-06; three-phase core from the audit-v2 session, 2026-07-08).
@@ -12935,6 +13209,7 @@ async function collectDrop(e, onFolderStatus) {
 const EMBEDDED_WORDLIST = ["the","and","to","a","was","he","she","it","they","her","said","his","in","with","you","so","that","lily","day","of","but","had","on","mom","endoftext","one","for","there","little","very","time","happy","saw","big","i","once","not","is","were","play","upon","wanted","him","girl","their","them","are","up","at","be","went","all","have","go","can","when","tom","friends","from","then","named","ben","what","loved","back","we","timmy","felt","smiled","too","asked","could","around","looked","fun","like","boy","out","help","as","do","would","some","mommy","away","started","together","see","make","ran","did","made","something","park","want","sad","new","home","found","put","again","says","who","playing","tim","bird","excited","got","things","decided","came","other","no","liked","down","dad","scared","this","an","man","friend","always","look","didn't","get","outside","dog","good","find","took","max","about","your","me","my","tree","toys","sam","knew","will","how","old","more","special","every","thought","take","anna","inside","it's","suddenly","toy","much","just","if","after","let's","sorry","don't","into","house","tried","because","car","couldn't","know","jack","never","told","over","gave","played","heard","yes","proud","each","room","hugged","water","come","ball","bear","until","everyone","now","learned","many","box","i'm","better","nice","even","eat","mia","small","soon","end","thank","thanked","lots","off","best","sara","laughed","by","long","beautiful","sky","cat","garden","careful","kind","safe","way","still","both","lily's","people","lived","family","animals","walked","feel","two","say","while","its","love","brave","sun","spot","kept","flew","sure","hard","loud","try","red","john","going","before","called","hurt","share","pretty","okay","angry","bad","lucy","ground","shiny","why","also","idea","opened","feeling","should","explore","give","next","or","walking","noise","finally","fast","run","lot","being","picked","looking","keep","door","food","smile","where","nodded","great","eyes","forest","hug","stopped","clean","need","show","important","ever","quickly","bob","sue","replied","sarah","noticed","slide","fish","hands","mum","showed","rabbit","let","blue","has","right","became","been","daddy","goodbye","watched","stay","that's","listen","work","high","face","hand","maybe","bed","here","different","jane","voice","place","flowers","store","closer","truck","grabbed","wait","fly","stop","first","hello","please","walk","strong","cake","jumped","anymore","three","curious","night","fell","bunny","birds","mean","adventure","helped","head","really","dress","ready","realized","our","yummy","use","warm","ate","rock","boat","happened","doll","kitchen","favorite","began","only","cry","reached","grass","story","lila","glad","bright","grandma","world","done","having","through","flower","timmy's","thing","us","bit","himself","tired","kids","daisy","benny","shouted","waved","am","worry","pond","making","game","does","under","near","joe","sees","seen","coming","watch","used","tommy","surprise","brother","learn","hopped","top","sometimes","funny","full","catch","wow","parents","sally","worked","pick","ok","carefully","surprised","mouse","open","book","trees","than","billy","doing","ice","soft","care","years","delicious","held","running","behind","needed","can't","lost","touch","dark","remembered","happily","tell","looks","herself","cried","enjoyed","lady","name","blocks","cool","teddy","think","another","hole","cold","rain","yellow","butterfly","wished","move","green","cars","sat","floor","finished","baby","lesson","children","buy","everywhere","likes","paper","you're","wind","wrong","frog","close","anything","cream","picture","s","sound","able","arrived","everything","left","friendly","hear","molly","gone","filled","wet","swing","cookies","hill","tall","someone","dinner","mama","broken","hat","own","followed","pink","read","later","colors","continued","else","wonderful","window","jump","enough","climb","stayed","table","understand","any","morning","trying","others","agreed","sweet","stick","getting","amy","puppy","leaves","far","few","forgot","climbed","beach","rest","lion","brought","hot","set","train","bag","hair","moment","joy","turned","mother","ride","ask","hungry","pictures","leave","oh","makes","squirrel","listened","air","books","wasn't","today","wants","flying","clothes","strange","fix","duck","well","scary","perfect","amazed","waited","white","castle","light","amazing","laugh","promised","mess","such","moral","pulled","woods","deep","owner","shared","alone","towards","silly","talk","colorful","slowly","fluffy","magical","remember","jill","hide","smiles","might","faster","grateful","tail","music","helping","worried","fox","money","fire","river","sand","most","party","living","wear","candy","job","monster","higher","year","sing","tight","met","cut","runs","stepped","lake","eating","sister","brown","heavy","closed","princess","bigger","wall","hi","dangerous","join","pieces","town","broke","visit","sit","emma","side","dolls","dance","asks","thinks","across","draw","sleep","wouldn't","believe","t","bike","stuck","welcome","soup","crying","farmer","race","reach","threw","dirty","pretend","jimmy","eventually","same","field","mouth","turn","swim","along","instead","gentle","paint","treasure","longer","clapped","words","piece","break","without","upset","must","cheered","quiet","sang","tiny","dragon","bite","nap","caught","mine","dropped","animal","yard","juice","blanket","school","mary","explained","swings","wings","teacher","child","nearby","bowl","chair","stories","pushed","balloon","singing","drove","start","course","sunny","young","cheese","enjoy","smart","song","turns","sea","fairy","sammy","dry","black","jar","exploring","seemed","sign","games","street","bucket","woke","hoped","elephant","twins","lonely","rocks","noises","hugs","mummy","taking","mr","bush","forget","bug","lucky","fit","apple","backyard","stars","though","shoes","swam","wish","basket","shook","lunch","whenever","shapes","purple","build","moved","sunshine","daughter","i'll","pocket","tower","fight","mittens","bench","hit","what's","late","owl","adventures","nothing","wise","bee","drink","magic","follow","kite","mark","fence","accidentally","onto","sitting","bring","orange","cute","plan","hold","rainbow","naughty","phone","star","secret","days","pull","arms","key","monkey","pot","bought","searched","talked","cozy","swimming","feels","wondered","doctor","milk","comes","snow","touched","laughing","sounds","real","heart","nest","pet","cave","relieved","fall","nose","busy","apples","rope","kitty","afraid","watching","branch","jenny","woman","huge","danced","journey","exciting","driver","spoon","forever","birthday","jake","knee","sick","healthy","mad","holding","treat","asleep","life","farm","grow","dream","snack","honey","spotted","round","gift","clever","rose","sharp","free","takes","smiling","gently","mom's","ant","storm","tasty","pointed","hey","emily","plane","tasted","sharing","smelled","shining","places","person","bottle","cow","bow","blew","appeared","spider","wearing","tom's","which","tightly","loves","jim","wide","these","tim's","confused","whole","picnic","anyone","won't","cookie","part","jen","bread","screamed","clouds","problem","front","giant","trouble","matter","hope","shop","bubbles","ocean","carrot","promise","jungle","large","snake","coat","cup","village","button","trip","puts","fruit","wave","chased","crayons","spent","answer","write","gives","king","treats","talking","road","waiting","interesting","spread","slow","taste","hiding","path","patient","dirt","shelf","last","feet","arm","building","shirt","ducks","ow","goes","oven","stood","wild","jumping","lovely","corner","pretended","rolled","puddle","helpful","rude","bugs","teeth","pile","ashamed","grandpa","shy","lay","furry","whistle","wash","forgive","creature","snowman","win","sparkly","throw","cannot","grab","prince","bus","wore","miss","sugar","push","protect","fighting","plant","machine","tomorrow","fair","tidy","creative","tries","zoo","true","selfish","peaceful","faces","pool","calm","messy","happen","carry","minutes","hours","alice","missed","spicy","fixed","embarrassed","meant","seek","ladder","bella","knowing","count","letter","ugly","bell","easy","seat","smell","hospital","lisa","horse","carrots","breath","often","call","land","grew","barked","couch","thankful","taught","understood","passed","landed","bedroom","knocked","sleepy","mud","coin","present","fur","chocolate","ship","returned","poor","tea","finish","generous","teach","hop","meadow","kiss","splash","drive","disappointed","mind","fancy","crab","peter","color","carried","bath","hears","snacks","hid","songs","zoom","smooth","leaf","especially","cloud","band","bridge","net","change","gathered","meet","string","nervous","wolf","fake","won","mysterious","penny","waves","chest","forward","number","smelly","johnny","gray","grumpy","block","jam","ella","map","body","shell","moon","leo","honest","glue","gate","frustrated","finger","polite","sack","kitten","group","shore","mirror","plants","berries","vase","pig","almost","weak","empty","robot","drew","spin","puzzle","plate","necklace","dogs","skipped","sail","expensive","stand","fruits","hopping","mountain","hidden","determined","lit","legs","sticks","sour","sheep","bored","closet","cook","moving","bake","line","stone","max's","ones","aunt","cries","saved","tiger","powerful","branches","packed","splashed","neighbor","yelled","birdie","save","taken","standing","jog","glass","discovered","cloth","answered","crane","worm","dolphin","wood","working","organized","excitement","boring","balloons","pleased","sighed","thick","smoke","wrote","middle","susie","sailed","covered","lock","tears","tells","spun","tie","stones","ben's","content","respect","soap","drum","tv","wagged","comfortable","scarf","incredible","feathers","roar","kindness","lose","figure","movie","eggs","measure","disappeared","rex","lola","eager","giggled","leg","clown","whale","yourself","knife","board","dinosaur","popcorn","mandy","parrot","drawing","questions","bone","we're","lying","police","dizzy","noisy","licked","balance","pillow","bobby","sadly","happening","become","dancing","lifted","fat","thanks","sword","mail","match","jacket","mistake","rare","smaller","wand","frightened","wagon","bathroom","managed","roll","offered","difficult","those","ruined","lazy","ancient","distance","feed","playground","tweety","normal","calling","cleaned","queen","walks","butter","circle","swan","elderly","drank","eye","adventurous","picks","lift","enjoying","trust","gets","shells","kissed","scissors","fragile","extra","mrs","famous","juicy","already","cross","tough","sweetie","circles","towel","louder","barn","slipped","neck","against","giving","flag","yours","needs","pay","grown","team","boys","rocket","learning","bags","patch","spinning","may","engine","sandwich","cheerful","deer","yarn","bubble","buttons","hurts","trunk","suggested","mix","nosy","pain","weird","boxes","nod","realised","hose","bye","shake","added","pizza","thin","bill","crown","vegetables","chase","spend","ellie","nemo","ring","collar","hammer","test","loudly","wrap","dig","foot","check","search","father","alligator","independent","invited","decide","foolish","asking","escape","unique","chicken","fine","colourful","saying","gold","rode","garage","rich","stubborn","bossy","live","brilliant","banana","pen","skin","guitar","pan","tent","lights","wiped","counted","sight","unusual","dreamed","shows","card","above","successful","pete","walls","bird's","tape","turkey","clear","safely","fill","tools","step","trap","fountain","impressed","harder","crawled","bottom","notice","nods","clap","diamond","crystal","dependable","toast","market","solve","clay","ears","original","breakfast","admired","brush","edge","beak","knight","happiness","shone","don","cop","caterpillar","ann","stronger","class","bitter","bald","picking","oyster","cart","terrible","joke","knows","regular","boats","george","we'll","humble","cone","library","raft","sauce","sounded","fridge","tank","tray","proudly","handed","cleaning","finding","ear","mighty","chose","joined","butterflies","umbrella","obedient","using","pie","changed","toby","medicine","helps","mask","rough","dull","mixed","playful","paw","locked","balls","wake","bobo","pass","crayon","parade","stuff"];
 
 const EMBEDDED_BASE_STORIES = ["Once upon a time, there was a little girl named Lily. She had a red ball. She liked to play with it in the park. One day the ball rolled into a puddle. Lily was sad, but her mom helped her wash it. Then Lily was happy again.","Tom had a small dog named Max. Max liked to run and jump. Every morning Tom and Max went for a walk. They saw birds in the trees. Max wagged his tail and Tom laughed. They were good friends.","Ben found a shiny rock by the pond. It was smooth and gray. He wanted to show his mom. He ran home fast. His mom smiled and said it was very pretty. Ben put the rock on his shelf.","Sara and her brother made a cake. They mixed the flour and the eggs. The cake smelled so good. When it was done, they gave a piece to their dad. He said it was the best cake ever. Everyone was happy.","There was a cat named Mia. Mia liked to sleep in the warm sun. One day it started to rain. Mia ran inside and hid under the bed. When the sun came back, she went out to play again.","A little boy named Sam had a blue kite. He took it to the hill on a windy day. The kite went up, up, up into the sky. Sam held the string tight and watched it fly. He was so proud.","Anna wanted to help her grandma in the garden. They planted seeds in the dirt and gave them water. Every day Anna checked the plants. After many days, little green leaves came up. Anna was very glad.","One day a duck went to the pond. She saw a frog on a big green leaf. The frog said hello. The duck and the frog played all day. When the sun went down, they said goodbye and went home.","Timmy lost his teddy bear. He looked under the bed and behind the door. He could not find it. He was very sad. Then his mom found it in the car. Timmy hugged his bear and smiled.","A girl named Lucy had a new dress. It was yellow with white flowers. She wore it to the party. All her friends said it was pretty. Lucy danced and laughed. It was a very fun day.","There was a big tree in the yard. A small bird made a nest in it. Soon there were three little eggs. The mother bird kept them warm. One day the eggs opened and baby birds came out.","Jack and Emma went to the beach. They made a castle in the sand. The waves came and washed it away. But they were not sad. They just made a new castle. They played until it was time to go.","A little mouse was very hungry. He looked for food in the kitchen. He found a piece of cheese under the table. He was so happy. He ate it all up and then went back to his cozy hole.","Molly had a red bike. She wanted to ride it, but she was scared. Her dad held the bike and helped her. Soon Molly could ride all by herself. She felt brave and strong. She rode all around the park.","One morning the sun was bright. A boy named Leo went outside to play. He saw a butterfly with pretty wings. It landed on a flower. Leo watched it very quietly. Then it flew away into the sky.","Sue baked cookies with her mom. They put them on a plate to cool. The cookies were warm and sweet. Sue gave one to her little sister. Her sister smiled and said thank you. They ate them together.","A dog named Rex liked to dig in the yard. One day he dug a big hole. He found an old bone in the dirt. He was so happy. He picked it up and ran to show the other dogs.","There was a little fish in the sea. She liked to swim near the rocks. One day she met a crab. The crab was funny and kind. They swam and played all day. The little fish was not lonely anymore.","Kate had a balloon at the fair. It was big and round and red. She held the string very tight. The wind was strong, but she did not let go. She kept her balloon all the way home.","A boy named Max helped his mom clean the house. He put his toys away in the box. He wiped the table and swept the floor. His mom said he was a big help. Max felt very proud of himself."];
+
 
 
 
@@ -13162,39 +13437,8 @@ function renderNameControl(m) {
 }
 
 // ---------- hypotheses ----------
-function heuristicHypotheses(m) {
-  const name = $('qName').value.trim();
-  const out = [];
-  for (const h of m.headScores.slice(0, 2)) {
-    if (h.score < 0.02) break;
-    out.push({ kind: 'head', layer: h.layer, index: h.head,
-      source: 'name attention',
-      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
-      prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
-  }
-  for (const nr of m.neuronTop.slice(0, 1)) {
-    if (nr.score < 1) break;
-    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
-      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
-      prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
-  }
-  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
-    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
-    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
-      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
-      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${$('qCont').value.trim()}" more than unrelated completions.` });
-  }
-  // the team hypothesis: knowledge is usually SHARED — single parts are often
-  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
-  const layerTotals = {};
-  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
-  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
-  out.push({ kind: 'team', layer: bestLayer,
-    source: 'layer team',
-    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
-    prediction: `Switch off ALL ${S.config.nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
-  return out;
-}
+// the built-in detective (src/hunt-evidence.js, shared with tools/ai-check.mjs)
+const heuristicHypotheses = m => builtinHypotheses(m, { name: $('qName').value.trim(), continuation: $('qCont').value.trim(), nHeads: S.config.nHeads });
 function ablationFor(h) {
   if (h.kind === 'head') return { heads: [`${h.layer}:${h.index}`] };
   if (h.kind === 'neuron') return { neurons: [`${h.layer}:${h.index}`] };
@@ -13205,30 +13449,12 @@ function labelFor(h) {
   if (h.kind === 'neuron') return `neuron L${h.layer}·n${h.index}`;
   return `ALL heads in layer ${h.layer}`;
 }
+// the language-model detective: prompt and reply parsing in src/hunt-evidence.js
 async function llmHypotheses(m) {
-  const name = $('qName').value.trim();
-  const evidence = {
-    task: `The tiny language model completes "${$('qProbe').value}" with "${$('qCont').value}" (probability ${m.contProb}).`,
-    character: name,
-    modelShape: S.config,
-    topGuesses: m.top,
-    headAttentionToName_atAnswerPosition: m.headScores,
-    neuronContrast_onNamePieces: m.neuronTop,
-    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
-  };
-  const prompt = `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes.
-
-Evidence (JSON):
-${JSON.stringify(evidence)}
-
-Answer with ONLY a JSON array, no prose:
-[{"kind":"head"|"neuron","layer":<int>,"index":<int>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+  const prompt = detectivePrompt({ probe: $('qProbe').value, continuation: $('qCont').value, name: $('qName').value.trim(), config: S.config, m });
   const raw = await callLLM({ provider: $('detective').value, key: $('detKey').value.trim(),
     model: $('detModel').value.trim(), prompt, maxTokens: 1500 });
-  const jsonText = raw.match(/\[[\s\S]*\]/)?.[0];
-  const arr = JSON.parse(jsonText);
-  return arr.filter(h => (h.kind === 'head' || h.kind === 'neuron') &&
-    Number.isInteger(h.layer) && Number.isInteger(h.index)).slice(0, 3);
+  return parseHypotheses(raw);
 }
 $('cluesBtn').onclick = async () => {
   if (!S.probe) return;
@@ -13955,7 +14181,7 @@ function create(A){
     const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
     if(!m) return {text:s.trim(),act:null};
     const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
-    return {text,act:{verb:m[1],args:m[2].trim()}};
+    return {text,act:{verb:m[1],args:m[2].trim().replace(/[.!?,;:]+$/,'')}};   // "DO: SHOW train." still means train
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -14326,6 +14552,7 @@ function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Treasure Hunt, where a visitor tests which parts contribute when a small language model predicts a learned fact, using attention evidence, neuron contrasts, ablation switch-off tests, unrelated completions, and a name-swap control. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind — and may say so. ' +
     'Core pedagogy you must keep straight: correlational evidence suggests candidates; ablation measures causal contribution; unrelated controls measure selectivity; none of these alone proves a unique storage location. A fact is used like a song in a choir, so small single-unit effects are expected. The headline answer score is length-normalized and the raw product remains visible. ' +
+    'The order of play: first choose a quest (a sentence about a character for the mind to finish) and press the probe button to ask the mind; only then are there clues to get (the detective) and parts to switch off and test, and the name-swap control. If the status shows no probe result yet, the first step is always to press probe. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; numbers and ratios are fine. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
@@ -14645,7 +14872,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      model = model || 'gpt-4o-mini';
+      model = model || 'gpt-5.4-mini';   // tools/ai-check.mjs: it answers the guide questions better than gpt-4o-mini
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -14711,7 +14938,7 @@ window.__vgShowBlockedEvent = {
    under tm-key-<provider>; srcdoc frames share the shell's origin, so
    any guide can find a key the visitor already gave the app. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -16978,6 +17205,77 @@ function causalVerdict(targetRatio, controlRatios = []) {
   return { kind: 'little', label: 'little measured effect', targetDamage, medianControlDamage, selectivity };
 }
 
+// ---- the detectives --------------------------------------------------------------
+// The built-in detective turns the probe's evidence (the hunt worker's probe-done: head
+// attention to the name, name-piece and answer-boundary neurons) into clues, ending
+// with a whole-layer "team" clue, since knowledge is usually shared.
+function builtinHypotheses(m, { name, continuation, nHeads }) {
+  const out = [];
+  for (const h of m.headScores.slice(0, 2)) {
+    if (h.score < 0.02) break;
+    out.push({ kind: 'head', layer: h.layer, index: h.head,
+      source: 'name attention',
+      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of m.neuronTop.slice(0, 1)) {
+    if (nr.score < 1) break;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
+    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
+      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${continuation}" more than unrelated completions.` });
+  }
+  // the team hypothesis: knowledge is usually SHARED — single parts are often
+  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
+  const layerTotals = {};
+  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
+  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
+  out.push({ kind: 'team', layer: bestLayer,
+    source: 'layer team',
+    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
+    prediction: `Switch off ALL ${nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
+  return out;
+}
+
+// The language-model detective: the prompt it gets (the same evidence as JSON), and the
+// clues kept from its reply (a JSON array of heads / neurons with integer places, or
+// "team" clues: every head of one layer).
+function detectivePrompt({ probe, continuation, name, config, m }) {
+  const evidence = {
+    task: `The tiny language model completes "${probe}" with "${continuation}" (probability ${m.contProb}).`,
+    character: name,
+    modelShape: config,
+    topGuesses: m.top,
+    headAttentionToName_atAnswerPosition: m.headScores,
+    // the whole-layer picture, for team hypotheses: every head's attention to the name, summed per layer
+    attentionToName_perLayer: (() => {
+      const t = {};
+      for (const h of m.allHeadScores || m.headScores || []) t[h.layer] = (t[h.layer] || 0) + h.score;
+      return Object.entries(t).map(([layer, total]) => ({ layer: +layer, total: +total.toFixed(3) })).sort((a, b) => b.total - a.total);
+    })(),
+    neuronContrast_onNamePieces: m.neuronTop,
+    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
+  };
+  return `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes. In a mind this small, knowledge is often shared: a single head or neuron is frequently redundant while a whole layer is not, so at least one hypothesis should be a "team" (every attention head of one layer switched off together). For a team, pick the layer whose heads pay the most attention to the name in total (attentionToName_perLayer), not the layer you would expect to hold facts in a big model.
+
+Evidence (JSON):
+${JSON.stringify(evidence)}
+
+Answer with ONLY a JSON array, no prose:
+[{"kind":"head"|"neuron"|"team","layer":<int>,"index":<int, omitted for a team>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+}
+function parseHypotheses(raw) {
+  const jsonText = String(raw).match(/\[[\s\S]*\]/)?.[0];
+  const arr = JSON.parse(jsonText);
+  return arr.filter(h => Number.isInteger(h.layer) &&
+    ((h.kind === 'head' || h.kind === 'neuron') && Number.isInteger(h.index) || h.kind === 'team')).slice(0, 3);
+}
+
 // ---- inlined src/ingest.js ----
 // ingest.js — universal drop/bundle ingestion, merged back from the mega/artifact
 // edition (2026-07-06; three-phase core from the audit-v2 session, 2026-07-08).
@@ -17465,6 +17763,7 @@ function onSwapStory(m) {
     return;
   }
   S.writing = false;
+  document.body.dataset.swapped = '1';   // the guide's status says whether a swap has been run
   markDiff('swapWith', `rewritten, with “${S.swap.words[0]}” swapped for “${S.swap.words[1]}”`, text, S.swap.noText);
   markDiff('swapNo', 'rewritten, no swap', S.swap.noText, text);
   // the swapped story becomes the one on show, so its thoughts can be looked at too
@@ -18059,7 +18358,7 @@ function create(A){
     const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
     if(!m) return {text:s.trim(),act:null};
     const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
-    return {text,act:{verb:m[1],args:m[2].trim()}};
+    return {text,act:{verb:m[1],args:m[2].trim().replace(/[.!?,;:]+$/,'')}};   // "DO: SHOW train." still means train
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -18364,7 +18663,14 @@ function statusText(){
   const vis = id => { const el = $(id); return !!(el && (el.textContent || '').trim() && !/^(choose|read or write)/i.test(el.textContent.trim())); };
   const mode = ($('mJ') && $('mJ').classList.contains('on')) ? 'thinking ahead' : ($('mL') && $('mL').classList.contains('on')) ? 'layer by layer' : 'what only thinking ahead sees';
   const rows = $('readout') ? [...$('readout').querySelectorAll('.lrow')].map(r => r.textContent.replace(/#\d+/g, ' ').replace(/\s+/g, ' ').trim()).join('; ') : '';
-  return `Mind: ${($('modelInfo') && $('modelInfo').textContent) || 'none'}. ${($('mindNote') && $('mindNote').textContent) || ''} ` +
+  const gold = $('readout') ? [...$('readout').querySelectorAll('.rchip.jonly')].map(c => c.firstChild.textContent.trim()) : [];
+  const goldLine = mode === 'what only thinking ahead sees'
+    ? (gold.length ? `Gold chips now: ${[...new Set(gold)].join(', ')}.` : 'No chip is gold right now.')
+    : 'No chip is gold: gold appears only in the "what only thinking ahead sees" mode.';
+  const swapRun = document.body.dataset.swapped === '1';   // set by the page when a swap and rewrite finishes
+  return `Mind: ${($('modelInfo') && $('modelInfo').textContent) || 'none'}. ${goldLine} ` +
+    `A swap has ${swapRun ? '' : 'NOT '}been run yet. ` +
+    ` ${($('mindNote') && $('mindNote').textContent) || ''} ` +
     `Story box: ${($('story') && $('story').value.slice(0, 200)) || 'empty'}. Status: ${($('status') && $('status').textContent) || ''}. ` +
     `Chosen piece: ${($('roPos') && $('roPos').textContent) || 'none'}. ` +
     `What it's holding in mind (box four), showing ${mode}${$('raw') && $('raw').checked ? ', every piece' : ''}: ${vis('readout') && rows ? rows : 'nothing yet'}. ` +
@@ -18376,7 +18682,8 @@ function statusText(){
 function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Thought bubble, a room where a visitor watches what a small story-writing language model is holding in mind as it reads or writes, word by word, and changes one of those thoughts. ' +
     'The views, by their names on the page: box four, "what it\'s holding in mind", shows one row per layer, deepest on top, in three modes: "thinking ahead" (what scientists call a J-lens: words a middle layer is already leaning toward further on in the story, not only next, read out by a map fitted to this mind), "layer by layer" (a logit lens: what it would say next if it stopped thinking at that layer) and "what only thinking ahead sees" (gold chips: thinking-ahead words that layer by layer does not show). "every piece (the honest view)" also shows word fragments; normally only whole story words are shown, and a pink chip is the start of a name. Clicking a word makes the story "glow" wherever that word was on its mind. ' +
-    'Box five, "swap what it\'s thinking": from a chosen piece on, at the chosen layers, the thought of the "take out" word is moved onto the "put in" word with a strength (small minds oversteer, so keep it low); the mind rewrites from that piece twice, with and without the swap, choosing its most likely word each time unless "use the surprise setting too" is ticked, so the only difference is the swap. Hole for castle at the last piece of the beach story makes the Giant Storyteller write moat. ' +
+    'Box five, "swap what it\'s thinking": from a chosen piece on, at the chosen layers, the thought of the "take out" word is moved onto the "put in" word with a strength (small minds oversteer, so keep it low); the mind rewrites from that piece twice, with and without the swap, choosing its most likely word each time unless "use the surprise setting too" is ticked, so the only difference is the swap. The recipe for "moat", in this order: (1) read the beach story "Lily and Max went to the beach. Lily built a castle. Max dug a"; (2) choose its last piece, the final "a" (where it is about to write hole); (3) in box five type hole in "take out" and castle in "put in" (never put in moat itself: the mind is meant to invent moat on its own, the castle kind of thing you dig); (4) keep every layer the selects offer and strength 0.4; (5) press swap and rewrite. Say "take out hole, put in castle" in exactly those words. The Giant Storyteller then writes moat; the smaller Big Storyteller may need a bigger strength, or may not. ' +
+    'Gold chips exist only in the "what only thinking ahead sees" mode; never name gold words unless the status lists them. ' +
     'This room only works with the Big and Giant Storytellers (they have a thinking-ahead map); the Giant shows thoughts most clearly, at layers four to eight. Mention scientific names only if asked. ' +
     'You are honestly an A I yourself, a much bigger mind whose insides are not this visible, and may say so. Pedagogy: the readout is a window, the swap is the experiment; a thought that changes the story when swapped really mattered. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; technical vocabulary is fine once they use it. ') +
@@ -20696,7 +21003,7 @@ function create(A){
     const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
     if(!m) return {text:s.trim(),act:null};
     const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
-    return {text,act:{verb:m[1],args:m[2].trim()}};
+    return {text,act:{verb:m[1],args:m[2].trim().replace(/[.!?,;:]+$/,'')}};   // "DO: SHOW train." still means train
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------
@@ -20973,7 +21280,7 @@ if (!window.__vgShowBlockedEvent) window.__vgShowBlockedEvent = {
   kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 if (!window.__vgRememberedKey) window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -20988,7 +21295,7 @@ if (!window.__vgProviders) window.__vgProviders = {
     if (provider === 'openai') {
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-        body: JSON.stringify({ model: model || 'gpt-4o-mini', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
+        body: JSON.stringify({ model: model || 'gpt-5.4-mini', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
       if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
       const d = await r.json(); return d.choices[0].message.content;
     }

@@ -79,3 +79,74 @@ export function causalVerdict(targetRatio, controlRatios = []) {
   }
   return { kind: 'little', label: 'little measured effect', targetDamage, medianControlDamage, selectivity };
 }
+
+// ---- the detectives --------------------------------------------------------------
+// The built-in detective turns the probe's evidence (the hunt worker's probe-done: head
+// attention to the name, name-piece and answer-boundary neurons) into clues, ending
+// with a whole-layer "team" clue, since knowledge is usually shared.
+export function builtinHypotheses(m, { name, continuation, nHeads }) {
+  const out = [];
+  for (const h of m.headScores.slice(0, 2)) {
+    if (h.score < 0.02) break;
+    out.push({ kind: 'head', layer: h.layer, index: h.head,
+      source: 'name attention',
+      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of m.neuronTop.slice(0, 1)) {
+    if (nr.score < 1) break;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
+      prediction: `If we switch it OFF, the model should get worse at saying "${continuation}".` });
+  }
+  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
+    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
+    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
+      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
+      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${continuation}" more than unrelated completions.` });
+  }
+  // the team hypothesis: knowledge is usually SHARED — single parts are often
+  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
+  const layerTotals = {};
+  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
+  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
+  out.push({ kind: 'team', layer: bestLayer,
+    source: 'layer team',
+    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
+    prediction: `Switch off ALL ${nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
+  return out;
+}
+
+// The language-model detective: the prompt it gets (the same evidence as JSON), and the
+// clues kept from its reply (a JSON array of heads / neurons with integer places, or
+// "team" clues: every head of one layer).
+export function detectivePrompt({ probe, continuation, name, config, m }) {
+  const evidence = {
+    task: `The tiny language model completes "${probe}" with "${continuation}" (probability ${m.contProb}).`,
+    character: name,
+    modelShape: config,
+    topGuesses: m.top,
+    headAttentionToName_atAnswerPosition: m.headScores,
+    // the whole-layer picture, for team hypotheses: every head's attention to the name, summed per layer
+    attentionToName_perLayer: (() => {
+      const t = {};
+      for (const h of m.allHeadScores || m.headScores || []) t[h.layer] = (t[h.layer] || 0) + h.score;
+      return Object.entries(t).map(([layer, total]) => ({ layer: +layer, total: +total.toFixed(3) })).sort((a, b) => b.total - a.total);
+    })(),
+    neuronContrast_onNamePieces: m.neuronTop,
+    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
+  };
+  return `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes. In a mind this small, knowledge is often shared: a single head or neuron is frequently redundant while a whole layer is not, so at least one hypothesis should be a "team" (every attention head of one layer switched off together). For a team, pick the layer whose heads pay the most attention to the name in total (attentionToName_perLayer), not the layer you would expect to hold facts in a big model.
+
+Evidence (JSON):
+${JSON.stringify(evidence)}
+
+Answer with ONLY a JSON array, no prose:
+[{"kind":"head"|"neuron"|"team","layer":<int>,"index":<int, omitted for a team>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+}
+export function parseHypotheses(raw) {
+  const jsonText = String(raw).match(/\[[\s\S]*\]/)?.[0];
+  const arr = JSON.parse(jsonText);
+  return arr.filter(h => Number.isInteger(h.layer) &&
+    ((h.kind === 'head' || h.kind === 'neuron') && Number.isInteger(h.index) || h.kind === 'team')).slice(0, 3);
+}

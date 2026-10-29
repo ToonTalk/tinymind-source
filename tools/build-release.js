@@ -19,7 +19,7 @@ const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js',
 const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js', 'jlens.js', 'batch.js'], hunt: [],
   thought: ['steer.js', 'jlens.js', 'batch.js', 'thought.js'] };
 // page-only extras for one app (the others' pages stay byte-identical)
-const PAGE_APP_EXTRA = { nursery: [], microscope: ['neuron-atlas.js'], hunt: [], thought: [] };
+const PAGE_APP_EXTRA = { nursery: ['ghostwriter.js'], microscope: ['neuron-atlas.js'], hunt: [], thought: [] };
 
 // the boot that replaces the dev marker block: real blob Worker, or the same-thread
 // shim when the sandbox refuses blob URLs (makeInlineWorker comes from app-shims)

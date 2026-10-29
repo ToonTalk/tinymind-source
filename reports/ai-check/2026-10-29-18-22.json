@@ -1,0 +1,463 @@
+{
+  "date": "2026-10-29T18:19:43.953Z",
+  "models": {
+    "app": "gpt-5.4-mini",
+    "guide": [
+      "gpt-4o-mini",
+      "gpt-5.4-mini"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-5.4-mini": {
+      "in": 27865,
+      "out": 15508,
+      "calls": 16
+    }
+  },
+  "ghost": [
+    {
+      "sheet": {
+        "name": "Zog",
+        "kind": "a small dragon",
+        "attr1": "eats clouds",
+        "attr2": "lives behind the moon"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 1,
+      "repairable": 7,
+      "repaired": 7,
+      "accepted": 5,
+      "rejected": 3,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 3
+      },
+      "unknown": [
+        "beat",
+        "tummy",
+        "hurry"
+      ],
+      "secs": 13.786,
+      "sample": "Zog was a small dragon. He lived behind the moon. Zog ate clouds and nothing else. One day, he wanted a cloud that was very high. He looked up and sighed. The cloud was near the stars. Zog tried to fly up, but the wind pushed him down. He felt sad and a little mad. Then he saw a mouse on the moon. The mouse said, \"Try again.\" Zog nodded. He took a deep breath and flew once more. This time, he went higher. The cloud came close. Zog opened his mouth and ate it. He laughed right away. The mouse laughed too. They watched the sky turn pink and blue. Then Zog lived behind the moon again, in his safe home. He felt brave and proud."
+    },
+    {
+      "sheet": {
+        "name": "Zog",
+        "kind": "a small dragon",
+        "attr1": "eats clouds",
+        "attr2": "lives behind the moon"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 0,
+      "repairable": 7,
+      "repaired": 7,
+      "accepted": 4,
+      "rejected": 4,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 4
+      },
+      "unknown": [
+        "raining",
+        "shape",
+        "shine",
+        "curled",
+        "spike",
+        "frowned",
+        "loose",
+        "floated",
+        "buzzed"
+      ],
+      "secs": 13.888,
+      "sample": "Zog was a small dragon. He lived behind the moon. He ate clouds every day. One day, Zog saw a big cloud. It was soft and white. He smiled and said, \"Cloud, come here.\" But the cloud was far away. Zog wanted it very much. He flew around the moon and looked again. Then he saw a tiny cloud. It was near and kind. Zog went to it and ate it up. He felt happy. Then he saw two more clouds. He ate them too. The sky looked blue and clean. Zog sat on a moon rock and smiled. A star shone near him. \"Good day,\" said Zog. He lived behind the moon, and that was his nice home. He was a small dragon, and he loved his cloud food. Then he was asleep and dreamed of more clouds."
+    },
+    {
+      "sheet": {
+        "name": "Sisi",
+        "kind": "a little cloud",
+        "attr1": "lives in the sky",
+        "attr2": "likes to sing songs"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 0,
+      "repairable": 7,
+      "repaired": 7,
+      "accepted": 5,
+      "rejected": 3,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 3
+      },
+      "unknown": [
+        "drop",
+        "fort",
+        "fog",
+        "forts",
+        "low",
+        "tied",
+        "floated",
+        "untie",
+        "golden"
+      ],
+      "secs": 15.649,
+      "sample": "Sisi was a little cloud. Sisi lived in the sky. Sisi liked to sing songs. One day Sisi looked down and saw a girl with a red ball. The girl waved up high. Sisi felt happy and sang a soft song. The girl smiled. But then the ball rolled away. The girl felt sad. Sisi saw the ball go near a tree. Sisi went down and put the ball back. The girl clapped and said, \"Thank you, Sisi.\" Sisi went back up to the sky. The wind was warm and nice. Sisi sang a new song. The girl listened from the ground. She smiled and waved again. Sisi sang once more. Then the sun came out. Sisi felt proud. The girl danced in the park. Sisi sang and sang. It was a happy day for both of them."
+    },
+    {
+      "sheet": {
+        "name": "Sisi",
+        "kind": "a little cloud",
+        "attr1": "lives in the sky",
+        "attr2": "likes to sing songs"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 3,
+      "repairable": 5,
+      "repaired": 5,
+      "accepted": 8,
+      "rejected": 0,
+      "why": {},
+      "unknown": [],
+      "secs": 12.334,
+      "sample": "Sisi was a little cloud. Sisi lives in the sky. Sisi likes to sing songs. One night, Sisi saw the moon. The moon was big and white. Sisi said, \"Hello, moon.\" The moon did not talk, but it shone. Sisi sang a sweet song in the sky. A little owl heard the song. The owl said, \"I like that.\" Sisi felt happy. The owl flew by a tall tree and sang too. Then the stars came out, one by one. Sisi and the owl sang to the stars. The sky looked calm and kind. A soft wind moved Sisi and the owl around the moon. The owl felt sleepy, and Sisi sang a tiny song to help. Soon the owl closed its eyes and flew home. Sisi smiled and sang one more song for the moon."
+    },
+    {
+      "sheet": {
+        "name": "Pip",
+        "kind": "a tiny robot",
+        "attr1": "loves red apples",
+        "attr2": "sleeps in a teapot"
+      },
+      "round": 1,
+      "total": 8,
+      "fine": 1,
+      "repairable": 7,
+      "repaired": 7,
+      "accepted": 6,
+      "rejected": 2,
+      "why": {
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 2
+      },
+      "unknown": [
+        "boot",
+        "meow"
+      ],
+      "secs": 11.621,
+      "sample": "Pip was a tiny robot. Pip loved red apples. Pip slept in a teapot. One day Pip went to the park. He saw a red apple on a bench. He felt very happy. A bird came and looked too. \"Hello,\" said Pip. \"I want that red apple.\" The bird hopped away. Pip went after it. Then Pip slipped on grass and fell on his bottom. The bird stopped and looked sad. Pip smiled. \"It is okay,\" he said. He picked the red apple up. He gave a tiny piece to the bird. The bird was happy. Pip was happy too. Then Pip went back home. He climbed into his teapot. He ate the red apple there. It was a nice end to a funny day."
+    },
+    {
+      "sheet": {
+        "name": "Pip",
+        "kind": "a tiny robot",
+        "attr1": "loves red apples",
+        "attr2": "sleeps in a teapot"
+      },
+      "round": 2,
+      "total": 8,
+      "fine": 1,
+      "repairable": 6,
+      "repaired": 6,
+      "accepted": 1,
+      "rejected": 7,
+      "why": {
+        "leaves out": 6,
+        "uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well": 3
+      },
+      "unknown": [
+        "yay",
+        "center",
+        "rainy",
+        "puddles",
+        "bent",
+        "softer",
+        "steps"
+      ],
+      "secs": 10.397,
+      "sample": "Pip was a tiny robot. Pip loved red apples. Pip slept in a teapot.  \nOne cold day, Pip stayed in the house with Mom. The wind made noise.  \nPip saw a red apple on the table. Pip said, \"I want it.\"  \nMom smiled and said, \"You may have it after lunch.\"  \nPip waited. Waiting felt hard. Pip looked at the apple كثير? no  \nPip looked at the apple again and again. Then Mom gave Pip a plate.  \nOn the plate was the red apple. Pip smiled so big.  \nPip took a small bite. It was sweet and good.  \nThen Mom and Pip drew pictures at the table. Pip drew the apple.  \nWhen night came, Pip felt cozy. Pip went to the teapot and slept."
+    }
+  ],
+  "detective": [
+    {
+      "quest": "what IS Zog?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "Attention head L0·H1 looks back at \"Zog\" right when it guesses the answer (56% of its attention).",
+          "verdict": "little",
+          "ratio": 0.9095282956716322
+        },
+        {
+          "part": "head L3·H3",
+          "claim": "Attention head L3·H3 looks back at \"Zog\" right when it guesses the answer (28% of its attention).",
+          "verdict": "little",
+          "ratio": 1.0175014217525162
+        },
+        {
+          "part": "neuron L2·n129",
+          "claim": "Neuron L2·n129 lights up 7.9× brighter on the \"Zog\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 0.998217468922262
+        },
+        {
+          "part": "neuron L1·n104",
+          "claim": "Neuron L1·n104 is unusually active at the answer boundary after \"all\".",
+          "verdict": "little",
+          "ratio": 0.9642399733414041
+        },
+        {
+          "part": "neuron L2·n65",
+          "claim": "Neuron L2·n65 is unusually active at the answer boundary after \"all\".",
+          "verdict": "little",
+          "ratio": 0.9727812205069147
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 0's attention heads may contribute together.",
+          "verdict": "selective",
+          "ratio": 0.21438139667531908
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what IS Zog?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "This attention head may help the model look back at Zog’s name when it guesses the next word.",
+          "verdict": "little",
+          "ratio": 0.9095282956716322
+        },
+        {
+          "part": "all heads in layer 3",
+          "claim": "These layer-3 attention heads seem to work together as a team to bring Zog’s name to the answer spot.",
+          "verdict": "little",
+          "ratio": 0.7602594524183116
+        },
+        {
+          "part": "neuron L2·n129",
+          "claim": "This neuron may help the model use the name Zog to choose the right fact.",
+          "verdict": "little",
+          "ratio": 0.998217468922262
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Mip eat?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "Attention head L0·H1 looks back at \"Mip\" right when it guesses the answer (43% of its attention).",
+          "verdict": "little",
+          "ratio": 0.5296481324862623
+        },
+        {
+          "part": "head L3·H0",
+          "claim": "Attention head L3·H0 looks back at \"Mip\" right when it guesses the answer (33% of its attention).",
+          "verdict": "little",
+          "ratio": 0.7928135212524697
+        },
+        {
+          "part": "neuron L4·n155",
+          "claim": "Neuron L4·n155 lights up 13.0× brighter on the \"Mip\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 1.0174571843075155
+        },
+        {
+          "part": "neuron L2·n117",
+          "claim": "Neuron L2·n117 is unusually active at the answer boundary after \"at\".",
+          "verdict": "little",
+          "ratio": 1.016309972302222
+        },
+        {
+          "part": "neuron L1·n168",
+          "claim": "Neuron L1·n168 is unusually active at the answer boundary after \"at\".",
+          "verdict": "little",
+          "ratio": 0.9484092057525727
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 0's attention heads may contribute together.",
+          "verdict": "selective",
+          "ratio": 0.27666751922754496
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Mip eat?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "all heads in layer 0",
+          "claim": "The whole layer 0 attention team may help find Mip’s name and send that clue forward.",
+          "verdict": "selective",
+          "ratio": 0.27666751922754496
+        },
+        {
+          "part": "head L3·H0",
+          "claim": "This one attention head may be a strong helper for using Mip’s name when predicting the next word.",
+          "verdict": "little",
+          "ratio": 0.7928135212524697
+        },
+        {
+          "part": "neuron L4·n155",
+          "claim": "This neuron may be a strong helper when the model is thinking about Mip’s name pieces.",
+          "verdict": "little",
+          "ratio": 1.0174571843075155
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "where does Bex live?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L2·H1",
+          "claim": "Attention head L2·H1 looks back at \"Bex\" right when it guesses the answer (84% of its attention).",
+          "verdict": "little",
+          "ratio": 0.5191171689182222
+        },
+        {
+          "part": "head L4·H3",
+          "claim": "Attention head L4·H3 looks back at \"Bex\" right when it guesses the answer (30% of its attention).",
+          "verdict": "little",
+          "ratio": 0.9568703204073385
+        },
+        {
+          "part": "neuron L0·n134",
+          "claim": "Neuron L0·n134 lights up 12.2× brighter on the \"Bex\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 0.7681090837029124
+        },
+        {
+          "part": "neuron L4·n168",
+          "claim": "Neuron L4·n168 is unusually active at the answer boundary after \" the\".",
+          "verdict": "little",
+          "ratio": 0.854152516004278
+        },
+        {
+          "part": "neuron L4·n97",
+          "claim": "Neuron L4·n97 is unusually active at the answer boundary after \" the\".",
+          "verdict": "little",
+          "ratio": 0.9230903144848586
+        },
+        {
+          "part": "all heads in layer 2",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 2's attention heads may contribute together.",
+          "verdict": "little",
+          "ratio": 0.5065469564085132
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "where does Bex live?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L2·H1",
+          "claim": "This attention head may help the model look from the answer spot back to Bex's name.",
+          "verdict": "little",
+          "ratio": 0.5191171689182222
+        },
+        {
+          "part": "all heads in layer 4",
+          "claim": "The whole layer 4 attention team may be important for using Bex's name to pick the home place.",
+          "verdict": "little",
+          "ratio": 0.5601866596660448
+        },
+        {
+          "part": "neuron L0·n134",
+          "claim": "This neuron may help turn Bex's name into a useful signal for the answer.",
+          "verdict": "little",
+          "ratio": 0.7681090837029124
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Nia eat?",
+      "who": "built-in",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "Attention head L0·H1 looks back at \"Nia\" right when it guesses the answer (47% of its attention).",
+          "verdict": "little",
+          "ratio": 0.6566076665866598
+        },
+        {
+          "part": "head L3·H0",
+          "claim": "Attention head L3·H0 looks back at \"Nia\" right when it guesses the answer (22% of its attention).",
+          "verdict": "little",
+          "ratio": 0.7338029403131386
+        },
+        {
+          "part": "neuron L2·n15",
+          "claim": "Neuron L2·n15 lights up 19.2× brighter on the \"Nia\" pieces than anywhere else.",
+          "verdict": "little",
+          "ratio": 0.979683277234423
+        },
+        {
+          "part": "neuron L2·n117",
+          "claim": "Neuron L2·n117 is unusually active at the answer boundary after \"at\".",
+          "verdict": "little",
+          "ratio": 0.6812385736797116
+        },
+        {
+          "part": "neuron L1·n168",
+          "claim": "Neuron L1·n168 is unusually active at the answer boundary after \"at\".",
+          "verdict": "selective",
+          "ratio": 0.445406564603259
+        },
+        {
+          "part": "all heads in layer 0",
+          "claim": "Maybe no single head dominates — the WHOLE TEAM of layer 0's attention heads may contribute together.",
+          "verdict": "selective",
+          "ratio": 0.056193836411167625
+        }
+      ],
+      "outOfRange": 0
+    },
+    {
+      "quest": "what does Nia eat?",
+      "who": "language model",
+      "error": "",
+      "clues": [
+        {
+          "part": "head L0·H1",
+          "claim": "This head may help carry Nia’s name to the place where the model decides the next word.",
+          "verdict": "little",
+          "ratio": 0.6566076665866598
+        },
+        {
+          "part": "all heads in layer 3",
+          "claim": "This whole layer’s attention team may work together to pass along the Nia information for the answer.",
+          "verdict": "general",
+          "ratio": 0.32789127838403126
+        },
+        {
+          "part": "neuron L2·n117",
+          "claim": "This neuron may help the model use Nia’s learned fact when it is about to guess the next word.",
+          "verdict": "little",
+          "ratio": 0.6812385736797116
+        }
+      ],
+      "outOfRange": 0
+    }
+  ],
+  "guide": []
+}

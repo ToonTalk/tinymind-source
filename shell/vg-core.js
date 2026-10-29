@@ -578,7 +578,7 @@ function create(A){
     const m=s.match(/DO:[ \t]*([A-Z_]+)[ \t]*([^\n]*?)[ \t]*$/);
     if(!m) return {text:s.trim(),act:null};
     const text=s.slice(0,m.index).replace(/[\s\u2014\u2013-]+$/,'').trim();
-    return {text,act:{verb:m[1],args:m[2].trim()}};
+    return {text,act:{verb:m[1],args:m[2].trim().replace(/[.!?,;:]+$/,'')}};   // "DO: SHOW train." still means train
   }
 
   /* ---------- DO dispatch over the adapter verb table ----------

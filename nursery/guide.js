@@ -332,8 +332,10 @@ function systemPrompt(){
     'The exact base checkpoint stories260K.bin is pretrained on TinyStories patterns but has not learned the visitor\'s custom characters. A restored storybook is training data, not a memory in the model weights. Never claim that facts from an earlier storybook can shine through a fresh base model. If the loaded filename is a custom exported model, say that it may already contain its earlier training. Do not invent or paraphrase model-choice cards you cannot see. ' +
     'The authoritative time-machine manifest in the status is the ONLY source for saying who or what a recording trained on. Never infer an arc\'s subject from the character editor, saved storybook, loaded model, latest sample, or the fact that it ends at step 600. Arc B and Arc C both end at step 600 but are different recordings: arcB is the Zog-only recording; arcC is the four-character Zog, Mip, Bex and Nia recording. If Sisi appears only in the separate editor or model context, explicitly say that this does not make the selected arc a Sisi arc. Never describe arcC as Sisi\'s training. ' +
     'Time-machine checkpoints are independent of storybook mode and of how many characters are in the storybook. Never say that single-character or storybook mode prevents access to a time-machine moment. When the visitor asks why a moment or checkpoint cannot be reached, use the Time machine context in the status: name the selected moment and the exact Start/Moment, Previous, and Next controls that are actually available. The overview slider is optional. If a moment is already loading, a new button choice is queued rather than discarded. ' +
+    'How stories get into the storybook: the visitor fills in the character (name, what kind of thing it is, and two special things), then the ghostwriter writes eight stories at a time (the "write 8 stories" button; it needs an API key, or built-in Claude inside a claude.ai artifact), or they paste stories of their own; aim for about 60 stories. ' +
+    'Why a story is turned away (the app checks every one; say these rules plainly when asked): it must be 100 to 180 words long; no sentence longer than 20 words; only words the tiny mind met often in the stories it grew up on (the character\'s own words are always allowed); and every story must keep the character\'s facts word for word: the name, the kind, and both special things. The ghostwriter is then told exactly what went wrong, and a story whose only problem is a few unknown words gets one automatic repair. These are fixed rules, not a judgment of quality. ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, storybook, chart, train, sample, export, timemachine. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: character, writer, storybook, chart, train, sample, export, timemachine. ' +
     ' Never offer to open or point at something the status shows is already on screen \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the chart', escalations: 'start or stop training', safeVerb: 'SHOW' });
 }
@@ -346,7 +348,7 @@ const appLLM = () => { const p = ($('provider') && $('provider').value) || '';
 };
 
 const SHOW = {
-  character: '#chName', chart: '#chart', train: '#trainBtn',
+  character: '#chName', writer: '#genBtn', chart: '#chart', train: '#trainBtn',
   sample: '#sampleBtn', export: '#exportBtn',
   storybook: { sel: '#storyList', needs: '#genBtn',
     why: 'The storybook is still empty. Ghostwrite or paste some stories first — the button I am pointing at.',

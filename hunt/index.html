@@ -126,6 +126,8 @@
 <script type="module">
 import { callLLM, PROVIDERS, keylessAvailable } from '../src/llm.js';
 import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
+import { questPresetsFromManifest, questPresetsFromSheet, controlNamesForManifest, nameSpecificityVerdict, causalVerdict, median,
+  builtinHypotheses, detectivePrompt, parseHypotheses } from '../src/hunt-evidence.js';
 const $ = id => document.getElementById(id);
 // @tm-worker-boot — build-release swaps this block for the blob boot with the
 // inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
@@ -346,39 +348,8 @@ function renderNameControl(m) {
 }
 
 // ---------- hypotheses ----------
-function heuristicHypotheses(m) {
-  const name = $('qName').value.trim();
-  const out = [];
-  for (const h of m.headScores.slice(0, 2)) {
-    if (h.score < 0.02) break;
-    out.push({ kind: 'head', layer: h.layer, index: h.head,
-      source: 'name attention',
-      claim: `Attention head L${h.layer}·H${h.head} looks back at "${name}" right when it guesses the answer (${(100 * h.score).toFixed(0)}% of its attention).`,
-      prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
-  }
-  for (const nr of m.neuronTop.slice(0, 1)) {
-    if (nr.score < 1) break;
-    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'name-piece contrast',
-      claim: `Neuron L${nr.layer}·n${nr.neuron} lights up ${nr.score.toFixed(1)}× brighter on the "${name}" pieces than anywhere else.`,
-      prediction: `If we switch it OFF, the model should get worse at saying "${$('qCont').value.trim()}".` });
-  }
-  for (const nr of (m.boundaryNeurons || []).slice(0, 2)) {
-    if (out.some(h => h.kind === 'neuron' && h.layer === nr.layer && h.index === nr.neuron)) continue;
-    out.push({ kind: 'neuron', layer: nr.layer, index: nr.neuron, source: 'answer boundary',
-      claim: `Neuron L${nr.layer}·n${nr.neuron} is unusually active at the answer boundary after "${m.triggerWord || 'the last piece'}".`,
-      prediction: `If that boundary activity contributes selectively, switching it OFF should hurt "${$('qCont').value.trim()}" more than unrelated completions.` });
-  }
-  // the team hypothesis: knowledge is usually SHARED — single parts are often
-  // redundant, whole layers rarely are. (This is the ladder after busted clues.)
-  const layerTotals = {};
-  for (const h of m.allHeadScores ?? m.headScores) layerTotals[h.layer] = (layerTotals[h.layer] ?? 0) + h.score;
-  const bestLayer = +Object.entries(layerTotals).sort((a, b) => b[1] - a[1])[0][0];
-  out.push({ kind: 'team', layer: bestLayer,
-    source: 'layer team',
-    claim: `Maybe no single head dominates — the WHOLE TEAM of layer ${bestLayer}'s attention heads may contribute together.`,
-    prediction: `Switch off ALL ${S.config.nHeads} heads in layer ${bestLayer} at once, then compare target damage with unrelated controls.` });
-  return out;
-}
+// the built-in detective (src/hunt-evidence.js, shared with tools/ai-check.mjs)
+const heuristicHypotheses = m => builtinHypotheses(m, { name: $('qName').value.trim(), continuation: $('qCont').value.trim(), nHeads: S.config.nHeads });
 function ablationFor(h) {
   if (h.kind === 'head') return { heads: [`${h.layer}:${h.index}`] };
   if (h.kind === 'neuron') return { neurons: [`${h.layer}:${h.index}`] };
@@ -389,30 +360,12 @@ function labelFor(h) {
   if (h.kind === 'neuron') return `neuron L${h.layer}·n${h.index}`;
   return `ALL heads in layer ${h.layer}`;
 }
+// the language-model detective: prompt and reply parsing in src/hunt-evidence.js
 async function llmHypotheses(m) {
-  const name = $('qName').value.trim();
-  const evidence = {
-    task: `The tiny language model completes "${$('qProbe').value}" with "${$('qCont').value}" (probability ${m.contProb}).`,
-    character: name,
-    modelShape: S.config,
-    topGuesses: m.top,
-    headAttentionToName_atAnswerPosition: m.headScores,
-    neuronContrast_onNamePieces: m.neuronTop,
-    neuronsActive_atAnswerBoundary: m.boundaryNeurons,
-  };
-  const prompt = `You are a friendly detective helping a child (age 10) test which parts of a tiny transformer contribute when it predicts a learned character fact. Study the correlational evidence, then propose EXACTLY 3 falsifiable hypotheses the child can test by switching parts off (ablation). Do not claim that a component stores the fact merely because it contributes.
-
-Evidence (JSON):
-${JSON.stringify(evidence)}
-
-Answer with ONLY a JSON array, no prose:
-[{"kind":"head"|"neuron","layer":<int>,"index":<int>,"claim":"<one short kid-friendly sentence naming the exact part and what you think it does>","prediction":"<what should happen to the model's chance of answering correctly if the child switches that part off>"}]`;
+  const prompt = detectivePrompt({ probe: $('qProbe').value, continuation: $('qCont').value, name: $('qName').value.trim(), config: S.config, m });
   const raw = await callLLM({ provider: $('detective').value, key: $('detKey').value.trim(),
     model: $('detModel').value.trim(), prompt, maxTokens: 1500 });
-  const jsonText = raw.match(/\[[\s\S]*\]/)?.[0];
-  const arr = JSON.parse(jsonText);
-  return arr.filter(h => (h.kind === 'head' || h.kind === 'neuron') &&
-    Number.isInteger(h.layer) && Number.isInteger(h.index)).slice(0, 3);
+  return parseHypotheses(raw);
 }
 $('cluesBtn').onclick = async () => {
   if (!S.probe) return;

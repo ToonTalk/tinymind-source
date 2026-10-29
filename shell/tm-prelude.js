@@ -168,7 +168,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      model = model || 'gpt-4o-mini';
+      model = model || 'gpt-5.4-mini';   // tools/ai-check.mjs: it answers the guide questions better than gpt-4o-mini
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -234,7 +234,7 @@ window.__vgShowBlockedEvent = {
    under tm-key-<provider>; srcdoc frames share the shell's origin, so
    any guide can find a key the visitor already gave the app. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
