@@ -149,14 +149,21 @@ export function neuronContrast(cap, spanStart, spanEnd, limit = 20) {
 // "What would the model predict if it stopped at layer l?"
 export function logitLens(model, cap, l, pos, phase = 'ffn') {
   const c = model.config, w = model.weights;
-  const x = cap.residualAt(l, pos, phase);
+  const xb = lensInput(model, cap.residualAt(l, pos, phase));
+  const logits = new Float32Array(c.vocabSize);
+  matmul(logits, xb, w.wcls, 0, c.dim, c.vocabSize);   // the engine's fast kernel
+  return logits;
+}
+
+// the final rmsnorm of a residual snapshot: what the classifier reads (batch.js sends
+// many of these through the classifier at once)
+export function lensInput(model, x) {
+  const c = model.config, w = model.weights;
   const f = Math.fround;
   let ss = 0;
   for (let j = 0; j < c.dim; j++) ss = f(ss + f(x[j] * x[j]));
   ss = f(1 / f(Math.sqrt(f(f(ss / c.dim) + 1e-5))));
   const xb = new Float32Array(c.dim);
   for (let j = 0; j < c.dim; j++) xb[j] = w.rmsFinal[j] * f(ss * x[j]);
-  const logits = new Float32Array(c.vocabSize);
-  matmul(logits, xb, w.wcls, 0, c.dim, c.vocabSize);   // the engine's fast kernel
-  return logits;
+  return xb;
 }

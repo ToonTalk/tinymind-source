@@ -21,7 +21,7 @@ export function steerKey(heads, steer) {
 }
 
 // the model.js ablate argument plus the per-layer clamp lists
-function plan(config, heads, steer) {
+export function plan(config, heads, steer) {
   const muted = new Set(), clamps = Array.from({ length: config.nLayers }, () => []);
   for (const s of steer || []) {
     if (s.value === 0) muted.add(s.layer + ':' + s.neuron);

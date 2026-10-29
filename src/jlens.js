@@ -31,6 +31,14 @@ export function readJlens(buffer) {
 
 // logits of the J-lens at one residual h (Float32Array of d_model)
 export function jLensLogits(model, J, h) {
+  const c = model.config;
+  const logits = new Float32Array(c.vocabSize);
+  matmul(logits, jLensInput(model, J, h), model.weights.wcls, 0, c.dim, c.vocabSize);
+  return logits;
+}
+
+// what the classifier reads for the J-lens at h (batch.js classifies many at once)
+export function jLensInput(model, J, h) {
   const c = model.config, w = model.weights, d = c.dim, f = Math.fround;
   const u = new Float32Array(d);
   matmul(u, h, J, 0, d, d);
@@ -39,7 +47,5 @@ export function jLensLogits(model, J, h) {
   ss = f(1 / f(Math.sqrt(f(f(ss / d) + 1e-5))));
   const xb = new Float32Array(d);
   for (let j = 0; j < d; j++) xb[j] = w.rmsFinal[j] * f(ss * u[j]);
-  const logits = new Float32Array(c.vocabSize);
-  matmul(logits, xb, w.wcls, 0, d, c.vocabSize);
-  return logits;
+  return xb;
 }

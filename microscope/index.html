@@ -325,11 +325,12 @@ worker.onmessage = (e) => {
     buildAttSelectors(); buildAblGrid();
     status('model ready — now look inside a story'); { const dz = $('drop'); if (dz) dz.textContent = 'model loaded — drop another .bin here to swap it'; }
   }
+  if (m.type === 'engine') document.body.dataset.cores = m.cores;   // how many cores read a story
   if (m.type === 'progress') {
     const bar = $('progress').firstElementChild;
     $('progress').style.display = 'block';
     bar.style.width = (100 * m.pos / m.n) + '%';
-    status(`reading piece ${m.pos}/${m.n}…`);
+    status(m.pieces ? `reading ${m.pieces} pieces, layer by layer… ${Math.round(100 * m.pos / m.n)}%` : `reading piece ${m.pos}/${m.n}…`);
   }
   if (m.type === 'run-done') {
     S.run = m;
@@ -343,7 +344,8 @@ worker.onmessage = (e) => {
     $('progress').style.display = 'none';
     $('runBtn').disabled = false;
     $('lensBtn').disabled = $('neuronBtn').disabled = $('ablRun').disabled = $('ablClear').disabled = false;
-    status(`read ${m.n} pieces of the story, recording everything every neuron did (${(m.bytes / 1e6).toFixed(1)} MB)` +
+    const secs = S.runT0 ? ` in ${((performance.now() - S.runT0) / 1000).toFixed(1)} s` : '';
+    status(`read ${m.n} pieces of the story${secs}, recording everything every neuron did (${(m.bytes / 1e6).toFixed(1)} MB)` +
       (m.truncated ? ' — story was cut to fit the model window' : ''));
     renderStrip(); renderBars(); renderHeat();
     $('lensOut').innerHTML = ''; $('neuronList').innerHTML = ''; $('ablInfo').textContent = '';
@@ -387,6 +389,7 @@ worker.onmessage = (e) => {
 $('runBtn').onclick = () => {
   if (S.busy) return;
   S.busy = true; $('runBtn').disabled = true;
+  S.runT0 = performance.now();
   worker.postMessage({ type: 'run', text: $('story').value });
 };
 

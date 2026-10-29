@@ -149,36 +149,37 @@ export async function run(t) {
   const posted = [];
   globalThis.self = { postMessage: (m) => posted.push(m) };
   await import('../microscope/worker.js');
-  const send = (data) => { posted.length = 0; self.onmessage({ data }); return posted.slice(); };
+  // the worker answers asynchronously (pool calls), one message at a time: wait for it to go idle
+  const send = async (data) => { posted.length = 0; self.onmessage({ data }); await self.whenIdle(); return posted.slice(); };
   const bytes = (await readFile(model260K)), tbytes = await readFile(tok512);
-  const loaded = send({ type: 'load', ckptBuf: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
-    tokBuf: tbytes.buffer.slice(tbytes.byteOffset, tbytes.byteOffset + tbytes.byteLength) }).find(m => m.type === 'loaded');
+  const loaded = (await send({ type: 'load', ckptBuf: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    tokBuf: tbytes.buffer.slice(tbytes.byteOffset, tbytes.byteOffset + tbytes.byteLength) })).find(m => m.type === 'loaded');
   t.check('worker: loaded reports the weight fingerprint the atlas is matched against',
     loaded && loaded.fingerprint === atlasFingerprint(c, ck.weights));
   const story = 'Zog is a small dragon. Zog eats clouds and lives behind the moon.';
-  send({ type: 'run', text: story });
+  await send({ type: 'run', text: story });
   const ser = (msgs) => JSON.stringify(msgs.map(m => ({ ...m, attention: m.attention ? Array.from(new Float32Array(m.attention)) : undefined,
     acts: m.acts ? Array.from(new Float32Array(m.acts)) : undefined })), (k, v) => k === 'steer' ? undefined : v);
   let allSame = true;
   for (const q of [{ type: 'lens', pos: 5, ablate: [] }, { type: 'neurons', spanStart: 1, spanEnd: 3, ablate: [] },
                    { type: 'neuron-acts', layer: 2, neuron: 10, ablate: [] },
                    { type: 'lens', pos: 5, ablate: ['2:3'] }, { type: 'run', text: story, ablate: ['2:3'] }]) {
-    if (ser(send(q)) !== ser(send({ ...q, steer: [] }))) allSame = false;
+    if (ser(await send(q)) !== ser(await send({ ...q, steer: [] }))) allSame = false;
   }
   t.check('worker: steer: [] answers every query byte-identically to the un-steered message', allSame);
   const legacyAbl = captureRun(createModel(ck), tok.encode(story, true, false), { topK: 12, ablate: new Set(['2:3']) });
-  const runAbl = send({ type: 'run', text: story, ablate: ['2:3'], steer: [] }).find(m => m.type === 'run-ablated');
+  const runAbl = (await send({ type: 'run', text: story, ablate: ['2:3'], steer: [] })).find(m => m.type === 'run-ablated');
   t.check('worker: head-mute run still equals the direct head-ablated capture',
     runAbl && runAbl.nextProb.every((v, i) => v === legacyAbl.nextProb[i]));
-  const muteMsg = send({ type: 'run', text: story, ablate: [], steer: [{ layer: 2, neuron: 10, value: 0 }] }).find(m => m.type === 'run-ablated');
+  const muteMsg = (await send({ type: 'run', text: story, ablate: [], steer: [{ layer: 2, neuron: 10, value: 0 }] })).find(m => m.type === 'run-ablated');
   const muteRef = captureRun(createModel(ck), tok.encode(story, true, false), { topK: 12, ablate: { heads: new Set(), neurons: new Set(['2:10']) } });
   t.check('worker: a muted neuron drives the whole microscope (run-ablated = neuron-ablated capture)',
     muteMsg && muteMsg.steer.length === 1 && muteMsg.nextProb.every((v, i) => v === muteRef.nextProb[i]));
-  const lensSteer = send({ type: 'lens', pos: 5, ablate: [], steer: [{ layer: L, neuron: J, value: 40 }] }).find(m => m.type === 'lens-done');
-  const lensPlain = send({ type: 'lens', pos: 5, ablate: [] }).find(m => m.type === 'lens-done');
+  const lensSteer = (await send({ type: 'lens', pos: 5, ablate: [], steer: [{ layer: L, neuron: J, value: 40 }] })).find(m => m.type === 'lens-done');
+  const lensPlain = (await send({ type: 'lens', pos: 5, ablate: [] })).find(m => m.type === 'lens-done');
   t.check('worker: the lens reflects the steered model', JSON.stringify(lensSteer.rows) !== JSON.stringify(lensPlain.rows));
-  const contPlain = send({ type: 'continue' }).find(m => m.type === 'continue-done');
-  const contUp = send({ type: 'continue', ablate: [], steer: [{ layer: L, neuron: J, value: 40 }] }).find(m => m.type === 'continue-done');
+  const contPlain = (await send({ type: 'continue' })).find(m => m.type === 'continue-done');
+  const contUp = (await send({ type: 'continue', ablate: [], steer: [{ layer: L, neuron: J, value: 40 }] })).find(m => m.type === 'continue-done');
   t.check('worker: continue — unchanged model reports changed=false and one story; a steer changes it',
     contPlain && !contPlain.changed && contPlain.base.join() === contPlain.steered.join() &&
     contUp && contUp.changed && contUp.base.join() === contPlain.base.join() && contUp.steered.join() !== contUp.base.join());

@@ -39,7 +39,7 @@ export function createModel(checkpoint) {
   return { config: checkpoint.config, weights: checkpoint.weights, state: createState(checkpoint.config) };
 }
 
-function rmsnorm(o, x, w, wOff, size) {
+export function rmsnorm(o, x, w, wOff, size) {
   let ss = 0;
   for (let j = 0; j < size; j++) ss = f(ss + f(x[j] * x[j]));
   ss = f(ss / size);
@@ -48,7 +48,7 @@ function rmsnorm(o, x, w, wOff, size) {
   for (let j = 0; j < size; j++) o[j] = w[wOff + j] * f(ss * x[j]);
 }
 
-function softmax(x, off, size) {
+export function softmax(x, off, size) {
   let max = x[off];
   for (let i = 1; i < size; i++) if (x[off + i] > max) max = x[off + i];
   let sum = 0;
@@ -79,6 +79,53 @@ export function matmul(xout, x, w, wOff, n, d) {
     let val = 0;
     for (let j = 0; j < n; j++) val += w[row + j] * x[j];
     xout[i] = val;
+  }
+}
+
+// out[N,d] = X[N,n] @ W(d,n)^T — matmul for N positions at once (batch.js). Each output
+// is the same double sum in the same order as matmul's, so results are bit-identical;
+// the gain is register tiling: four weight rows x three positions per pass, twelve
+// sums kept at once, so each value loaded is used three or four times (~1.8x).
+export function matmulBatch(out, X, w, wOff, N, n, d) {
+  const d4 = d - (d % 4), N3 = N - (N % 3);
+  let i = 0;
+  for (; i < d4; i += 4) {
+    const r0 = wOff + i * n, r1 = r0 + n, r2 = r1 + n, r3 = r2 + n;
+    let p = 0;
+    for (; p < N3; p += 3) {
+      const xa = p * n, xb = xa + n, xc = xb + n;
+      let a0 = 0, a1 = 0, a2 = 0, a3 = 0, b0 = 0, b1 = 0, b2 = 0, b3 = 0, c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+      for (let j = 0; j < n; j++) {
+        const u = X[xa + j], v = X[xb + j], x = X[xc + j];
+        const w0 = w[r0 + j], w1 = w[r1 + j], w2 = w[r2 + j], w3 = w[r3 + j];
+        a0 += u * w0; a1 += u * w1; a2 += u * w2; a3 += u * w3;
+        b0 += v * w0; b1 += v * w1; b2 += v * w2; b3 += v * w3;
+        c0 += x * w0; c1 += x * w1; c2 += x * w2; c3 += x * w3;
+      }
+      let o = p * d + i; out[o] = a0; out[o + 1] = a1; out[o + 2] = a2; out[o + 3] = a3;
+      o += d; out[o] = b0; out[o + 1] = b1; out[o + 2] = b2; out[o + 3] = b3;
+      o += d; out[o] = c0; out[o + 1] = c1; out[o + 2] = c2; out[o + 3] = c3;
+    }
+    for (; p < N; p++) {
+      const xo = p * n;
+      let a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+      for (let j = 0; j < n; j++) {
+        const xv = X[xo + j];
+        a0 += xv * w[r0 + j]; a1 += xv * w[r1 + j];
+        a2 += xv * w[r2 + j]; a3 += xv * w[r3 + j];
+      }
+      const o = p * d + i;
+      out[o] = a0; out[o + 1] = a1; out[o + 2] = a2; out[o + 3] = a3;
+    }
+  }
+  for (; i < d; i++) {
+    const row = wOff + i * n;
+    for (let p = 0; p < N; p++) {
+      const xo = p * n;
+      let val = 0;
+      for (let j = 0; j < n; j++) val += w[row + j] * X[xo + j];
+      out[p * d + i] = val;
+    }
   }
 }
 
