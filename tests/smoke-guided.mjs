@@ -925,6 +925,42 @@ async function main() {
     }
   }
 
+  /* ============ SHELL scenario G: "save my work" round trip ============ */
+  console.log('-- shell: save my work, then open it in a fresh page --');
+  {
+    const ck = new Uint8Array(readFileSync('models/stories260K.bin'));
+    const meta = { schemaVersion: 1, source: 'nursery', storyWorld: { mode: 'single', label: 'Sisi',
+      sheet: { name: 'Sisi', kind: 'a small unicorn', attr1: 'lives in the clouds', attr2: 'enjoys candy' } } };
+    const book = JSON.stringify({ mode: 'single', sheet: meta.storyWorld.sheet, train: ['Sisi ate candy.'], heldout: [] });
+    const errorsA = [];
+    const a = makeDom(BUILT, errorsA, w => w.localStorage.setItem('tm-storybook', book)).window;
+    const bootA = await until(() => a.__tmShell && a.__tmShell.buildWorkZip, 8000);
+    check('shell boots for the save-my-work round trip', bootA);
+    if (bootA) {
+      await a.__tmShell.ingest([{ name: 'sisi-260K.bin', u8: ck, origin: 'trained', modelMeta: meta }]);
+      const w1 = await a.__tmShell.buildWorkZip();
+      check('save my work bundles the raised mind and the storybook', !!w1 && w1.models === 1 && w1.storybook);
+      const b = makeDom(BUILT, []).window;
+      const bootB = await until(() => b.__tmShell && b.__tmShell.ingest, 8000);
+      if (bootB && w1) {
+        await b.__tmShell.ingest([{ name: 'tiny-mind-my-work.zip', u8: w1.zip }]);
+        await sleep(100);
+        check('opening the bundle brings the mind back as one you raised',
+          /a mind you raised/.test(b.document.getElementById('pool').textContent));
+        const w2 = await b.__tmShell.buildWorkZip();
+        const files = w2 ? await b.unzip(w2.zip) : [];
+        const man = files.find(f => f.name === 'tiny-mind-work.json');
+        const back = man && JSON.parse(new TextDecoder().decode(man.u8)).models[0];
+        check('... with its character still attached (so the Hunt can quiz it)',
+          !!back && back.origin === 'trained' && back.meta && back.meta.storyWorld.sheet.name === 'Sisi');
+        const first = await b.unzip(w1.zip);
+        const sb = first.find(f => f.name === 'my-storybook.json');
+        check('... and the storybook travels in the bundle', !!sb &&
+          JSON.parse(new TextDecoder().decode(sb.u8)).train[0] === 'Sisi ate candy.');
+      }
+    }
+  }
+
   /* ============ SHELL scenario C: hanging artifact storage ============ */
   console.log('-- shell: artifact storage that never resolves --');
   {

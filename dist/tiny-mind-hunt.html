@@ -2513,7 +2513,11 @@ $('detective').onchange = () => {
     $('detKey').value = LSget('tm-key-' + d) || '';
   }
 };
-if (keylessAvailable()) $('detective').add(new Option(PROVIDERS.keyless.label, 'keyless'), 1);
+if (keylessAvailable()) {
+  $('detective').add(new Option(PROVIDERS.keyless.label, 'keyless'), 1);
+  $('detective').value = 'keyless';   // inside a claude.ai artifact, built-in Claude is the default detective
+  $('detective').onchange();
+}
 
 // ---------- worker ----------
 worker.onmessage = (e) => {

@@ -1588,6 +1588,8 @@ window.__tmSelectArc = (arc) => selectArc(arc);
 if (keylessAvailable()) {
   const opt = new Option(PROVIDERS.keyless.label, 'keyless');
   $('provider').add(opt, 1);
+  $('provider').value = 'keyless';   // inside a claude.ai artifact the viewer's own Claude writes by default
+  $('provider').dispatchEvent(new Event('change'));
 }
 // window.storage is async, so hydrate the sync cache before the restore reads it.
 (async () => {

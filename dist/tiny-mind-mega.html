@@ -42,7 +42,8 @@ button:disabled{opacity:.4;cursor:default}
 #browseBtn,#startNursery{margin-right:8px}
 /* front door (simple view) + the switch to the full tabs (expert view) */
 #brand{cursor:pointer}
-#modeBtn{margin-left:auto;font-size:12px}
+#saveWork{margin-left:auto;font-size:12px}
+#modeBtn{font-size:12px}
 #chips + #modeBtn{margin-left:8px}
 body.simple #tabsBar{display:none}
 body.expert #simpleBar{display:none}
@@ -83,6 +84,7 @@ body[data-view="home"] #simpleBar .inApp{display:none}
     <div class="tab" data-tab="hunt">🎯 hunt</div>
   </span>
   <div id="chips"></div>
+  <button id="saveWork" title="one .zip with the minds you raised and your storybook — open it again here, on another computer, or in another copy of Tiny Mind">💾 save my work</button>
   <button id="modeBtn" title="switch between the simple front door and the full set of tabs">show all tabs</button>
 </header>
 <main>
@@ -102,7 +104,7 @@ body[data-view="home"] #simpleBar .inApp{display:none}
           <span class="d">Find where a mind keeps something it knows, and prove it by switching parts of it off.</span></button>
       </div>
       <p class="foot">The minds load by themselves. If you have a mind saved from an earlier visit, choose it from the
-        "mind" menu once you are inside, or drop its file anywhere on this page.
+        "mind" menu once you are inside, or drop its file anywhere on this page. "💾 save my work" keeps your minds and storybook in one file.
         Know your way around? <a href="#" id="homeExpert" style="color:#8fd3a7">Show all the tabs and files</a>.</p>
     </div>
   </div>
@@ -3993,6 +3995,8 @@ window.__tmSelectArc = (arc) => selectArc(arc);
 if (keylessAvailable()) {
   const opt = new Option(PROVIDERS.keyless.label, 'keyless');
   $('provider').add(opt, 1);
+  $('provider').value = 'keyless';   // inside a claude.ai artifact the viewer's own Claude writes by default
+  $('provider').dispatchEvent(new Event('change'));
 }
 // window.storage is async, so hydrate the sync cache before the restore reads it.
 (async () => {
@@ -12054,7 +12058,11 @@ $('detective').onchange = () => {
     $('detKey').value = LSget('tm-key-' + d) || '';
   }
 };
-if (keylessAvailable()) $('detective').add(new Option(PROVIDERS.keyless.label, 'keyless'), 1);
+if (keylessAvailable()) {
+  $('detective').add(new Option(PROVIDERS.keyless.label, 'keyless'), 1);
+  $('detective').value = 'keyless';   // inside a claude.ai artifact, built-in Claude is the default detective
+  $('detective').onchange();
+}
 
 // ---------- worker ----------
 worker.onmessage = (e) => {
@@ -14071,7 +14079,7 @@ function renderMindPick() {
   const fits = pool.models.filter(m => app === 'microscope' || is512(m));
   const opts = fits.map(m => `<option value="m:${encodeURIComponent(m.name)}">${escHtml(mindName(m))}</option>`);
   if (app === 'microscope' && !specimen() && tmCanFetch()) opts.unshift('<option value="big">the big storyteller (downloads 58 MB once)</option>');
-  opts.push('<option value="file">＋ add a mind from a file…</option>');
+  opts.push('<option value="file">📂 open saved work, or a mind file…</option>');
   const cur = frameModel[app] ? 'm:' + encodeURIComponent(frameModel[app]) : '';
   sel.innerHTML = (cur ? '' : '<option value="" selected>choose a mind…</option>') + opts.join('');
   if (cur) sel.value = cur;
@@ -14251,7 +14259,7 @@ $('mindPick').onchange = async () => {
   const model = v.startsWith('m:') && pool.models.find(m => m.name === decodeURIComponent(v.slice(2)));
   if (model) openModelInApp(app, model);
 };
-window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, startActivity, setMode, get activeTab(){ return activeTab; }, get uiMode(){ return uiMode; } }; // vg: shell adapter seam
+window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, startActivity, setMode, buildWorkZip: () => buildWorkZip(), ingest: recs => shellIngest(recs), get activeTab(){ return activeTab; }, get uiMode(){ return uiMode; } }; // vg: shell adapter seam
 const tmRestoreReady = tmRestorePool(); // vg wave 4: bring back last visit's bay before same-folder discovery
 
 function openModelInApp(app, model) {
@@ -14437,15 +14445,19 @@ async function tmRestorePool(){
 const isNeuronAtlasText = text => text.slice(0, 200).includes('"tiny-mind-neuron-atlas-v1"');
 async function shellIngest(recs) {
   const recByName = new Map(recs.map(r => [r.name, r]));
+  // minds unpacked from the site's own packs came with the site too
+  const batchOrigin = recs.length && recs.every(r => r.origin === 'same-folder') ? 'same-folder' : null;
   let atlasJsons = 0;
   const res = await ingestBatch(recs, {
     takeArc: (manifest, bins) => takeArc(manifest, { bins }, 'drop'),
     addModel: (name, u8, vocab) => {
       const rec = recByName.get(name);
-      addModel(name, u8, vocab, (rec && rec.origin) || 'ingest', rec && rec.modelMeta);
+      const saved = pendingWorkMeta.get(name); if (saved) pendingWorkMeta.delete(name);
+      addModel(name, u8, vocab, (saved && saved.origin) || (rec && rec.origin) || batchOrigin || 'ingest', (saved && saved.meta) || (rec && rec.modelMeta));
     },
     addTok: (name, u8, vocab) => { if (!pool.toks.some(t => t.name === name)) { pool.toks.push({ name, u8, vocab }); tmPersist('tok', name, u8); } },
     json: (name, text) => {
+      if (name.split(/[\\/]/).pop() === WORK_MANIFEST && applyWorkManifest(text)) return;   // a "save my work" bundle
       shellJsonNames.add(name);
       if (isNeuronAtlasText(text)) {   // the Microscope's neuron card; held until its frame opens
         atlasJsons++;
@@ -14475,6 +14487,65 @@ async function shellIngest(recs) {
   say('bay: ' + (bits.join(' · ') || 'nothing recognizable in that drop'),
     (res.arcs.length || res.took) ? 'ok' : 'warn');
   return res;
+}
+
+/* ---------- "save my work": one .zip of the minds you raised + your storybook ----------
+   Browser storage belongs to one web address (the site, an old copy, each artifact), so
+   it is not where work you care about should live. The bundle opens anywhere Tiny Mind
+   runs: drop it, or choose it from the "mind" menu. tiny-mind-work.json (written last)
+   carries what the .bin files cannot: where each mind came from and its character. */
+const WORK_MANIFEST = 'tiny-mind-work.json';
+const BUILT_IN_MINDS = /^(stories260k(-zog|-binding|-binding-max)?|stories15m)\.bin$/i;
+const pendingWorkMeta = new Map();             // mind file -> {origin, meta} from a manifest read before the mind
+async function buildWorkZip() {
+  const entries = [], models = [];
+  for (const m of pool.models) {
+    // the site's own minds come back by themselves (by name too: older visits stored them unlabelled)
+    if (m.origin === 'same-folder' || (!/^(trained|export)$/.test(m.origin) && BUILT_IN_MINDS.test(baseName(m)))) continue;
+    entries.push({ name: m.name, data: m.u8 });
+    models.push({ file: m.name, origin: m.origin || 'ingest', meta: m.meta || null });
+  }
+  let storybook = null;
+  try {
+    const v = (await shellStorage.get('tm-storybook')).value;
+    const data = JSON.parse(v);
+    if (data && ((data.train || []).length || (data.heldout || []).length)) {
+      storybook = 'my-storybook.json';
+      entries.push({ name: storybook, data: new TextEncoder().encode(v) });
+    }
+  } catch (e) { /* no storybook yet */ }
+  if (!entries.length) return null;
+  const manifest = { kind: 'tiny-mind-work', version: 1, savedAt: new Date().toISOString(), models, storybook };
+  entries.push({ name: WORK_MANIFEST, data: new TextEncoder().encode(JSON.stringify(manifest, null, 1)) });
+  return { zip: makeZip(entries), models: models.length, storybook: !!storybook };
+}
+function applyWorkManifest(text) {
+  let man; try { man = JSON.parse(text); } catch (e) { return false; }
+  if (!man || man.kind !== 'tiny-mind-work') return false;
+  for (const m of man.models || []) {
+    const have = pool.models.find(x => x.name === m.file);
+    if (have) addModel(have.name, have.u8, have.vocab, m.origin, m.meta);
+    else pendingWorkMeta.set(m.file, { origin: m.origin, meta: m.meta });
+  }
+  say(`opened your saved work: ${(man.models || []).length} mind${(man.models || []).length === 1 ? '' : 's'}` +
+    (man.storybook ? ' and your storybook (in the Nursery)' : ''), 'ok');
+  return true;
+}
+$('saveWork').onclick = async () => {
+  const w = await buildWorkZip();
+  if (!w) { say('nothing to save yet — raise a mind or write a storybook first', 'warn'); alertSimple('Nothing to save yet: raise a mind or write a storybook first.'); return; }
+  const stamp = new Date().toISOString().slice(0, 10);
+  await onExport(`tiny-mind-my-work-${stamp}.zip`, w.zip, 'shell');
+};
+/* the simple view hides the status line, so a short-lived note under the header */
+function alertSimple(text) {
+  if (uiMode !== 'simple') return;
+  let n = document.getElementById('simpleToast');
+  if (!n) { n = document.createElement('div'); n.id = 'simpleToast';
+    n.style.cssText = 'position:fixed;top:52px;right:16px;z-index:70;background:#2a2f3a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px 12px;font:13px system-ui,sans-serif;max-width:360px';
+    document.body.appendChild(n); }
+  n.textContent = text; n.style.display = '';
+  clearTimeout(n._t); n._t = setTimeout(() => { n.style.display = 'none'; }, 5000);
 }
 
 /* ---------- shell-level drop (bay + header; app areas keep their own) ---------- */
