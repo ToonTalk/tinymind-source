@@ -42,7 +42,7 @@ function wireWorker(emit){
         break;
       case 'sample':          saveSample(m.text); emit('sampleReady', { step: m.step, text: m.text }); break;
       case 'idle':            emit('trainDone',   { step: m.step }); break;
-      case 'export-done':     emit('exportDone',  { step: m.step }); break;
+      case 'export-done':     emit(m.purpose === 'publish' ? 'mindPublished' : 'exportDone', { step: m.step }); break;
       case 'probe-fact-done': emit('probeFact', m); break;
     }
   });
@@ -225,6 +225,9 @@ const EVENTS = {
   storyAccepted: { priority: 'ambient', cooldownMs: 15000,
     lines: p => p.loaded ? 'A whole storybook is in.' : `${p.ok} more accepted into the storybook.`,
     kidLines: 'More stories in the book!' },
+  mindPublished: { priority: 'moment', cooldownMs: 30000,
+    lines: 'Your mind is ready: it joined your minds, so the Microscope and the Hunt can open it now. Save my work, at the top, keeps it for another day.',
+    kidLines: 'Your mind is ready! You can look inside it, or hunt for its secrets.' },
   exportDone: { priority: 'moment', once: true,
     lines: 'Saved. That file is the whole mind — every dial, frozen. Drop it back on this page any time and it wakes up exactly here.',
     kidLines: 'Saved! That file is the whole mind. Bring it back any time.' },
@@ -251,7 +254,7 @@ function STEPS(){
         : 'The ghostwriter is already writing — the stories will appear in the storybook below. I will wait right here.')
       : kid()
       ? 'Now we need stories! In "who writes?", pick a helper to write them' + (hasBuiltIn() ? ' — built-in Claude needs no key' : ' (a grown-up pastes a key)') + ', then press write 8 stories. Or write some yourself and press check and add. Or load a ready-made storybook. I will wait.'
-      : 'Now the storybook. Under "who writes?" choose who drafts the stories: ' + (hasBuiltIn() ? 'built-in Claude needs no key, or ' : '') + 'an AI with your own key, then press ✍️ write 8 stories, a few times. Or choose "me", paste stories you wrote, and press check + add. Or load one of the ready-made storybooks. Every sixth story is kept secret to test the mind with later. I will wait right here.' },
+      : 'Now the storybook. Under "who writes?" choose who drafts the stories: ' + (hasBuiltIn() ? 'built-in Claude needs no key, or ' : '') + 'an AI with your own key, then press ✍️ write 8 more stories, a few times. Or choose "me", paste stories you wrote, and press check + add. Or load one of the ready-made storybooks. Every sixth story is kept secret to test the mind with later. I will wait right here.' },
   { name: 'readAloud', spot: '#storyList', text: () => kid()
       ? 'Look at the storybook! Pick one and read it out loud. Every single word will pass through the tiny mind hundreds of times.'
       : 'Here is the storybook. Read one aloud — really. Every word in it will pass through the trainee hundreds of times; it is worth hearing once with your own voice what the mind will hear a hundred times.' },

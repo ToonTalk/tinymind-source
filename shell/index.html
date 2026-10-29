@@ -937,7 +937,10 @@ function onPublishModel(name, u8, fromApp, meta) {
   const v = checkpointVocab(u8);
   if (v > 0) {
     addModel(name, u8, v, 'trained', meta);
-    say(`${name} finished training and joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok');
+    const mo = pool.models.find(x => x.name === name);
+    say(`${name} joined your minds (vocab ${v}), ready for the Microscope and the Hunt`, 'ok');
+    alertSimple(`${mo ? mindName(mo) : name} is ready — choose it from the "mind" menu in 🔬 Look inside or 🎯 Hunt.`);
+    refreshBar();
   } else say(`could not add ${name} to the model table`, 'err');
 }
 

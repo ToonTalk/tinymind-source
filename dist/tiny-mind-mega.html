@@ -621,7 +621,7 @@ window.__vgDeferBoot = async function(create){
       <label class="f"><input type="checkbox" id="rememberKey"> remember this key on this computer (browser storage — untick on shared machines)</label>
       <label class="f">model <input type="text" id="apiModel"></label>
       <label class="f"><input type="checkbox" id="strictWords" checked> give the writer the full allowed-word list (works much better)</label>
-      <button class="go small" id="genBtn">✍️ write 8 stories</button>
+      <button class="go small" id="genBtn">✍️ write 8 more stories</button>
     </span>
     <span id="manualFields">
       <label class="f">paste stories (blank line between them)
@@ -642,7 +642,7 @@ window.__vgDeferBoot = async function(create){
     <button class="small alt" id="loadBookTop">📂 load</button>
   </h2>
   <div id="prog"><div></div></div>
-  <div class="hint" id="bookGoal">goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.</div>
+  <div class="hint" id="bookGoal">goal: 60 stories — 50 to learn from + 10 kept secret (to check for parroting). Each ✍️ press writes up to 8, so it takes about 8 presses; every 6th accepted story becomes a secret one.</div>
   <div id="storyList"></div>
   <button class="small" id="clearBook">start over</button>
   <button class="small alt" id="saveBook">💾 save storybook (.json)</button>
@@ -669,6 +669,7 @@ window.__vgDeferBoot = async function(create){
   <button class="go" id="trainBtn" disabled>🐣 start raising</button>
   <button id="pauseBtn" disabled>pause</button>
   <div id="trainHint" class="hint warn"></div>
+  <div id="doneNote" class="ok" style="display:none;margin:.4rem 0;padding:.45rem .7rem;border:1px solid #4a7;border-radius:8px;background:#1b2a1d"></div>
   <button class="small" id="sampleBtn" disabled>ask for a story now</button>
   <button class="alt small" id="exportBtn" disabled>💾 save my tiny mind (.bin)</button>
   <button class="alt small" id="restartBtn" disabled title="new training run from the ORIGINAL 260K weights — your storybook is kept">↺ start over from the original 260K</button>
@@ -2910,30 +2911,30 @@ function validateStory(text) {
   const probs = [], offList = [], missing = [];
   const w = words(text);
   const wset = new Set(w);
-  if (w.length < 100 || w.length > 180) probs.push(`length ${w.length} (want 100–180 words)`);
+  if (w.length < 100 || w.length > 180) probs.push(`${w.length} words long — stories need 100 to 180 words, so the mind gets enough (but not too much) to learn from`);
   if (S.wordlist) {
     const wl = whitelist();
     const off = [...new Set(w.filter(x => !S.wordlist.has(x) && !wl.has(x)))];
-    if (off.length) { probs.push('words too big for a tiny mind: ' + off.join(', ')); offList.push(...off); }
+    if (off.length) { probs.push('uses words the tiny mind hardly ever met in the stories it grew up on, so it cannot learn them well: ' + off.join(', ')); offList.push(...off); }
   }
   for (const s of text.split(/[.!?]+/)) {
     const n = (s.match(/[a-z']+/gi) || []).length;
-    if (n > 20) probs.push(`sentence too long (${n} words): "${s.trim().slice(0, 40)}…"`);
+    if (n > 20) probs.push(`a sentence is too long for a tiny mind (${n} words; 20 at most): "${s.trim().slice(0, 40)}…"`);
   }
   const lower = unsmart(text).toLowerCase();
   const sh = sheet();
   const kindPhrase = sh.kind.replace(/^(a|an|the)\s+/i, '').toLowerCase();
-  if (!lower.includes(kindPhrase)) { probs.push(`missing "${kindPhrase}"`); missing.push(`is ${sh.kind}`); }
+  if (!lower.includes(kindPhrase)) { probs.push(`never says ${sh.name || 'the character'} is "${sh.kind}" — every story must use exactly those words`); missing.push(`is ${sh.kind}`); }
   for (const attr of [sh.attr1, sh.attr2]) {
     for (const cw of words(attr).filter(x => !STOP.has(x) && x.length > 2)) {
       const fam = familyOf(cw);
       if (![...fam].some(f => wset.has(f))) {
-        probs.push(`missing "${cw}" (from "${attr}")`); missing.push(attr);
+        probs.push(`leaves out "${cw}" (from "${attr}") — every story must keep both special things`); missing.push(attr);
         break;
       }
     }
   }
-  if (!lower.includes(sh.name.toLowerCase())) probs.push(`missing the name "${sh.name}"`);
+  if (!lower.includes(sh.name.toLowerCase())) probs.push(`never uses the name "${sh.name}"`);
   return { probs, offList, missing, wordCount: w.length };
 }
 
@@ -2969,8 +2970,9 @@ function addStories(texts, from) {
   } else if (ok) S.feedback = null;
   $('genOut').innerHTML = `<span class="${bad ? 'warn' : 'ok'}">${from}: ${ok} accepted, ${bad} rejected</span>` +
     (report.length ? '<br>' + report.slice(0, 6).map(r => `<span class="err">${r.replace(/</g, '&lt;')}</span>`).join('<br>') : '') +
+    (bad ? '<br><span class="hint">turned-away stories do not go in the storybook. A tiny mind only learns well from short, simple stories in words it already met, that keep the character\'s facts word for word.</span>' : '') +
     (bad && from === 'ghostwriter'
-      ? '<br><span class="warn">click ✍️ again — the ghostwriter will be told exactly what went wrong</span>' : '');
+      ? '<br><span class="warn">press ✍️ again — the ghostwriter will be told exactly what went wrong and asked to fix it</span>' : '');
   renderBook(); refreshAlphaCounts(); pushData();
 }
 // the train button is NEVER silently gray: updateTrainGate always says why, and a
@@ -3022,7 +3024,7 @@ function setBookMode(mode, characters = null, purpose = null) {
   $('pasteBox').disabled = binding; $('pasteBtn').disabled = binding; $('genBtn').disabled = binding;
   $('bookGoal').textContent = binding
     ? 'balanced experiment: 64 learning stories + 16 kept secret; all four characters appear equally often.'
-    : 'goal: 50 to learn from + 10 kept secret (to check for parroting). every 6th accepted story becomes a secret one.';
+    : 'goal: 60 stories — 50 to learn from + 10 kept secret (to check for parroting). Each ✍️ press writes up to 8, so it takes about 8 presses; every 6th accepted story becomes a secret one.';
   const rows = $('bindingCharacterRows'); rows.innerHTML = '';
   if (binding) for (const [name, facts] of Object.entries(characters || {})) {
     const row = document.createElement('tr');
@@ -3389,24 +3391,34 @@ worker.onmessage = (e) => {
       $('saveSamples').disabled = false;
     }
   }
+  if (m.type === 'step' && $('doneNote') && $('doneNote').style.display !== 'none') doneNote('');
   if (m.type === 'idle') {
     S.running = false; S.trained = true; S.lastStep = m.step;
     $('trainBtn').textContent = '🐣 keep raising';
     $('pauseBtn').disabled = true;
     $('exportBtn').disabled = $('sampleBtn').disabled = $('restartBtn').disabled = false;
     updateTrainGate();
+    const label = activeBookLabel();
     if (m.step >= S.maxSteps) {
-      status(`finished ${m.step} steps — adding this trained mind to the model table and asking for a story…`);
+      status(`finished ${m.step} steps — asking for a story…`);
       if (typeof window.__tmPublishModel === 'function')
         worker.postMessage({ type: 'export', purpose: 'publish' });
       $('sampleBtn').onclick();
-    } else status(`paused at step ${m.step}`);
+      doneNote(`✅ Done — the mind finished all ${m.step} steps of learning about ${label}.` +
+        (window.__tmBridge ? ' It is in your minds now: look inside it (🔬) or hunt in it (🎯). 💾 save my work keeps it.' : ' Save it with 💾 save my tiny mind.'));
+    } else {
+      status(`paused at step ${m.step}`);
+      if (m.step > 0 && typeof window.__tmPublishModel === 'function')
+        worker.postMessage({ type: 'export', purpose: 'publish' });   // the mind so far is usable while paused
+      doneNote(`⏸ Paused at step ${m.step} of ${S.maxSteps}.` +
+        (window.__tmBridge ? ' The mind as it is now is in your minds (🔬, 🎯); press keep raising to carry on.' : ' Press keep raising to carry on.'));
+    }
   }
   if (m.type === 'export-done') {
     const name = activeCheckpointName();
     if (m.purpose === 'publish' && typeof window.__tmPublishModel === 'function') {
       window.__tmPublishModel(name, m.bin, activeModelMetadata(m.step));
-      status(`finished ${m.step} steps — ${name} is joining the model table for the Microscope and Hunt`);
+      status(`step ${m.step} — the mind joined your minds for the Microscope and the Hunt`);
     } else {
       const saved = deliverFile(name, m.bin, 'application/octet-stream');
       if (saved) status(`saved after step ${m.step} — drop this .bin into the Microscope to inspect what it learned about ${activeBookLabel()}`);
@@ -3942,6 +3954,8 @@ $('trainBtn').onclick = () => {
 };
 $('startFrom').onchange = () => { fresh = true; S.lastStep = 0; $('trainBtn').textContent = '🐣 start raising'; };
 $('pauseBtn').onclick = () => { worker.postMessage({ type: 'pause' }); };
+/* a plain, visible note under the training buttons: paused, finished */
+function doneNote(text) { const el = $('doneNote'); if (!el) return; el.textContent = text || ''; el.style.display = text ? '' : 'none'; }
 $('sampleBtn').onclick = () => worker.postMessage({ type: 'sample-now', prompt: nextActiveStoryPrompt() });
 $('restartBtn').onclick = () => {
   $('startFrom').value = 'trained';   // whatever checkpoint the worker was init'd with (kept pristine there)
@@ -4899,7 +4913,7 @@ function wireWorker(emit){
         break;
       case 'sample':          saveSample(m.text); emit('sampleReady', { step: m.step, text: m.text }); break;
       case 'idle':            emit('trainDone',   { step: m.step }); break;
-      case 'export-done':     emit('exportDone',  { step: m.step }); break;
+      case 'export-done':     emit(m.purpose === 'publish' ? 'mindPublished' : 'exportDone', { step: m.step }); break;
       case 'probe-fact-done': emit('probeFact', m); break;
     }
   });
@@ -5082,6 +5096,9 @@ const EVENTS = {
   storyAccepted: { priority: 'ambient', cooldownMs: 15000,
     lines: p => p.loaded ? 'A whole storybook is in.' : `${p.ok} more accepted into the storybook.`,
     kidLines: 'More stories in the book!' },
+  mindPublished: { priority: 'moment', cooldownMs: 30000,
+    lines: 'Your mind is ready: it joined your minds, so the Microscope and the Hunt can open it now. Save my work, at the top, keeps it for another day.',
+    kidLines: 'Your mind is ready! You can look inside it, or hunt for its secrets.' },
   exportDone: { priority: 'moment', once: true,
     lines: 'Saved. That file is the whole mind — every dial, frozen. Drop it back on this page any time and it wakes up exactly here.',
     kidLines: 'Saved! That file is the whole mind. Bring it back any time.' },
@@ -5108,7 +5125,7 @@ function STEPS(){
         : 'The ghostwriter is already writing — the stories will appear in the storybook below. I will wait right here.')
       : kid()
       ? 'Now we need stories! In "who writes?", pick a helper to write them' + (hasBuiltIn() ? ' — built-in Claude needs no key' : ' (a grown-up pastes a key)') + ', then press write 8 stories. Or write some yourself and press check and add. Or load a ready-made storybook. I will wait.'
-      : 'Now the storybook. Under "who writes?" choose who drafts the stories: ' + (hasBuiltIn() ? 'built-in Claude needs no key, or ' : '') + 'an AI with your own key, then press ✍️ write 8 stories, a few times. Or choose "me", paste stories you wrote, and press check + add. Or load one of the ready-made storybooks. Every sixth story is kept secret to test the mind with later. I will wait right here.' },
+      : 'Now the storybook. Under "who writes?" choose who drafts the stories: ' + (hasBuiltIn() ? 'built-in Claude needs no key, or ' : '') + 'an AI with your own key, then press ✍️ write 8 more stories, a few times. Or choose "me", paste stories you wrote, and press check + add. Or load one of the ready-made storybooks. Every sixth story is kept secret to test the mind with later. I will wait right here.' },
   { name: 'readAloud', spot: '#storyList', text: () => kid()
       ? 'Look at the storybook! Pick one and read it out loud. Every single word will pass through the tiny mind hundreds of times.'
       : 'Here is the storybook. Read one aloud — really. Every word in it will pass through the trainee hundreds of times; it is worth hearing once with your own voice what the mind will hear a hundred times.' },
@@ -14674,7 +14691,10 @@ function onPublishModel(name, u8, fromApp, meta) {
   const v = checkpointVocab(u8);
   if (v > 0) {
     addModel(name, u8, v, 'trained', meta);
-    say(`${name} finished training and joined the model table (vocab ${v}), ready for the Microscope/Hunt`, 'ok');
+    const mo = pool.models.find(x => x.name === name);
+    say(`${name} joined your minds (vocab ${v}), ready for the Microscope and the Hunt`, 'ok');
+    alertSimple(`${mo ? mindName(mo) : name} is ready — choose it from the "mind" menu in 🔬 Look inside or 🎯 Hunt.`);
+    refreshBar();
   } else say(`could not add ${name} to the model table`, 'err');
 }
 
