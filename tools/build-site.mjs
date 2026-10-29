@@ -5,6 +5,7 @@
 //     four-friends models;
 //   - loose files: the Zog mind, and the big storyteller (stories15M + its tokenizer) with
 //     the neuron atlas, which the page fetches only when the Microscope asks for them;
+//   - the J-lens files for stories15M and stories110M (the 110M mind comes from Hugging Face);
 //   - arc/: the three time-machine recordings, each snapshot fetched when scrubbed to.
 // Usage: node tools/build-release.js && node tools/build-site.mjs <site folder>
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, statSync } from 'node:fs';
@@ -42,6 +43,9 @@ const resources = {
 writeFileSync(join(out, 'tiny-mind-resources.json'), JSON.stringify(resources, null, 2) + '\n');
 for (const r of resources.resources) put(join(ROOT, 'dist', r.file), r.file);
 for (const m of ['stories260K-zog.bin', 'stories15M.bin', 'tokenizer.bin']) put(join(ROOT, 'models', m), m);
+// the "thinking ahead" lenses (J-lens, fitted in jlens-tinystories); the 110M mind itself is
+// over GitHub's 100 MB limit, so the page fetches it from Hugging Face (shell GIANT_URL)
+for (const m of ['stories15M.jlens', 'stories110M.jlens']) put(join(ROOT, 'models', m), m);
 
 // the recordings: each manifest and the snapshots it names (no optimizer state)
 const arcs = ['arc-manifest.json', 'newborn/arc-manifest.json', 'binding/arc-manifest.json'];

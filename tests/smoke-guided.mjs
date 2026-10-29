@@ -134,7 +134,7 @@ async function main() {
   check('same-folder assets use persistent cache before network',
     BUILT.includes("const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1'") &&
     BUILT.includes('const hit = await cache.match(url)') &&
-    BUILT.includes('await cache.put(url, response.clone())'));
+    BUILT.includes('cache.put(url, copy)'));
   check('trained models stay separate from the exact pretrained base',
     BUILT.includes('const trainedModels = () =>') && BUILT.includes('!isBase260(m)'));
   check('time-machine card copy humanized', BUILT.includes('Time machine: ') && !BUILT.includes('scrub a recorded arc:'));

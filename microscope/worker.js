@@ -10,8 +10,10 @@ import { createModel } from '../src/model.js';
 import { captureRun, logitLens, neuronContrast } from '../src/capture.js';
 import { captureSteered, continueSteered, steerKey } from '../src/steer.js';
 import { atlasFingerprint } from '../src/neuron-atlas.js';
+import { readJlens, jLensLogits } from '../src/jlens.js';
 
 let model = null, tok = null, config = null;
+let jl = null;   // the J-lens for the loaded mind (src/jlens.js), or null
 let baseCap = null, baseIds = null;
 // One ablated capture serves every ablation-aware instrument (lens, neurons, neuron-acts,
 // and the ablated run itself), keyed by the sorted muted-head set over the SAME story, so
@@ -72,11 +74,14 @@ self.onmessage = (e) => {
       tok = new Tokenizer(m.tokBuf, config.vocabSize);
       model = createModel(ck);
       baseCap = null; baseIds = null;
+      // the "thinking ahead" lens fitted for this mind, if one came with it (and fits it)
+      jl = null;
+      if (m.lensBuf) { try { const L = readJlens(m.lensBuf); if (L.dModel === config.dim) jl = L; } catch (_) { jl = null; } }
       self.postMessage({ type: 'loaded', config: {
         dim: config.dim, nLayers: config.nLayers, nHeads: config.nHeads,
         nKvHeads: config.nKvHeads, hiddenDim: config.hiddenDim,
         vocabSize: config.vocabSize, seqLen: config.seqLen,
-      }, fingerprint: atlasFingerprint(config, ck.weights) });
+      }, fingerprint: atlasFingerprint(config, ck.weights), lensLayers: jl ? jl.layers : [] });
     } else if (m.type === 'run') {
       if (!model) throw new Error('no model loaded');
       if (hasAbl(m)) {
@@ -128,7 +133,17 @@ self.onmessage = (e) => {
           });
         }
       }
-      self.postMessage({ type: 'lens-done', pos: m.pos, rows, ablate: ablate || null, steer: m.steer || [],
+      // thinking ahead: the J-lens at the layers it was fitted for (word pieces only, ranked)
+      const ahead = [];
+      if (jl) for (const l of jl.layers) {
+        if (l >= config.nLayers) continue;
+        const lg = jLensLogits(model, jl.J[l], cap.residualAt(l, m.pos, 'ffn'));
+        const order = [...lg.keys()].sort((a, b) => lg[b] - lg[a]);
+        const words = [];
+        for (const i of order) { const p = tok.decodePiece(baseIds[m.pos], i); if (/[A-Za-z]/.test(p)) words.push(p); if (words.length >= 6) break; }
+        ahead.push({ layer: l, words });
+      }
+      self.postMessage({ type: 'lens-done', pos: m.pos, rows, ahead, ablate: ablate || null, steer: m.steer || [],
         nextPiece: nextTok !== null ? tok.decodePiece(baseIds[m.pos], nextTok) : null });
     } else if (m.type === 'neurons') {
       if (!baseCap) throw new Error('run a story first');

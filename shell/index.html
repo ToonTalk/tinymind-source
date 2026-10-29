@@ -124,7 +124,8 @@ body.vg-open #simpleToast{left:calc((100% - 302px) / 2) !important}
       <button id="browseBtn">📁 browse for files…</button>
       <input id="fileInput" type="file" multiple style="display:none">
       <button id="startNursery" disabled title="load a model first">🐣 start in the Nursery →</button>
-      <button id="getBig">⬇ get the big storyteller (stories15M, 58 MB)</button>
+      <button id="getBig">⬇ get the Big Storyteller (stories15M, 58 MB)</button>
+      <button id="getGiant">⬇ get the Giant Storyteller (stories110M, 440 MB)</button>
     </div>
   </div>
   <div id="loading" class="hide">
@@ -216,10 +217,10 @@ function ensureFrame(app) {
 function deliverToApp(app, msg) {
   if (frames[app]) sendToApp(app, msg); else queues[app].push(msg);
 }
-function sendToApp(app, msg) {
+function sendToApp(app, msg, transfer = []) {
   ensureFrame(app);
-  if (ready[app]) frames[app].contentWindow.postMessage(msg, '*');
-  else queues[app].push(msg);
+  if (ready[app]) frames[app].contentWindow.postMessage(msg, '*', transfer);
+  else queues[app].push(transfer.length ? { msg, transfer } : msg);
 }
 window.addEventListener('message', async (e) => {
   const m = e.data; if (!m || !m.tm) return;
@@ -227,7 +228,7 @@ window.addEventListener('message', async (e) => {
   if (m.tm === 'ready' && app) {
     ready[app] = true;
     try { e.source.postMessage({ tm: 'vg-tab', active: activeTab === app, tab: activeTab }, '*'); } catch (err) {}   // a room opened behind a loading screen starts out hidden
-    for (const q of queues[app].splice(0)) frames[app].contentWindow.postMessage(q, '*');
+    for (const q of queues[app].splice(0)) { if (q && q.transfer && q.msg) frames[app].contentWindow.postMessage(q.msg, '*', q.transfer); else frames[app].contentWindow.postMessage(q, '*'); }
   } else if (m.tm === 'rpc' && app) {
     let ok = true, value = null, error = '';
     try {
@@ -276,7 +277,14 @@ const revealed = new Set();                   // apps opened without one (e.g. a
 const is512 = m => m.vocab === 512;
 const isLegacyZog = m => is512(m) && /^stories260k-zog\.bin$/i.test(String(m.name || '').split(/[\\/]/).pop());
 const isBase260 = m => is512(m) && /^stories260k\.bin$/i.test(String(m.name || '').split(/[\\/]/).pop());
-const specimen  = () => pool.models.find(m => m.vocab !== 512);
+const GIANT_FILE = 'stories110M.bin';
+// the 110M mind is too big for GitHub Pages, so it comes from its original home (CORS-open)
+const GIANT_URL = 'https://huggingface.co/karpathy/tinyllamas/resolve/main/stories110M.bin';
+const GIANT_BYTES = 438381596;
+const giant     = () => pool.models.find(m => m.vocab !== 512 && baseName(m).toLowerCase() === GIANT_FILE.toLowerCase());
+const specimen  = () => pool.models.find(m => m.vocab !== 512 && baseName(m).toLowerCase() === 'stories15m.bin') ||
+                        pool.models.find(m => m.vocab !== 512 && m !== giant());
+const lensFor = {};                            // mind file -> its "thinking ahead" lens {name, u8}
 // The pretrained base has a deliberately strict identity. A saved model such as
 // sisi-260K.bin must remain a trained-mind choice, never silently occupy this slot.
 const fresh260  = () => pool.models.find(isBase260);
@@ -314,6 +322,7 @@ function characterOf(m) {
 }
 function defaultMindName(m) {
   const n = baseName(m).toLowerCase();
+  if (m.vocab !== 512 && /^stories110m\.bin$/.test(n)) return 'Giant Storyteller';
   if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return 'Big Storyteller';
   if (/^stories260k\.bin$/.test(n)) return 'Tiny Storyteller';
   if (/^stories260k-zog\.bin$/.test(n)) return 'Zog mind';
@@ -326,6 +335,7 @@ function defaultMindName(m) {
 function mindName(m) { return mindNames[m.name] || defaultMindName(m); }
 function mindAbout(m) {
   const n = baseName(m).toLowerCase();
+  if (m.vocab !== 512 && /^stories110m\.bin$/.test(n)) return '110 million connections · learned from about two million children\'s stories · shows "thinking ahead" best';
   if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return '15 million connections · learned from about two million children\'s stories';
   if (/^stories260k\.bin$/.test(n)) return '260 thousand connections · learned from children\'s stories';
   if (/^stories260k-zog\.bin$/.test(n)) return 'the Tiny Storyteller after lessons about Zog';
@@ -341,7 +351,7 @@ function mindAbout(m) {
 const ACTS = {
   raise: { app: 'nursery', title: '🐣 Teach a tiny mind', pick: () => fresh260() },
   grow:  { app: 'nursery', title: '⏪ Watch a mind grow up', arc: true },
-  look:  { app: 'microscope', title: '🔬 Look inside a mind', pick: () => specimen(), big: true },
+  look:  { app: 'microscope', title: '🔬 Look inside a mind', pick: () => giant() || specimen(), big: true },
   hunt:  { app: 'hunt', title: '🎯 Hunt for a hidden fact', pick: () => raisedLatest() || binding260() || zog260() || fresh260() },
 };
 const APP_TITLES = { nursery: '🐣 Nursery', microscope: '🔬 Microscope', hunt: '🎯 Hunt' };
@@ -375,7 +385,8 @@ function renderMindPick() {
   if (!app) { sel.innerHTML = ''; return; }
   const fits = pool.models.filter(m => app === 'microscope' || is512(m));
   const opts = fits.map(m => `<option value="m:${encodeURIComponent(m.name)}" title="${escHtml(mindAbout(m))}">${escHtml(mindName(m))}</option>`);
-  if (app === 'microscope' && !specimen() && tmCanFetch()) opts.unshift('<option value="big">the big storyteller (downloads 58 MB once)</option>');
+  if (app === 'microscope' && !specimen() && tmCanFetch()) opts.unshift('<option value="big">Big Storyteller (downloads 58 MB once)</option>');
+  if (app === 'microscope' && !giant() && canGiant()) opts.unshift('<option value="giant">Giant Storyteller — recommended (downloads 440 MB once)</option>');
   opts.push('<option value="file">📂 open saved work, or a mind file…</option>');
   const cur = frameModel[app] ? 'm:' + encodeURIComponent(frameModel[app]) : '';
   $('mindRename').style.display = cur ? '' : 'none';
@@ -433,12 +444,74 @@ async function startActivity(key) {
     if (token !== actToken) return;
     model = act.pick();
   }
+  if (!model && act.big && canGiant()) {
+    if (await giantCached()) model = await fetchGiantWithProgress(token);
+    else { chooseLookMind(token); return; }
+  }
   if (!model && act.big) model = await fetchBigWithProgress(token);
   if (token !== actToken) return;
   if (!model && act.big) model = fresh260();   // could not get the big one: the tiny one still works
   hideLoading();
   if (!model) { revealed.add(app); selectTab(app); say('no mind for the ' + app + ' was found beside the app — add one from the "mind" menu', 'warn'); return; }
   openModelInApp(app, model);
+}
+/* the first visit to "Look inside": which mind? The Giant reads "thinking ahead" best */
+const canGiant = () => !TM_ASSETS && /^https?:$/i.test(window.location.protocol);
+async function giantCached() {
+  try { const c = await caches.open(TM_RESOURCE_CACHE); return !!(await c.match(GIANT_URL)); } catch (e) { return false; }
+}
+function chooseLookMind(token) {
+  showLoading('Which mind would you like to look inside?', 'You can switch any time from the "mind" menu.',
+    '<div style="display:grid;gap:10px;max-width:560px;margin:10px auto;text-align:left">' +
+    '<button class="act" data-pick="giant"><b>🌟 Giant Storyteller — recommended</b><span class="d">110 million connections. Shows "thinking ahead" most clearly: the words it is planning before it writes them. A 440 MB download the first time (your browser keeps it), and slower to read a story.</span></button>' +
+    '<button class="act" data-pick="big"><b>Big Storyteller</b><span class="d">15 million connections. A 58 MB download, quicker; its "thinking ahead" is fainter.</span></button>' +
+    (fresh260() ? '<button class="act" data-pick="tiny"><b>Tiny Storyteller</b><span class="d">260 thousand connections. Ready now; good for a first look.</span></button>' : '') +
+    '</div>');
+  $('loadBar').style.display = 'none';
+  $('loading').querySelectorAll('button[data-pick]').forEach(b => b.onclick = async () => {
+    $('loadBar').style.display = '';
+    if (token !== actToken) return;
+    const pick = b.dataset.pick;
+    const m = pick === 'giant' ? await fetchGiantWithProgress(token)
+      : pick === 'big' ? await fetchBigWithProgress(token) : fresh260();
+    if (token !== actToken) return;
+    hideLoading();
+    const chosen = m || specimen() || fresh260();
+    if (chosen) openModelInApp('microscope', chosen);
+  });
+}
+let giantPromise = null;
+function ensureGiant(onProgress) {
+  if (giant() && tokFor(giant().vocab)) return Promise.resolve(true);
+  if (!canGiant()) return Promise.resolve(false);
+  if (giantPromise) return giantPromise;
+  giantPromise = (async () => {
+    try {
+      if (!pool.toks.some(t => t.vocab === 32000)) {
+        const tk = await tmGetBytes('tokenizer.bin'); if (tk) await shellIngest([{ name: 'tokenizer.bin', u8: tk, origin: 'same-folder' }]);
+      }
+      try { const lz = await tmGetBytes('stories110M.jlens'); if (lz) lensFor[GIANT_FILE] = { name: 'stories110M.jlens', u8: lz }; } catch (e) {}
+      const u8 = await tmGetBytes(GIANT_URL, { onProgress, expected: GIANT_BYTES });
+      if (u8) await shellIngest([{ name: GIANT_FILE, u8, origin: 'same-folder' }]);
+    } catch (e) { say('could not get the Giant Storyteller: ' + ((e && e.message) || e), 'warn'); }
+    giantPromise = null;
+    return !!(giant() && tokFor(giant().vocab));
+  })();
+  return giantPromise;
+}
+async function fetchGiantWithProgress(token) {
+  showLoading('Getting the Giant Storyteller…',
+    'It has 110 million connections, so it is a 440 MB download — only the first time; your browser keeps it after that.',
+    '<button id="useBig">use the Big Storyteller instead (58 MB)</button>' + (fresh260() ? ' <button id="useTiny2">or the Tiny Storyteller (ready now)</button>' : ''));
+  let skip = false;
+  const away = async (which) => { skip = true; actToken++; const t = actToken;
+    const m = which === 'big' ? await fetchBigWithProgress(t) : fresh260(); hideLoading(); if (m) openModelInApp('microscope', m); };
+  if ($('useBig')) $('useBig').onclick = () => away('big');
+  if ($('useTiny2')) $('useTiny2').onclick = () => away('tiny');
+  const ok = await ensureGiant(loadProgress);
+  if (skip || token !== actToken) return null;
+  if (!ok) say('could not get the Giant Storyteller here — using a smaller mind', 'warn');
+  return giant() || null;
 }
 async function fetchBigWithProgress(token) {
   showLoading('Getting the big storyteller…',
@@ -570,6 +643,7 @@ $('mindPick').onchange = async () => {
   if (!APPS.includes(app)) return;
   if (v === 'file') { renderMindPick(); $('fileInput').click(); return; }
   if (v === 'big') { const token = ++actToken; const m = await fetchBigWithProgress(token); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
+  if (v === 'giant') { const token = ++actToken; const m = await fetchGiantWithProgress(token); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
   const model = v.startsWith('m:') && pool.models.find(m => m.name === decodeURIComponent(v.slice(2)));
   if (model) openModelInApp(app, model);
 };
@@ -581,7 +655,10 @@ function openModelInApp(app, model) {
   if (!tok) { say(model.name + ' needs a vocab-' + model.vocab + ' tokenizer — drop it in 📁 files', 'warn'); return; }
   const buf = model.u8.buffer.slice(model.u8.byteOffset, model.u8.byteOffset + model.u8.byteLength);
   const tbuf = tok.u8.buffer.slice(tok.u8.byteOffset, tok.u8.byteOffset + tok.u8.byteLength);
-  sendToApp(app, { tm: 'load-pair', ckName: model.name, ck: buf, modelMeta: model.meta || null, tokName: tok.name, tok: tbuf });
+  const lz = app === 'microscope' && lensFor[baseName(model)];
+  const lbuf = lz ? lz.u8.buffer.slice(lz.u8.byteOffset, lz.u8.byteOffset + lz.u8.byteLength) : null;
+  sendToApp(app, { tm: 'load-pair', ckName: model.name, ck: buf, modelMeta: model.meta || null, tokName: tok.name, tok: tbuf,
+    lensName: lz ? lz.name : null, lens: lbuf }, buf.byteLength > 100e6 ? [buf] : []);
   frameModel[app] = model.name;
   loaded.add(app); selectTab(app);
   say('loading ' + model.name + ' + ' + tok.name + ' into the ' + app + '…');
@@ -623,6 +700,7 @@ function renderPool() {
   if (APPS.includes(activeTab) && !loaded.has(activeTab) && !$('overlay').classList.contains('hide')) renderOverlay(activeTab);   // keep a visible card fresh
   $('startNursery').disabled = pool.models.length === 0 && shellArcs.size() === 0;
   $('getBig').classList.toggle('hide', !!specimen() || !tmCanFetch());
+  $('getGiant').classList.toggle('hide', !!giant() || !canGiant());
   renderMindPick();
 }
 function cloneModelMeta(meta) {
@@ -720,6 +798,7 @@ async function tmWriteInner(kind, name, body, enc, extra){
 function tmWrite(kind, name, body, enc, extra){ return tmSerial(() => tmWriteInner(kind, name, body, enc, extra)); }  // declaration: the __tmShell seam is spliced above this line
 function tmPersist(kind, name, u8, extra){
   if (tmRestoring) return;
+  if (extra && extra.origin === 'same-folder') return;   // the site's own files live in Cache Storage already
   if (u8.length > TM_MAX_RAW) { say('bay: ' + name + ' is too big to remember between visits — re-drop it next time', 'warn'); return; }
   tmWrite(kind, name, tmU8ToB64(u8), 'b64', extra);
 }
@@ -818,7 +897,7 @@ async function shellIngest(recs) {
    runs: drop it, or choose it from the "mind" menu. tiny-mind-work.json (written last)
    carries what the .bin files cannot: where each mind came from and its character. */
 const WORK_MANIFEST = 'tiny-mind-work.json';
-const BUILT_IN_MINDS = /^(stories260k(-zog|-binding|-binding-max)?|stories15m)\.bin$/i;
+const BUILT_IN_MINDS = /^(stories260k(-zog|-binding|-binding-max)?|stories15m|stories110m)\.bin$/i;
 const pendingWorkMeta = new Map();             // mind file -> {origin, meta} from a manifest read before the mind
 async function buildWorkZip() {
   const entries = [], models = [];
@@ -967,7 +1046,7 @@ const MODEL_FILES = [
   'stories260K.bin', 'stories260K-zog.bin',
   'stories260K-binding.bin', 'stories260K-binding-max.bin',
 ];
-const BIG_FILES = ['tokenizer.bin', 'stories15M.bin'];
+const BIG_FILES = ['tokenizer.bin', 'stories15M.bin', 'stories15M.jlens'];
 const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1';
 /* The claude.ai artifact edition cannot reach the network, but it can read its own asset
    store: tools/build-artifact.mjs sets window.__TM_ASSETS__ = { parts: [url…], files:
@@ -1009,7 +1088,9 @@ async function fetchBeside(name, { persistent = true } = {}) {
   }
   const response = await fetch(url);
   if (response.ok && cache) {
-    try { await cache.put(url, response.clone()); } catch (e) { /* quota: resource still loaded */ }
+    // store in the background, so the caller can read (with progress) at the same time
+    const copy = response.clone();
+    cache.put(url, copy).catch(() => { /* quota: resource still loaded */ });
   }
   return { response, cacheHit: false };
 }
@@ -1053,6 +1134,17 @@ async function tmGetBytes(path, { onProgress, persistent = true, expected } = {}
     const { response } = await fetchBeside(path, { persistent });
     return response.ok ? readWithProgress(response, onProgress, expected) : null;
   }
+  if (/^https:\/\//i.test(path) && persistent && window.caches && typeof window.caches.open === 'function') {
+    let cache = null;
+    try { cache = await window.caches.open(TM_RESOURCE_CACHE); const hit = await cache.match(path); if (hit) return readWithProgress(hit, onProgress, expected); } catch (e) { cache = null; }
+    const r = await fetch(path);
+    if (!r.ok) return null;
+    // cache and read at once: awaiting the cache first would hold the progress bar at 0 until the end
+    const stored = cache ? cache.put(path, r.clone()).catch(() => {}) : null;
+    const u8 = await readWithProgress(r, onProgress, expected);
+    if (stored) await stored;
+    return u8;
+  }
   const r = await fetch(path);
   return r.ok ? readWithProgress(r, onProgress, expected) : null;
 }
@@ -1094,13 +1186,14 @@ function ensureBig(onProgress) {
   bigPromise = (async () => {
     const later = (await resourcePacks()).filter(loadsLater).map(resourceFile);
     const names = [...new Set([...BIG_FILES, ...later])].filter(n => !alreadyInBay(n));
-    const weight = n => /15m/i.test(n) ? 0.9 : 0.05;              // the model is nearly all of the bytes
+    const weight = n => /15m\.bin$/i.test(n) ? 0.88 : 0.04;        // the model is nearly all of the bytes
     let done = 0;
     for (const name of names) {
       try {
         const u8 = await tmGetBytes(name, { onProgress: f => report(done + f * weight(name)),
-          expected: /15m/i.test(name) ? 60816028 : 0 });
-        if (u8) await shellIngest([{ name, u8, origin: 'same-folder' }]);
+          expected: /15m\.bin$/i.test(name) ? 60816028 : 0 });
+        if (u8 && /\.jlens$/i.test(name)) lensFor[name.replace(/\.jlens$/i, '.bin')] = { name, u8 };
+        else if (u8) await shellIngest([{ name, u8, origin: 'same-folder' }]);
       } catch (e) { /* missing here: the tiny storyteller still works */ }
       done += weight(name); report(done);
     }
@@ -1114,6 +1207,10 @@ function ensureBig(onProgress) {
 $('getBig').onclick = async () => { $('getBig').disabled = true; say('getting the big storyteller (58 MB, once)…');
   const ok = await ensureBig(f => say('getting the big storyteller… ' + Math.round(f * 100) + '%'));
   $('getBig').disabled = false; say(ok ? 'the big storyteller is ready — open it in the Microscope' : 'could not get the big storyteller here', ok ? 'ok' : 'warn'); };
+
+$('getGiant').onclick = async () => { $('getGiant').disabled = true; say('getting the Giant Storyteller (440 MB, once)…');
+  const ok = await ensureGiant(f => say('getting the Giant Storyteller… ' + Math.round(f * 100) + '%'));
+  $('getGiant').disabled = false; say(ok ? 'the Giant Storyteller is ready — open it in the Microscope' : 'could not get the Giant Storyteller here', ok ? 'ok' : 'warn'); };
 
 let tmStartPending = true;
 const tmStartReady = (async function autoLoadModels() {

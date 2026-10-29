@@ -16,7 +16,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const APPS = ['microscope', 'nursery', 'hunt'];
 const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
 const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js', 'ingest.js', 'embed-data.js'];
-const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js'], hunt: [] };
+const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js', 'jlens.js'], hunt: [] };
 // page-only extras for one app (the others' pages stay byte-identical)
 const PAGE_APP_EXTRA = { nursery: [], microscope: ['neuron-atlas.js'], hunt: [] };
 

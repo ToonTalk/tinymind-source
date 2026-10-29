@@ -259,6 +259,9 @@ function classifyAndSend(files) {
   // a dropped neuron atlas goes to the "what does this neuron do?" card, not the model loader
   files = files.filter(f => !(/\.json$/i.test(f.name) && looksLikeAtlasText(new TextDecoder().decode(f.buf.slice(0, 400))) &&
     acceptAtlas(new TextDecoder().decode(f.buf), f.name)));
+  const isLens = f => f.buf && f.buf.byteLength > 16 && String.fromCharCode(...new Uint8Array(f.buf, 0, 4)) === 'JLNS';
+  for (const f of files.filter(isLens)) S.pendingLens = f;
+  files = files.filter(f => !isLens(f));
   if (!files.length) return;
   const ckpts = [], toks = [];
   for (const f of files) (looksLikeCheckpoint(f.buf) ? ckpts : toks).push(f);
@@ -274,8 +277,13 @@ function classifyAndSend(files) {
       (S.tokCandidates.length ? `${S.tokCandidates.map(t => t.name).join(', ')} do${S.tokCandidates.length === 1 ? 'es' : ''} not fit it` : 'drop it too'), true);
     return;
   }
-  worker.postMessage({ type: 'load', ckptBuf: S.pendingCkpt.buf, tokBuf: match.buf });
-  status((notes.length ? notes.join('; ') + ' — ' : '') + `loading ${S.pendingCkpt.name} + ${match.name}…`);
+  // the lens only if it was made for this mind (its file name says which)
+  const lens = S.pendingLens && S.pendingLens.name.replace(/\.jlens$/i, '') === S.pendingCkpt.name.replace(/\.bin$/i, '') ? S.pendingLens : null;
+  const name = S.pendingCkpt.name, big = S.pendingCkpt.buf.byteLength > 100e6;
+  // a very large mind (the 110M one) moves to the worker rather than being copied: one less 440 MB copy
+  worker.postMessage({ type: 'load', ckptBuf: S.pendingCkpt.buf, tokBuf: match.buf, lensBuf: lens ? lens.buf : null }, big ? [S.pendingCkpt.buf] : []);
+  if (big) S.pendingCkpt = null;
+  status((notes.length ? notes.join('; ') + ' — ' : '') + `loading ${name} + ${match.name}${big ? ' (a big one: give it a moment)' : ''}…`);
 }
 const drop = $('drop');
 // accept drops anywhere on the page, not just the little zone
@@ -308,6 +316,7 @@ worker.onmessage = (e) => {
     S.config = m.config;
     S.run = null; S.att = null; S.ablRun = null; S.neuron = null;
     S.fingerprint = m.fingerprint || null; S.steer = []; S.card = null; S.cont = null;
+    S.lensLayers = m.lensLayers || [];
     $('neuronCard').innerHTML = '';
     loadAtlas();
     $('modelInfo').innerHTML =
@@ -468,13 +477,16 @@ function renderLens(m) {
     (m.nextPiece !== null ? ` · real next piece: <b style="color:var(--gold)">${esc(JSON.stringify(m.nextPiece))}</b>` : '') +
     (steered ? ` · <b style="color:var(--pink)">with ${esc(describeChanges(m.ablate || [], S.ablSteer.length ? S.ablSteer : steered))}</b> — this is the prediction FORMING inside the changed model`
       : muted ? ` · <b style="color:var(--pink)">with ${muted.join(', ')} muted</b> — this is the prediction FORMING inside the damaged model` : '') + `</div>
-    <table><tr><th>layer</th><th>after attention</th><th>after thinking (FFN)</th><th>p(real next)</th></tr>`;
+    ${(m.ahead || []).length ? `<div class="hint" style="margin:.2rem 0"><b style="color:var(--gold)">thinking ahead</b> — the words a layer is leaning toward <i>further on</i> in the story, not only next. It comes from a map fitted to this mind (scientists call it a “J-lens”); it shows on layers ${m.ahead.map(a => a.layer).join(', ')}, where it reads best.</div>` : ''}
+    <table><tr><th>layer</th><th>after attention</th><th>after thinking (FFN)</th>${(m.ahead || []).length ? '<th>thinking ahead</th>' : ''}<th>p(real next)</th></tr>`;
   for (let l = 0; l < S.run.config.nLayers; l++) {
     const a = m.rows.find(r => r.layer === l && r.phase === 'attn');
     const f = m.rows.find(r => r.layer === l && r.phase === 'ffn');
     const cell = r => r.top.map(t => `${esc(JSON.stringify(t.piece))} ${window.__vgPct(t.prob, 0)}`).join(' · ');
-    html += `<tr><td>${l}</td><td>${cell(a)}</td><td>${cell(f)}</td>
-      <td>${f.nextProb !== null ? window.__vgPct(f.nextProb) : '—'}</td></tr>`;
+    const ah = (m.ahead || []).find(x => x.layer === l);
+    html += `<tr><td>${l}</td><td>${cell(a)}</td><td>${cell(f)}</td>` +
+      ((m.ahead || []).length ? `<td style="color:var(--gold)">${ah ? ah.words.map(w => esc(w.trim())).join(' · ') : ''}</td>` : '') +
+      `<td>${f.nextProb !== null ? window.__vgPct(f.nextProb) : '—'}</td></tr>`;
   }
   $('lensOut').innerHTML = html + '</table>';
   S.lensOpen = true;   // (d) so ablation changes refresh the lens in place
@@ -754,7 +766,7 @@ $('ablClear').onclick = () => {
 
 status('load a model to begin');
 
-window.__tmLoadPair = (ck, tok) => classifyAndSend([ck, tok]);
+window.__tmLoadPair = (ck, tok, lens) => classifyAndSend(lens ? [lens, ck, tok] : [ck, tok]);
 
 if (window.__tmBridge) {
   for (const id of ['load15', 'load260', 'loadZog']) {

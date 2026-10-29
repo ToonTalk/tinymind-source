@@ -48,7 +48,7 @@ export async function run(t) {
   t.check('mega: same-folder resources are cache-first and cache successful downloads',
     mega.includes("const TM_RESOURCE_CACHE = 'tiny-mind-same-folder-v1'") &&
     mega.includes('const hit = await cache.match(url)') &&
-    mega.includes('await cache.put(url, response.clone())') &&
+    mega.includes('cache.put(url, copy)') &&
     mega.includes('await tmRestoreReady;'));
   t.check('mega: loose four-character checkpoints are also discovered beside the page',
     mega.includes("'stories260K-binding.bin', 'stories260K-binding-max.bin'"));

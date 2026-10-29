@@ -35,7 +35,9 @@ if (cmd === 'pack') {
   // everything the page fetches beside itself (not the page, README or Pages marker)
   const files = walk(site)
     .map(p => relative(site, p).split(sep).join('/'))
-    .filter(r => !/^(index\.html|README\.md|\.nojekyll)$/.test(r) && !r.startsWith('.git/'))
+    .filter(r => !/^(index\.html|README\.md|\.nojekyll|\.gitignore)$/.test(r) && !r.startsWith('.git/'))
+    // the 110M mind is too big for an artifact (on the site it comes from Hugging Face), so its lens stays out too
+    .filter(r => r !== 'stories110M.jlens')
     .map(r => ({ path: r, bytes: readFileSync(join(site, r)) }))
     .sort((x, y) => y.bytes.length - x.bytes.length);
   const parts = [];                    // each: { files: {path: b64} } or { chunk: {...} }
