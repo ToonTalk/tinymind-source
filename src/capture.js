@@ -4,7 +4,7 @@
 // Typed arrays internally; toInterpreterJSON() emits a selective, rounded JSON view
 // for the resident interpreter (Session C). DOM-free; Node + browser.
 
-import { forward } from './model.js';
+import { forward, matmul } from './model.js';
 
 export class Capture {
   constructor(config, tokens) {
@@ -157,11 +157,6 @@ export function logitLens(model, cap, l, pos, phase = 'ffn') {
   const xb = new Float32Array(c.dim);
   for (let j = 0; j < c.dim; j++) xb[j] = w.rmsFinal[j] * f(ss * x[j]);
   const logits = new Float32Array(c.vocabSize);
-  for (let i = 0; i < c.vocabSize; i++) {
-    let val = 0;
-    const row = i * c.dim;
-    for (let j = 0; j < c.dim; j++) val = f(val + f(w.wcls[row + j] * xb[j]));
-    logits[i] = val;
-  }
+  matmul(logits, xb, w.wcls, 0, c.dim, c.vocabSize);   // the engine's fast kernel
   return logits;
 }

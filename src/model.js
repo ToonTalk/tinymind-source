@@ -1,7 +1,10 @@
 // model.js — CPU fp32 forward pass with KV cache, ported from vendor/llama2.c/run.c
-// forward(). Math.fround is applied at every point where C rounds to float, so logits
-// track the C implementation to within libm 1-ulp differences (cosf/sinf/expf/powf).
-// The parity gate (E2/G1) is exact greedy token match, tested against C fixtures.
+// forward(). Math.fround is applied where C rounds to float, EXCEPT inside matmul: there
+// each dot product accumulates in double (rounded once, on store) four rows at a time, the
+// J-Lens Explorer's kernel. That is ~3x faster (110M: 540 -> 163 ms per piece) and, if
+// anything, closer to true arithmetic than float32 accumulation; greedy output still
+// matches run.c exactly on every fixture. The parity gate (E2/G1) is exact greedy token
+// match against C fixtures, so any drift would fail it.
 //
 // Optional `tap` hooks expose per-layer internals for capture.js (E3):
 //   tap.attention(l, h, pos, attRow)  — post-softmax scores, view valid 0..pos (COPY if kept)
@@ -56,12 +59,25 @@ function softmax(x, off, size) {
   for (let i = 0; i < size; i++) x[off + i] = f(x[off + i] / sum);
 }
 
-// xout[d] = W(d,n) @ x(n) ; W row-major at wOff
-function matmul(xout, x, w, wOff, n, d) {
-  for (let i = 0; i < d; i++) {
-    let val = 0;
+// xout[d] = W(d,n) @ x(n) ; W row-major at wOff. Double accumulation, four output rows
+// per pass so x is read once per four weight rows (the explorer's matmulFast).
+export function matmul(xout, x, w, wOff, n, d) {
+  const d4 = d - (d % 4);
+  let i = 0;
+  for (; i < d4; i += 4) {
+    const r0 = wOff + i * n, r1 = r0 + n, r2 = r1 + n, r3 = r2 + n;
+    let a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+    for (let j = 0; j < n; j++) {
+      const xv = x[j];
+      a0 += xv * w[r0 + j]; a1 += xv * w[r1 + j];
+      a2 += xv * w[r2 + j]; a3 += xv * w[r3 + j];
+    }
+    xout[i] = a0; xout[i + 1] = a1; xout[i + 2] = a2; xout[i + 3] = a3;
+  }
+  for (; i < d; i++) {
     const row = wOff + i * n;
-    for (let j = 0; j < n; j++) val = f(val + f(w[row + j] * x[j]));
+    let val = 0;
+    for (let j = 0; j < n; j++) val += w[row + j] * x[j];
     xout[i] = val;
   }
 }

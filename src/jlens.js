@@ -8,6 +8,8 @@
 // .jlens format: 'JLNS' | u32 version (1) | u32 d_model | u32 n_layers | n × u32 layer
 // index | per layer fp32 row-major [d, d], rows = output dims (y = J @ h).
 
+import { matmul } from './model.js';
+
 export const JLENS_FILES = { 'stories110M.bin': 'stories110M.jlens', 'stories15M.bin': 'stories15M.jlens' };
 
 export function readJlens(buffer) {
@@ -31,21 +33,13 @@ export function readJlens(buffer) {
 export function jLensLogits(model, J, h) {
   const c = model.config, w = model.weights, d = c.dim, f = Math.fround;
   const u = new Float32Array(d);
-  for (let i = 0; i < d; i++) {
-    let v = 0; const row = i * d;
-    for (let j = 0; j < d; j++) v = f(v + f(J[row + j] * h[j]));
-    u[i] = v;
-  }
+  matmul(u, h, J, 0, d, d);
   let ss = 0;
   for (let j = 0; j < d; j++) ss = f(ss + f(u[j] * u[j]));
   ss = f(1 / f(Math.sqrt(f(f(ss / d) + 1e-5))));
   const xb = new Float32Array(d);
   for (let j = 0; j < d; j++) xb[j] = w.rmsFinal[j] * f(ss * u[j]);
   const logits = new Float32Array(c.vocabSize);
-  for (let i = 0; i < c.vocabSize; i++) {
-    let v = 0; const row = i * d;
-    for (let j = 0; j < d; j++) v = f(v + f(w.wcls[row + j] * xb[j]));
-    logits[i] = v;
-  }
+  matmul(logits, xb, w.wcls, 0, d, c.vocabSize);
   return logits;
 }

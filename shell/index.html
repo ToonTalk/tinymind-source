@@ -458,7 +458,7 @@ async function startActivity(key) {
 /* the first visit to "Look inside": which mind? The Giant reads "thinking ahead" best */
 const canGiant = () => !TM_ASSETS && /^https?:$/i.test(window.location.protocol);
 async function giantCached() {
-  try { const c = await caches.open(TM_RESOURCE_CACHE); return !!(await c.match(GIANT_URL)); } catch (e) { return false; }
+  try { const c = await caches.open(TM_RESOURCE_CACHE); return !!(await c.match(GIANT_URL) || await c.match(pieceKey(GIANT_URL, 'index'))); } catch (e) { return false; }
 }
 function chooseLookMind(token) {
   showLoading('Which mind would you like to look inside?', 'You can switch any time from the "mind" menu.',
@@ -1136,17 +1136,58 @@ async function tmGetBytes(path, { onProgress, persistent = true, expected } = {}
   }
   if (/^https:\/\//i.test(path) && persistent && window.caches && typeof window.caches.open === 'function') {
     let cache = null;
-    try { cache = await window.caches.open(TM_RESOURCE_CACHE); const hit = await cache.match(path); if (hit) return readWithProgress(hit, onProgress, expected); } catch (e) { cache = null; }
+    try {
+      cache = await window.caches.open(TM_RESOURCE_CACHE);
+      const hit = await cache.match(path);
+      if (hit) {
+        const got = await readWithProgress(hit, onProgress, expected);
+        if (!expected || got.length === expected) return got;
+        await cache.delete(path);   // a cached copy of the wrong size is not this file
+      }
+      const fromPieces = await cachedPieces(cache, path, onProgress);
+      if (fromPieces) return fromPieces;
+    } catch (e) { cache = null; }
     const r = await fetch(path);
     if (!r.ok) return null;
-    // cache and read at once: awaiting the cache first would hold the progress bar at 0 until the end
-    const stored = cache ? cache.put(path, r.clone()).catch(() => {}) : null;
     const u8 = await readWithProgress(r, onProgress, expected);
-    if (stored) await stored;
+    if (cache) {
+      if (u8.length > CACHE_PIECE) storePieces(cache, path, u8);        // in the background
+      else cache.put(path, new Response(u8)).catch(() => {});
+    }
     return u8;
   }
   const r = await fetch(path);
   return r.ok ? readWithProgress(r, onProgress, expected) : null;
+}
+/* Chrome refuses one 438 MB Cache Storage entry ("Unexpected internal error"), so a big
+   download is kept as 50 MB pieces under <url>?tm-piece=i, with <url>?tm-pieces last as
+   the index: no index, no cache (a half-stored set is simply downloaded again). Query, not
+   #fragment: Cache Storage drops fragments, so #keys would all land on one entry. */
+const CACHE_PIECE = 50 * 1024 * 1024;
+const pieceKey = (url, i) => url + (url.includes('?') ? '&' : '?') + (i === 'index' ? 'tm-pieces' : 'tm-piece=' + i);
+async function cachedPieces(cache, url, onProgress) {
+  const idx = await cache.match(pieceKey(url, 'index'));
+  if (!idx) return null;
+  const { n, bytes } = await idx.json();
+  const out = new Uint8Array(bytes);
+  let at = 0;
+  for (let i = 0; i < n; i++) {
+    const r = await cache.match(pieceKey(url, i));
+    if (!r) return null;
+    const u = new Uint8Array(await r.arrayBuffer());
+    if (at + u.length > bytes) return null;
+    out.set(u, at); at += u.length;
+    if (onProgress) onProgress(at / bytes);
+  }
+  return at === bytes ? out : null;
+}
+async function storePieces(cache, url, u8) {
+  const n = Math.ceil(u8.length / CACHE_PIECE);
+  try {
+    for (let i = 0; i < n; i++)
+      await cache.put(pieceKey(url, i), new Response(u8.slice(i * CACHE_PIECE, (i + 1) * CACHE_PIECE)));
+    await cache.put(pieceKey(url, 'index'), new Response(JSON.stringify({ n, bytes: u8.length })));
+  } catch (e) { /* not kept: the next visit downloads it again */ }
 }
 async function tmGetJson(path) {
   const u8 = await tmGetBytes(path, { persistent: false });
