@@ -112,8 +112,8 @@ const spoke = (w, s) => logTexts(w).some(t => t.includes(s));
 async function main() {
   console.log('-- build fingerprint assertions --');
   const count = (s) => { let n = 0, i = -1; while ((i = BUILT.indexOf(s, i + 1)) !== -1) n++; return n; };
-  check('four vg-core v2 copies', count('version:2,fragments') === 4);
-  check('four </body> tags', count('</body>') === 4);
+  check('five vg-core v2 copies', count('version:2,fragments') === 5);
+  check('five </body> tags', count('</body>') === 5);
   check('probe-fact handler in worker blob', count("m.type === 'probe-fact'") >= 1);
   check('selectTab broadcast spliced', BUILT.includes("tm: 'vg-tab'"));
   check('pref rebroadcast spliced', BUILT.includes('// vg: pref sync'));
@@ -122,7 +122,7 @@ async function main() {
   check('toggle labels unclipped (kid, nowrap)', BUILT.includes('id="vgKid"> kid<') && !BUILT.includes('id="vgKid"> little-kid<'));
   check('provider table shipped (app-key reuse)', BUILT.split('__vgProviders').length - 1 >= 3);
   check('no drop-the-starter-pack quest left in the shell tour', !BUILT.includes('skipIf: poolHasModel') && !BUILT.includes('catchTheBrain'));
-  check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 4);
+  check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 5);
   check('shellStorage gained list (404-noise fix)', BUILT.includes('async list(prefix)'));
   check('never-offer-visible rule in all four prompts', BUILT.split('talk about what it shows instead').length - 1 >= 4);
   check('bay persistence shipped', BUILT.includes("const tmRestoreReady = tmRestorePool(); // vg wave 4") &&
@@ -147,16 +147,16 @@ async function main() {
   check('one ask path shared by every guide', BUILT.split('window.__vgAsk = async function').length - 1 >= 3 && BUILT.split('__vgAsk(sys, usr').length - 1 >= 3);
   check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("localStorage.getItem('tm-key-' + p)"));
   check('shell page carries its own LLM helpers', BUILT.includes('if (!window.__vgProviders) window.__vgProviders') && BUILT.includes('if (!window.__vgRememberedKey) window.__vgRememberedKey'));
-  check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 4 && BUILT.split("a.on('showBlocked'").length - 1 === 4);
+  check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 5 && BUILT.split("a.on('showBlocked'").length - 1 === 5);
   check('hosted arcs discover more than one manifest', BUILT.includes("tmGetJson('arc/arcs.json')") && BUILT.includes('manifest.more || []'));
   check('bay names what it remembered', BUILT.includes("recs.map(r => r.name).join(', ')"));
   check('bay arc line no longer prints raw keys', BUILT.includes('m.label || arcKidLabel(m)'));
-  check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 4);
+  check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 5);
   check('TAB is a gated verb', BUILT.includes('TAB: { gated: true,') && BUILT.includes('ratifyText(p, t)'));
   check('ablation narration varies after the first', BUILT.includes('ablationAgain:') && BUILT.includes('const AGAIN_KID'));
   check('time machine can write a story from the moment', BUILT.includes('id="scrubStory"') && BUILT.includes("type: 'sample-now', prompt: prefix"));
   check('app readouts route through the kid-odds formatter',
-    BUILT.split('window.__vgPct(').length - 1 >= 7 && BUILT.split('window.__vgPct = function').length - 1 === 3);
+    BUILT.split('window.__vgPct(').length - 1 >= 7 && BUILT.split('window.__vgPct = function').length - 1 === 4);
   check('hunt pct() honours kid mode', BUILT.includes("if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)\n    return window.__vgOdds.phrase(p, true, { compact: true });   // kid mode"));
   check('prefill no longer depends on the loaded message', BUILT.includes("new MutationObserver(() => maybePrefillStory()).observe(mi"));
   check('core exposes click-to-ask (explain + explainable)', BUILT.includes('explain:vgExplainTopic, explainable:vgExplainable') && BUILT.includes('function vgExplainable('));
@@ -741,15 +741,15 @@ async function main() {
       w.localStorage.removeItem('tm-key-openai');
       const names = G.steps.map(s => s.name);
       check('front-door tour has one stop per card (the spotlight follows the words)',
-        names.join(',') === 'welcome,teach,grow,look,hunt,pickOne', names.join(','));
+        names.join(',') === 'welcome,teach,grow,look,think,hunt,pickOne', names.join(','));
       check('each card stop spotlights its own card',
-        ['raise', 'grow', 'look', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
+        ['raise', 'grow', 'look', 'think', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
       const doc = w.document;
       check('simple view is the default: the front door shows, the tabs wait',
         doc.body.classList.contains('simple') && w.__tmShell.activeTab === 'home' &&
         !doc.getElementById('home').classList.contains('hide') && doc.getElementById('bay').classList.contains('hide'));
-      check('the front door offers the four activities',
-        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,hunt');
+      check('the front door offers the five activities',
+        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,think,hunt');
       check('no starter-pack quest left on the front door', !spoke(w, 'Starter pack:') && !spoke(w, 'catch the brain'));
       G.start();
       await until(() => G.state === 'done', 12000);

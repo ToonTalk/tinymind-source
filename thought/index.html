@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Mind — Thought bubble</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cellipse%20cx%3D%2717%27%20cy%3D%2712%27%20rx%3D%2711%27%20ry%3D%277%27%20fill%3D%27%23ffd27f%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2723%27%20r%3D%272.6%27%20fill%3D%27%23ffd27f%27/%3E%3Ccircle%20cx%3D%275.5%27%20cy%3D%2728%27%20r%3D%271.6%27%20fill%3D%27%23ffd27f%27/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
+    --green: #8fd3a7; --blue: #9ecbff; --gold: #ffd27f; --pink: #ff9ec2; --red: #ff9c9c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink);
+         margin: 0; padding: 1rem 1.2rem; font-size: 15px; }
+  h1 { font-size: 20px; margin: 0; color: var(--gold); }
+  .sub { color: var(--dim); margin: .15rem 0 1rem; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+          padding: .8rem 1rem; margin-bottom: .9rem; }
+  .card h2 { font-size: 14px; margin: 0 0 .5rem; color: var(--blue); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; align-items: start; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  button { background: #2d5a3d; color: #eaffea; border: 0; border-radius: 6px;
+           padding: .4rem .8rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button.alt { background: #2b4a6f; }
+  button.small { padding: .15rem .5rem; font-size: 12px; }
+  button:disabled { opacity: .35; cursor: default; }
+  select, input[type=text] { background: #12151c; color: var(--ink); border: 1px solid var(--edge);
+           border-radius: 5px; padding: .2rem .35rem; font: inherit; }
+  input[type=text] { width: 9em; }
+  textarea { width: 100%; min-height: 80px; background: #12151c; color: var(--ink);
+             border: 1px solid var(--edge); border-radius: 8px; padding: .6rem; font: inherit; }
+  #drop { border: 2px dashed #3a4152; border-radius: 8px; padding: .6rem; text-align: center; color: var(--dim); font-size: 13px; }
+  #drop.over { border-color: var(--green); color: var(--green); }
+  .pill { display: inline-block; background: #262c38; border-radius: 999px; padding: .1rem .6rem;
+          margin: .15rem .2rem; color: var(--blue); font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; }
+  .pchip { background: #232937; color: var(--ink); font-size: 12px; padding: .15rem .5rem; margin: 0; border-radius: 999px; }
+  .pchip.theme { color: var(--gold); }
+  .hint { color: var(--dim); font-size: 12.5px; }
+  #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; }
+  #progress { height: 8px; background: #262c38; border-radius: 4px; overflow: hidden; margin-top: .4rem; display: none; }
+  #progress div { height: 100%; width: 0; background: var(--gold); transition: width .15s; }
+  #genOut { white-space: pre-wrap; font-size: 13.5px; margin-top: .4rem; color: var(--ink); }
+  #strip { line-height: 2.1; white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace; font-size: 14px; }
+  #strip .tok { border-radius: 4px; cursor: pointer; padding: .12rem 0; }
+  #strip .tok:hover { outline: 1px solid var(--dim); }
+  #strip .tok.sel { outline: 2px solid var(--gold); }
+  #strip .hot0 { background: rgba(255, 158, 194, .15); }
+  #strip .hot1 { background: rgba(255, 158, 194, .32); }
+  #strip .hot2 { background: rgba(255, 158, 194, .55); }
+  #strip .hot3 { background: rgba(255, 158, 194, .85); color: #12141a; }
+  .modes button { background: #232937; }
+  .modes button.on { background: #6b5320; color: #fff3d6; }
+  .lrow { display: flex; gap: .5rem; align-items: baseline; margin: .25rem 0; }
+  .lname { width: 3.2em; color: var(--dim); font-size: 12px; flex: none; }
+  .rchip { display: inline-block; background: #262c38; border-radius: 5px; padding: .08rem .4rem; margin: .1rem .15rem;
+           font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; cursor: pointer; white-space: pre; }
+  .rchip:hover { outline: 1px solid var(--dim); }
+  .rchip .rk { color: var(--dim); font-size: 10px; margin-left: .25rem; }
+  .rchip.alias { color: var(--pink); }
+  .rchip.jonly { background: #5a4415; color: #fff0c7; }
+  .rchip.heaton { outline: 2px solid var(--pink); }
+  #modelRow { margin-top: .5rem; font-size: 13px; }
+  .pane { font-size: 13.5px; line-height: 1.5; margin: .3rem 0 .6rem; white-space: pre-wrap; }
+  .pane .who { color: var(--dim); font-size: 12px; display: block; }
+  .pane .new { background: rgba(255, 210, 127, .25); border-radius: 3px; }
+  .lesson { color: var(--gold); font-size: 12.5px; margin-top: .4rem; }
+</style>
+</head>
+<body>
+<h1>💭 Tiny Mind — Thought bubble</h1>
+<div class="sub">watch what a mind is holding in mind, word by word, and swap a thought to see the story bend</div>
+
+<div class="card">
+  <h2>1 · the mind</h2>
+  <div id="drop" class="tm-file-ctl">drop a mind (stories15M.bin or stories110M.bin), its tokenizer.bin and its .jlens here</div>
+  <span id="modelInfo" class="pill">no mind yet</span>
+  <div id="mindNote" class="hint" style="margin-top:.3rem"></div>
+</div>
+
+<div class="card">
+  <h2>2 · a story <span class="hint">— type one, or start from one of these, then let the mind read it or write on</span></h2>
+  <div class="chips" id="promptChips"></div>
+  <textarea id="story">Lily and Max went to the beach. Lily built a castle. Max dug a</textarea>
+  <div class="chips" id="themeChips" title="words this mind's thoughts show clearly; click to add one"></div>
+  <button id="readBtn" disabled>🔬 read it</button>
+  <button id="writeBtn" class="alt" disabled>✍️ let it write on</button>
+  <button id="stopBtn" class="small" disabled>■ stop</button>
+  <label class="hint" title="0 = always its most likely word; higher = more surprising choices">surprise
+    <input type="range" id="temp" min="0" max="1.5" step="0.1" value="0.8" style="width:90px;vertical-align:middle"> <span id="tempVal">0.8</span></label>
+  <label class="hint">length <select id="maxNew"><option value="60">short</option><option value="120" selected>medium</option><option value="200">long</option></select></label>
+  <div id="status"></div>
+  <div id="progress"><div></div></div>
+  <div id="genOut"></div>
+</div>
+
+<div class="card">
+  <h2>3 · the story, piece by piece <span class="hint">— click any piece to see what the mind was holding in mind there</span></h2>
+  <div id="strip" class="hint">read or write a story first…</div>
+  <div style="margin-top:.4rem"><span id="heatCap" class="hint"></span> <button id="heatOff" class="small" style="display:none">clear the glow</button></div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>4 · what it's holding in mind <span id="roPos" class="hint">— no piece chosen</span></h2>
+    <div class="modes">
+      <button id="mJ" class="small on" title="words a middle layer is already leaning toward further on in the story">thinking ahead</button><button id="mL" class="small" title="what it would say next if it stopped thinking at that layer">layer by layer</button><button id="mD" class="small" title="gold = words thinking ahead sees that layer by layer does not">what only thinking ahead sees</button>
+      <label class="hint" style="margin-left:.5rem"><input type="checkbox" id="raw"> every piece (the honest view)</label>
+      <label class="hint" style="margin-left:.5rem"><input type="checkbox" id="top20"> top 20</label>
+    </div>
+    <div id="readout" class="hint" style="margin-top:.4rem">choose a piece in the story…</div>
+    <div id="modelRow"></div>
+    <div class="hint" style="margin-top:.4rem">Click any word to make the story glow wherever that word was on the mind's mind.
+      Normally only whole words a story would use are shown; "every piece" shows word fragments and the rest too.</div>
+  </div>
+
+  <div class="card">
+    <h2>5 · swap what it's thinking <span class="hint">— then let it write on</span></h2>
+    <div>take out <input type="text" id="swapOut" list="vocabList" placeholder="hole">
+      put in <input type="text" id="swapIn" list="vocabList" placeholder="castle"></div>
+    <datalist id="vocabList"></datalist>
+    <div class="hint" style="margin:.3rem 0">one-piece words work best: pick from the list</div>
+    <div>from <b id="swapFrom" style="color:var(--gold)">— choose a piece in the story</b> onward,
+      layers <select id="swapL0"></select> to <select id="swapL1"></select></div>
+    <div style="margin-top:.3rem">strength <input type="range" id="swapStr" min="0.1" max="1.5" step="0.1" value="0.4" style="width:110px;vertical-align:middle"> <span id="swapStrVal">0.4</span>
+      <span class="hint">(small minds oversteer: keep it low)</span></div>
+    <label class="hint" title="normally both rewrites pick the most likely word, so the ONLY difference is the swap"><input type="checkbox" id="swapWarm"> use the surprise setting too</label>
+    <div><button id="swapBtn" disabled>🔁 swap and rewrite</button> <span id="swapHint" class="hint"></span></div>
+    <div class="hint" style="margin-top:.3rem">From the chosen piece the mind rewrites the story twice; the only difference between the two
+      rewrites is the swap. What is already written up to that piece stays: the swap changes what it is thinking from there on.</div>
+    <div class="pane" id="swapOrig"><span class="who">the story</span>—</div>
+    <div class="pane" id="swapNo"><span class="who">rewritten, no swap</span>—</div>
+    <div class="pane" id="swapWith"><span class="who">rewritten, with the swap</span>—</div>
+  </div>
+</div>
+
+<script type="module">
+import { makeInlineWorker } from '../src/app-shims.js';
+const $ = id => document.getElementById(id);
+// @tm-worker-boot — build-release swaps this block for the blob boot with the
+// inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
+let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+let workerMode = 'background worker';
+// @tm-worker-boot-end
+
+// the story vocabulary (the explorer's vocab.json): built into the page by the release
+// build, read from beside this page in development
+const VOCAB = typeof __TM_THOUGHT_VOCAB__ !== 'undefined' ? __TM_THOUGHT_VOCAB__
+  : await fetch(new URL('./vocab.json', import.meta.url)).then(r => r.json()).catch(() => null);
+
+const S = {
+  config: null, band: [], ready: false, busy: false,
+  ids: [], pieces: [], selected: -1,
+  readout: null, mode: 'J', raw: false, top20: false,
+  heatToken: null, heatLabel: '', pieceById: new Map(),
+  swap: null, writing: false, readT0: 0,
+};
+const wordStart = new Set(VOCAB ? VOCAB.wordStartIds : []);
+const alias = (VOCAB && VOCAB.alias) || {};
+
+function status(msg, isErr) { $('status').textContent = msg; $('status').style.color = isErr ? 'var(--red)' : 'var(--dim)'; }
+function progress(frac) {
+  const p = $('progress');
+  if (frac === null) { p.style.display = 'none'; return; }
+  p.style.display = 'block'; p.firstElementChild.style.width = Math.round(100 * frac) + '%';
+}
+function setBusy(b) {
+  S.busy = b;
+  $('readBtn').disabled = $('writeBtn').disabled = b || !S.ready;
+  $('swapBtn').disabled = b || !S.ready || S.selected < 1;
+  $('stopBtn').disabled = !S.writing;
+}
+
+// ---------- starting points ----------
+const CANNED = [
+  'Lily and Max went to the beach. Lily built a castle. Max dug a',
+  'Once upon a time there was a little girl named Lily. She had a dog named Max. One day',
+  "Ben broke his mom's favorite vase. He heard her coming.",
+  'It was a dark night. Tim heard a strange noise in the garden.',
+  'The little bird could not fly. Every day it tried and tried.',
+];
+for (const p of CANNED) {
+  const b = document.createElement('button');
+  b.className = 'pchip'; b.textContent = p.length > 44 ? p.slice(0, 44) + '…' : p; b.title = p;
+  b.onclick = () => { $('story').value = p; };
+  $('promptChips').appendChild(b);
+}
+// the theme list runs in frequency order (and, the, was…): offer the concrete story words in it
+const CONCRETE = new Set(['park', 'bird', 'dog', 'tree', 'car', 'house', 'ball', 'water', 'box', 'bear', 'sky', 'garden', 'cat',
+  'sun', 'forest', 'fish', 'flowers', 'boat', 'night', 'kitchen', 'rock', 'book', 'doll', 'store', 'door', 'food', 'grass', 'bed']);
+if (VOCAB) for (const w of VOCAB.themeWords.filter(x => CONCRETE.has(x))) {
+  const b = document.createElement('button');
+  b.className = 'pchip theme'; b.textContent = w; b.title = 'add this word to the story';
+  b.onclick = () => { const t = $('story'); t.value = (t.value.replace(/\s+$/, '') + ' ' + w).trimStart(); };
+  $('themeChips').appendChild(b);
+}
+
+// ---------- loading ----------
+function looksLikeCheckpoint(buf) {
+  if (buf.byteLength < 28) return false;
+  const dv = new DataView(buf);
+  const dim = dv.getInt32(0, true), nl = dv.getInt32(8, true);
+  return dim > 0 && dim <= 8192 && nl > 0 && nl <= 128 && buf.byteLength > 500000;
+}
+const isLens = f => f.buf && f.buf.byteLength > 16 && String.fromCharCode(...new Uint8Array(f.buf, 0, 4)) === 'JLNS';
+const pending = { ck: null, tok: null, lens: null };
+function load(files) {
+  for (const f of files) {
+    if (isLens(f)) pending.lens = f;
+    else if (looksLikeCheckpoint(f.buf)) pending.ck = f;
+    else pending.tok = f;
+  }
+  if (!pending.ck || !pending.tok) { status('drop the mind, its tokenizer.bin and its .jlens'); return; }
+  if (!VOCAB) { status('the story vocabulary (vocab.json) is missing beside this page', true); return; }
+  const lens = pending.lens && pending.lens.name.replace(/\.jlens$/i, '') === pending.ck.name.replace(/\.bin$/i, '') ? pending.lens : null;
+  const big = pending.ck.buf.byteLength > 100e6;
+  S.ready = false; setBusy(false);
+  worker.postMessage({ type: 'load', ckptBuf: pending.ck.buf, tokBuf: pending.tok.buf, lensBuf: lens ? lens.buf : null, vocab: VOCAB },
+    big ? [pending.ck.buf] : []);
+  status(`loading ${pending.ck.name}${big ? ' (a big one: give it a moment)' : ''}…`);
+  pending.ck = null;
+}
+window.__tmLoadPair = (ck, tok, lens) => load(lens ? [ck, tok, lens] : [ck, tok]);
+window.__tmUnload = () => { worker.postMessage({ type: 'unload' }); S.ready = false; setBusy(false); };
+const drop = $('drop');
+window.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+window.addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('over'); });
+window.addEventListener('drop', async e => {
+  e.preventDefault(); drop.classList.remove('over');
+  const snap = [...e.dataTransfer.files], files = [];
+  for (const f of snap) files.push({ name: f.name, buf: await f.arrayBuffer() });
+  if (files.length) load(files);
+});
+
+// ---------- the engine's answers ----------
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'error') { status(m.message, true); S.writing = false; setBusy(false); progress(null); return; }
+  if (m.type === 'loaded') {
+    S.config = m.config; S.band = m.lensLayers || [];
+    $('modelInfo').textContent = `${m.config.nLayers} layers · ${m.config.dim} numbers per piece`;
+    if (m.noLens) {
+      S.ready = false;
+      $('mindNote').innerHTML = 'This mind has no thinking-ahead map, so there is nothing to show here. Choose the <b>Big</b> or <b>Giant Storyteller</b> from the mind menu at the top.';
+      status('this mind cannot show its thoughts here', true);
+    } else {
+      S.ready = true;
+      S.pieceById = new Map(m.pairs);
+      document.body.dataset.cores = m.cores;
+      $('mindNote').textContent = `Its thoughts can be read at layers ${S.band.join(', ')}.` + (S.band.length < 3 ? ' (A smaller mind: its thoughts are fainter than the Giant Storyteller\'s.)' : '');
+      initLayerSelects();
+      status('ready — read a story, or let the mind write one');
+    }
+    setBusy(false);
+    return;
+  }
+  if (m.type === 'unloaded') { $('modelInfo').textContent = 'resting (another room is using this mind)'; return; }
+  if (m.type === 'progress') {
+    progress(m.done / m.total);
+    status(`${m.tag === 'noswap' ? 'rewriting without the swap: ' : m.tag === 'withswap' ? 'rewriting with the swap: ' : ''}reading its thoughts, layer by layer… ${Math.round(100 * m.done / m.total)}%`);
+    return;
+  }
+  if (m.type === 'gen-token') {
+    if (m.tag === 'noswap') $('swapNo').lastChild.textContent += m.piece;
+    else if (m.tag === 'withswap') $('swapWith').lastChild.textContent += m.piece;
+    else $('genOut').textContent += m.piece;
+    return;
+  }
+  if (m.type === 'analyzed' || m.type === 'generated') {
+    progress(null);
+    if (m.tag === 'noswap' || m.tag === 'withswap') { onSwapStory(m); return; }
+    S.writing = false;
+    if (m.type === 'generated') $('story').value = m.pieces.join('');
+    showStory(m);
+    const secs = (m.ms / 1000).toFixed(1);
+    status(m.type === 'generated'
+      ? `wrote ${m.ids.length - m.promptLen} pieces${m.stopped ? ' (stopped)' : ''} and read its thoughts, in ${secs} s — click any piece`
+      : `read ${m.ids.length - 1} pieces in ${secs} s${m.truncated ? ' (cut to the first 255)' : ''} — click any piece`);
+    setBusy(false);
+    return;
+  }
+  if (m.type === 'readout') { S.readout = m; renderReadout(); return; }
+  if (m.type === 'heat') { renderHeat(m); return; }
+};
+
+// ---------- read / write ----------
+$('temp').oninput = () => { $('tempVal').textContent = $('temp').value; };
+$('readBtn').onclick = () => {
+  const text = $('story').value.trim(); if (!text || S.busy) return;
+  setBusy(true); $('genOut').textContent = '';
+  worker.postMessage({ type: 'analyze', text });
+  status('reading the story…');
+};
+$('writeBtn').onclick = () => {
+  const text = $('story').value.trim(); if (!text || S.busy) return;
+  S.writing = true; setBusy(true);
+  $('genOut').textContent = text;
+  worker.postMessage({ type: 'generate', prompt: text, temperature: +$('temp').value, maxNew: +$('maxNew').value, seed: (Math.random() * 0x7fffffff) | 0 });
+  status('the mind is writing…');
+};
+$('stopBtn').onclick = () => worker.postMessage({ type: 'stop' });
+
+// ---------- the story strip ----------
+function showStory(m) {
+  S.ids = m.ids; S.pieces = m.pieces; S.selected = -1; S.readout = null;
+  clearHeat(true);
+  const el = $('strip'); el.innerHTML = ''; el.classList.remove('hint');
+  m.pieces.forEach((piece, i) => {
+    if (i === 0) return;                        // the start marker: nothing to show
+    const sp = document.createElement('span');
+    sp.className = 'tok'; sp.dataset.pos = i;
+    sp.textContent = piece === '\n' ? '⏎\n' : piece;
+    sp.onclick = () => selectPiece(i);
+    el.appendChild(sp);
+  });
+  $('readout').innerHTML = '<span class="hint">choose a piece in the story…</span>'; $('modelRow').textContent = '';
+  $('roPos').textContent = '— no piece chosen';
+  $('swapFrom').textContent = '— choose a piece in the story';
+  updateSwapList();
+  setBusy(false);
+  // the last piece is where the mind is about to go on: the most telling place to look
+  selectPiece(m.pieces.length - 1);
+}
+function selectPiece(pos) {
+  if (pos < 1 || pos >= S.pieces.length) return;
+  S.selected = pos;
+  document.querySelectorAll('#strip .tok').forEach(t => t.classList.toggle('sel', +t.dataset.pos === pos));
+  const p = S.pieces[pos].trim() || JSON.stringify(S.pieces[pos]);
+  $('roPos').textContent = `— at “${p}” (piece ${pos})`;
+  $('swapFrom').textContent = `“${p}” (piece ${pos})`;
+  setBusy(S.busy);
+  worker.postMessage({ type: 'readout', pos, k: 40 });
+}
+
+// ---------- the readout ----------
+$('mJ').onclick = () => setMode('J'); $('mL').onclick = () => setMode('L'); $('mD').onclick = () => setMode('D');
+function setMode(mode) {
+  S.mode = mode;
+  for (const [id, k] of [['mJ', 'J'], ['mL', 'L'], ['mD', 'D']]) $(id).classList.toggle('on', mode === k);
+  renderReadout();
+}
+$('raw').onchange = () => { S.raw = $('raw').checked; renderReadout(); };
+$('top20').onchange = () => { S.top20 = $('top20').checked; renderReadout(); };
+const pieceOf = id => S.pieceById.has(id) ? S.pieceById.get(id) : '#' + id;
+const keep = id => S.raw || wordStart.has(id) || String(id) in alias;
+function chip(e, extra, rank) {
+  const c = document.createElement('span');
+  c.className = 'rchip' + (extra || '');
+  const a = alias[String(e.id)], raw = pieceOf(e.id);
+  const label = a ? a.display : (raw.trim() === '' ? JSON.stringify(raw) : raw);
+  c.textContent = label;
+  const how = 'click: make the story glow wherever this word was on its mind';
+  c.title = a ? `the start of a name: ${a.names.map(n => n.name).join(', ')} · ${how}` : how;
+  if (a) c.classList.add('alias');
+  if (rank !== undefined) { const r = document.createElement('span'); r.className = 'rk'; r.textContent = '#' + (rank + 1); c.appendChild(r); }
+  if (S.heatToken === e.id) c.classList.add('heaton');
+  c.onclick = () => toggleHeat(e.id, label);
+  return c;
+}
+function renderReadout() {
+  const m = S.readout; if (!m) return;
+  const K = S.top20 ? 20 : 8, box = $('readout');
+  box.innerHTML = ''; box.classList.remove('hint');
+  for (const row of m.layers.slice().reverse()) {              // the deepest layer on top
+    const div = document.createElement('div'); div.className = 'lrow';
+    div.innerHTML = `<span class="lname" title="layer ${row.layer} of ${S.config.nLayers}">layer ${row.layer}</span>`;
+    const chips = document.createElement('span');
+    const j = row.jlens.filter(e => keep(e.id)).slice(0, K), l = row.logit.filter(e => keep(e.id)).slice(0, K);
+    if (S.mode === 'J') j.forEach((e, i) => chips.appendChild(chip(e, '', i)));
+    else if (S.mode === 'L') l.forEach((e, i) => chips.appendChild(chip(e, '', i)));
+    else { const seen = new Set(l.map(e => e.id)); j.forEach((e, i) => chips.appendChild(chip(e, seen.has(e.id) ? '' : ' jonly', i))); }
+    div.appendChild(chips); box.appendChild(div);
+  }
+  $('modelRow').innerHTML = '<b>its next word:</b> ';
+  m.model.forEach(e => $('modelRow').appendChild(chip(e)));
+  const lesson = document.createElement('div'); lesson.className = 'lesson';
+  lesson.textContent = S.mode === 'J' ? 'Thinking ahead: words a layer is already leaning toward further on in the story, not only next.'
+    : S.mode === 'L' ? 'Layer by layer: what it would say next if it stopped thinking at that layer.'
+    : 'Gold words are thinking-ahead words that layer by layer does not show: the mind holding something in mind for later.';
+  $('modelRow').appendChild(lesson);
+}
+
+// ---------- the glow (heat strip) ----------
+function toggleHeat(id, label) {
+  if (S.heatToken === id) { clearHeat(); return; }
+  S.heatToken = id; S.heatLabel = label;
+  worker.postMessage({ type: 'heat', tokenId: id });
+}
+function clearHeat(quiet) {
+  S.heatToken = null;
+  document.querySelectorAll('#strip .tok').forEach(t => t.classList.remove('hot0', 'hot1', 'hot2', 'hot3'));
+  $('heatCap').textContent = ''; $('heatOff').style.display = 'none';
+  if (!quiet) renderReadout();
+}
+$('heatOff').onclick = () => clearHeat();
+function renderHeat(m) {
+  if (!m.ranks) { status('that piece is outside the story vocabulary, so it has no glow', true); return; }
+  document.querySelectorAll('#strip .tok').forEach(el => {
+    const r = m.ranks[+el.dataset.pos];
+    el.classList.remove('hot0', 'hot1', 'hot2', 'hot3');
+    if (r <= 2) el.classList.add('hot3'); else if (r <= 10) el.classList.add('hot2');
+    else if (r <= 40) el.classList.add('hot1'); else if (r <= 150) el.classList.add('hot0');
+  });
+  $('heatCap').textContent = `✨ where “${S.heatLabel.trim()}” was on its mind (its best thinking-ahead place over layers ${S.band.join(', ')}; brightest = in its top 3)`;
+  $('heatOff').style.display = '';
+  renderReadout();
+}
+
+// ---------- swap and rewrite ----------
+$('swapStr').oninput = () => { $('swapStrVal').textContent = $('swapStr').value; };
+function initLayerSelects() {
+  const a = $('swapL0'), b = $('swapL1');
+  a.innerHTML = b.innerHTML = '';
+  for (const l of S.band) { a.appendChild(new Option('layer ' + l, l)); b.appendChild(new Option('layer ' + l, l)); }
+  a.value = S.band[0]; b.value = S.band[S.band.length - 1];
+}
+// suggestions: this story's one-piece words first, then the theme words
+function updateSwapList() {
+  const dl = $('vocabList'); dl.innerHTML = '';
+  const seen = new Set();
+  const add = (w, label) => { if (seen.has(w)) return; seen.add(w); const o = document.createElement('option'); o.value = w; if (label) o.label = label; dl.appendChild(o); };
+  S.pieces.slice(1).forEach(p => { if (/^ [A-Za-z]+$/.test(p)) add(p.slice(1), 'in this story'); });
+  if (VOCAB) VOCAB.themeWords.forEach(w => add(w));
+}
+// a typed word -> the one piece " word" stands for, or null
+function idOfWord(w) {
+  w = String(w || '').trim();
+  if (!w) return null;
+  for (const [id, piece] of S.pieceById) if (piece === ' ' + w) return id;
+  return null;
+}
+$('swapBtn').onclick = () => {
+  if (S.busy || S.selected < 1) return;
+  const outId = idOfWord($('swapOut').value), inId = idOfWord($('swapIn').value);
+  if (outId === null || inId === null) { $('swapHint').textContent = 'both words must be one-piece words this mind knows: pick from the list'; return; }
+  if (outId === inId) { $('swapHint').textContent = 'take out one word and put in a different one'; return; }
+  $('swapHint').textContent = '';
+  const anchor = S.selected;
+  S.swap = {
+    seed: (Math.random() * 0x7fffffff) | 0,
+    temperature: $('swapWarm').checked ? +$('temp').value : 0,   // greedy: the ONLY difference is the swap
+    promptIds: S.ids.slice(0, anchor + 1),                       // what is on screen, not re-typed text
+    edit: { outId, inId, l0: +$('swapL0').value, l1: +$('swapL1').value, strength: +$('swapStr').value, fromPos: anchor },
+    original: S.pieces.slice(1).join(''), prefix: S.pieces.slice(1, anchor + 1).join(''),
+    words: [$('swapOut').value.trim(), $('swapIn').value.trim()],
+  };
+  pane('swapOrig', 'the story', S.swap.original);
+  pane('swapNo', 'rewritten, no swap', S.swap.prefix);
+  pane('swapWith', `rewritten, with “${S.swap.words[0]}” swapped for “${S.swap.words[1]}”`, S.swap.prefix);
+  S.writing = true; setBusy(true);
+  status('rewriting from the chosen piece, without the swap…');
+  worker.postMessage({ type: 'generate', tag: 'noswap', promptIds: S.swap.promptIds, seed: S.swap.seed,
+    temperature: S.swap.temperature, maxNew: +$('maxNew').value, noRead: true });
+};
+function pane(id, who, text) {
+  const el = $(id); el.innerHTML = '';
+  const w = document.createElement('span'); w.className = 'who'; w.textContent = who; el.appendChild(w);
+  el.appendChild(document.createTextNode(text));
+}
+// mark where a rewrite parts from the other one
+function markDiff(id, who, text, other) {
+  let i = 0; while (i < text.length && i < other.length && text[i] === other[i]) i++;
+  const el = $(id); el.innerHTML = '';
+  const w = document.createElement('span'); w.className = 'who'; w.textContent = who; el.appendChild(w);
+  el.appendChild(document.createTextNode(text.slice(0, i)));
+  if (i < text.length) { const n = document.createElement('span'); n.className = 'new'; n.textContent = text.slice(i); el.appendChild(n); }
+}
+function onSwapStory(m) {
+  const text = m.pieces.slice(1).join('');
+  if (m.tag === 'noswap') {
+    S.swap.noText = text;
+    pane('swapNo', 'rewritten, no swap', text);
+    status('rewriting from the chosen piece, with the swap…');
+    worker.postMessage({ type: 'generate', tag: 'withswap', promptIds: S.swap.promptIds, seed: S.swap.seed,
+      temperature: S.swap.temperature, maxNew: +$('maxNew').value, edit: S.swap.edit });
+    return;
+  }
+  S.writing = false;
+  markDiff('swapWith', `rewritten, with “${S.swap.words[0]}” swapped for “${S.swap.words[1]}”`, text, S.swap.noText);
+  markDiff('swapNo', 'rewritten, no swap', S.swap.noText, text);
+  // the swapped story becomes the one on show, so its thoughts can be looked at too
+  $('story').value = m.pieces.join('');
+  showStory(m);
+  status(text === S.swap.noText
+    ? 'the swap changed nothing this time: try a bigger strength, more layers, or another pair of words'
+    : 'swap done: the highlighted part is where the two rewrites part ways. The story below is the swapped one: click its pieces to see the swapped thoughts.');
+  setBusy(false);
+}
+
+status(VOCAB ? 'choose a mind to begin' : 'the story vocabulary (vocab.json) is missing', !VOCAB);
+</script>
+</body>
+</html>

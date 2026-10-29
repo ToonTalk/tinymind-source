@@ -100,6 +100,9 @@ async function handle(m) {
       }, fingerprint: atlasFingerprint(config, ck.weights), lensLayers: jl ? jl.layers : [] });
       const p = await poolP;   // say how the reading will be done once the pool has (or hasn't) started
       self.postMessage({ type: 'engine', cores: p ? p.K : 1 });
+    } else if (m.type === 'unload') {
+      poolP.then(p => p && p.dispose()); poolP = Promise.resolve(null);
+      model = null; baseCap = null; baseIds = null; ablCap = null; ablKey = null; baseCont = null;
     } else if (m.type === 'run') {
       if (!model) throw new Error('no model loaded');
       if (hasAbl(m)) {

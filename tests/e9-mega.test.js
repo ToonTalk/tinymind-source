@@ -19,13 +19,13 @@ export async function run(t) {
   const mega = await readFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'utf8');
   const resourceManifest = JSON.parse(await readFile(join(ROOT, 'dist', 'tiny-mind-resources.json'), 'utf8'));
 
-  t.check('mega: all three app templates present',
-    ['tpl-nursery', 'tpl-microscope', 'tpl-hunt'].every(id => mega.includes(`<template id="${id}">`)));
+  t.check('mega: all four app templates present',
+    ['tpl-nursery', 'tpl-microscope', 'tpl-hunt', 'tpl-thought'].every(id => mega.includes(`<template id="${id}">`)));
   t.check('mega: no unresolved build placeholders', !/@@[A-Z_]+@@/.test(mega));
   t.check('mega: every app carries the frame bridge',
     (mega.match(/tiny-mind frame bridge/g) || []).length >= 3);
   t.check('mega: every app carries an inlined worker',
-    (mega.match(/__WORKER_SRC__ = "/g) || []).length === 3);
+    (mega.match(/__WORKER_SRC__ = "/g) || []).length === 4);
   t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
     mega.includes("tmGetJson('arc/arcs.json')") && mega.includes('manifest.more || []'));
   t.check('mega: the Nursery ghostwriter can reach the LLM (aliased import survives the build)',
@@ -52,9 +52,9 @@ export async function run(t) {
     mega.includes('await tmRestoreReady;'));
   t.check('mega: loose four-character checkpoints are also discovered beside the page',
     mega.includes("'stories260K-binding.bin', 'stories260K-binding-max.bin'"));
-  t.check('mega: guided layer present in all four docs (vg-core ×4, prelude ×3, shell adapter)',
-    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 4 &&
-    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 3 &&
+  t.check('mega: guided layer present in all five docs (vg-core ×5, prelude ×4, shell adapter)',
+    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 5 &&
+    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 4 &&
     mega.includes('tm-shell-adapter.js'));
   t.check('mega: probe-fact branch shipped inside the nursery worker blob',
     mega.includes('probe-fact-done'));

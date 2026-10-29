@@ -69,6 +69,8 @@ Raise, watch and look inside real (very small) language models, in your browser:
 - **Watch a mind grow up**: replay recordings of minds learning, from random babble to stories.
 - **Look inside a mind**: see which words a model is weighing up, layer by layer, and what single
   neurons respond to, in the 15-million-connection TinyStories model.
+- **See what a mind is thinking** (the Thought bubble): watch the words a mind is holding in mind as it
+  reads or writes, then swap one of its thoughts and see the story change (from the J-Lens Explorer).
 - **Hunt for a hidden fact**: find where a mind keeps something it knows, and prove it by
   switching parts of it off.
 

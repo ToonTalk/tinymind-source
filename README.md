@@ -40,6 +40,9 @@ node tools/make-arc-zips.js      # zog-arc.zip, newborn-arc.zip, tiny-mind-start
   paste) with mechanical validation + repair loop, 512-piece alphabet view, live
   training room with the developmental-arc sample timeline, parroting badge,
   storybook save/load, checkpoint export.
+- `thought/` — the Thought bubble: the J-Lens Explorer's instrument on Tiny Mind's engine
+  (src/thought.js + batch.js): thinking ahead / layer by layer / DIFF readouts over the story
+  vocabulary (`thought/vocab.json`), the heat glow, and swap & rewrite. Big and Giant Storytellers.
 - `hunt/` — Session C app: the treasure hunt. Probe a question, get falsifiable
   clues from the built-in or LLM detective, prove or bust them with head/neuron/team
   ablations. Voice + little-kid mode toggles.

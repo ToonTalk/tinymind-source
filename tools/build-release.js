@@ -13,12 +13,13 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const APPS = ['microscope', 'nursery', 'hunt'];
+const APPS = ['microscope', 'nursery', 'hunt', 'thought'];
 const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
 const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js', 'ingest.js', 'embed-data.js'];
-const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js', 'jlens.js', 'batch.js'], hunt: [] };
+const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js', 'jlens.js', 'batch.js'], hunt: [],
+  thought: ['steer.js', 'jlens.js', 'batch.js', 'thought.js'] };
 // page-only extras for one app (the others' pages stay byte-identical)
-const PAGE_APP_EXTRA = { nursery: [], microscope: ['neuron-atlas.js'], hunt: [] };
+const PAGE_APP_EXTRA = { nursery: [], microscope: ['neuron-atlas.js'], hunt: [], thought: [] };
 
 // the boot that replaces the dev marker block: real blob Worker, or the same-thread
 // shim when the sandbox refuses blob URLs (makeInlineWorker comes from app-shims)
@@ -83,6 +84,11 @@ if (Object.keys(bindingCorpus.characters || {}).length !== 4 ||
     bindingCorpus.stories.filter(s => s.split === 'heldout').length !== 16) {
   throw new Error('nursery: binding story world must contain four characters, 64 training and 16 held-out stories');
 }
+// the Thought bubble's story vocabulary (the J-Lens Explorer's vocab.json, 110 KB): built into its page
+const thoughtVocab = JSON.parse(await readFile(join(ROOT, 'thought', 'vocab.json'), 'utf8'));
+if (!Array.isArray(thoughtVocab.prunedIds) || !Array.isArray(thoughtVocab.wordStartIds) || !thoughtVocab.alias || !Array.isArray(thoughtVocab.themeWords)) {
+  throw new Error('thought: vocab.json must have prunedIds, wordStartIds, alias and themeWords');
+}
 const sameFolderResources = JSON.parse(await readFile(join(ROOT, 'shell', 'resources.json'), 'utf8'));
 if (!sameFolderResources || sameFolderResources.version !== 1 ||
     !Array.isArray(sameFolderResources.resources) ||
@@ -116,6 +122,7 @@ for (const app of APPS) {
   const embeddedData = app === 'nursery'
     ? `\nconst __TM_EMBEDDED_ZOG_STORIES__ = JSON.parse(${embedString(JSON.stringify(zogStories))});\n` +
       `const __TM_EMBEDDED_BINDING_CORPUS__ = JSON.parse(${embedString(JSON.stringify(bindingCorpus))});\n`
+    : app === 'thought' ? `\nconst __TM_THOUGHT_VOCAB__ = JSON.parse(${embedString(JSON.stringify(thoughtVocab))});\n`
     : '';
   const appExtra = PAGE_APP_EXTRA[app].length ? '\n' + await bundleOf(PAGE_APP_EXTRA[app]) : '';
   const bundled = embeddedData +

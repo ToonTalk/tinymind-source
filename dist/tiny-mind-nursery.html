@@ -652,6 +652,8 @@ window.__vgDeferBoot = async function(create){
         else if (n > 0) setTimeout(() => tryArc(n - 1), 150);
       };
       tryArc(100);
+    } else if (m.tm === 'unload') {   // another room took the big mind: let this one go (memory)
+      if (window.__tmUnload) window.__tmUnload();
     } else if (m.tm === 'select-arc') {
       const trySelectArc = (n) => {
         if (window.__tmSelectArc) window.__tmSelectArc(m.arc);

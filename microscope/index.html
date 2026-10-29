@@ -775,6 +775,8 @@ $('ablClear').onclick = () => {
 status('load a model to begin');
 
 window.__tmLoadPair = (ck, tok, lens) => classifyAndSend(lens ? [lens, ck, tok] : [ck, tok]);
+// the shell asks a room to let go of a very big mind when another room takes it (memory)
+window.__tmUnload = () => { worker.postMessage({ type: 'unload' }); S.run = null; $('runBtn').disabled = true; $('modelInfo').textContent = 'resting (another room is using this mind)'; };
 
 if (window.__tmBridge) {
   for (const id of ['load15', 'load260', 'loadZog']) {

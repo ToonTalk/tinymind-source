@@ -52,6 +52,13 @@ function poolMain(self) {
         const vn = S.v1 - S.v0, out = new Float32Array(N * vn);
         matmulBatch(out, q.X, S.wcls, 0, N, c.dim, vn);
         self.postMessage({ id: q.id, out }, [out.buffer]);
+      } else if (q.op === 'set-mat') {   // an extra matrix's row slice (Pool.addMatrix)
+        (S.mats || (S.mats = {}))[q.name] = { m: q.m, rows: q.rows, cols: q.cols };
+        self.postMessage({ id: q.id });
+      } else if (q.op === 'mat') {
+        const M = S.mats[q.name], out = new Float32Array(N * M.rows);
+        matmulBatch(out, q.X, M.m, 0, N, M.cols, M.rows);
+        self.postMessage({ id: q.id, out }, [out.buffer]);
       } else throw new Error('pool: unknown op ' + q.op);
     } catch (err) {
       self.postMessage({ id: q.id, error: String((err && err.stack) || err) });
@@ -186,13 +193,29 @@ export class Pool {
     const parts = await this._all({ op: 'cls', X, N });
     for (let k = 0; k < this.K; k++) scatter(out, parts[k].out, N, this.config.vocabSize, this.bV[k], this.bV[k + 1]);
   }
+  // an extra matrix M [rows, cols], split by rows across the workers like the weights
+  // (the Thought bubble's story-vocabulary readout); mat() then multiplies by it
+  async addMatrix(name, M, rows, cols) {
+    const b = splitRange(rows, this.K);
+    (this.mats || (this.mats = {}))[name] = { rows, b };
+    await Promise.all(this.workers.map((wk, k) => {
+      const m = M.slice(b[k] * cols, b[k + 1] * cols);
+      return this._call(wk, { op: 'set-mat', name, m, rows: b[k + 1] - b[k], cols }, [m.buffer]);
+    }));
+  }
+  async mat(name, X, N, out) {
+    const { rows, b } = this.mats[name], parts = await this._all({ op: 'mat', name, X, N });
+    for (let k = 0; k < this.K; k++) scatter(out, parts[k].out, N, rows, b[k], b[k + 1]);
+  }
 }
 
 // ---- the batched forward pass ------------------------------------------------------
 // Positions start .. start+ids.length-1 through every layer, filling model.state's KV
 // cache (so a later call carries on from there, as generation does). tap / ablate are
 // forward()'s. Returns the final-normed residuals [N, dim]: what the classifier reads.
-export async function forwardBatch(model, ids, start, { tap = null, ablate = null, pool = null, onLayer = null } = {}) {
+// edit: { layers: Set, fn(l, pos, x) } changes the residual stream x in place after a
+// layer's ffn add, before anything reads it (the Thought bubble's thought swap).
+export async function forwardBatch(model, ids, start, { tap = null, ablate = null, pool = null, onLayer = null, edit = null } = {}) {
   const c = model.config, w = model.weights, s = model.state, f = Math.fround;
   const N = ids.length, dim = c.dim, kvDim = c.kvDim, hd = c.hiddenDim, headSize = c.headSize;
   const kvMul = c.nHeads / c.nKvHeads;
@@ -302,6 +325,7 @@ export async function forwardBatch(model, ids, start, { tap = null, ablate = nul
     if (pool) await pool.mm('w2', l, HB, N, O);
     else matmulBatch(O, HB, w.w2, l * hd * dim, N, hd, dim);
     for (let i = 0; i < N * dim; i++) X[i] = X[i] + O[i];
+    if (edit && edit.layers.has(l)) for (let p = 0; p < N; p++) edit.fn(l, start + p, row(X, p, dim));
     if (tap && tap.residual) for (let p = 0; p < N; p++) tap.residual(l, 'ffn', start + p, row(X, p, dim));
     if (onLayer) onLayer(l + 1, c.nLayers);
   }

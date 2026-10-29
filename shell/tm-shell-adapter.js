@@ -146,6 +146,9 @@ function STEPS(){
   { name: 'look', spot: '[data-act="look"]', text: () => kid()
       ? 'Look inside a mind shows what it is thinking, word by word.'
       : 'Look inside a mind shows the words a model is weighing up, layer by layer, and what single neurons respond to.' },
+  { name: 'think', spot: '[data-act="think"]', text: () => kid()
+      ? 'See what a mind is thinking lets you peek at its thoughts, and even swap one!'
+      : 'See what a mind is thinking shows the words a mind is holding in mind as it reads or writes; then you swap one of its thoughts and watch the story change.' },
   { name: 'hunt', spot: '[data-act="hunt"]', text: () => kid()
       ? 'Hunt for a hidden fact is a treasure hunt inside a mind.'
       : 'Hunt for a hidden fact is a detective game: find where a mind keeps something, then prove it by switching parts off.' },
@@ -157,7 +160,7 @@ function STEPS(){
 
 function statusText(){
   const t = activeTab();
-  const where = t === 'home' ? 'the front door, with its four activity cards \u2014 this very page'
+  const where = t === 'home' ? 'the front door, with its five activity cards \u2014 this very page'
     : t === 'bay' ? 'the files page (the expert view\'s "files" tab) \u2014 this very page'
     : 'the ' + t + ' room, whose own guide is beside them there';
   return `The visitor is RIGHT NOW looking at ${where}. Never tell them to go where they already are. ` +
@@ -167,26 +170,26 @@ function statusText(){
     `Minds loaded (truncated): ${poolText().slice(0, 200) || 'none yet'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide on the front page of Tiny Mind, a three-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, and a Treasure Hunt for finding where a fact lives. This page is the front door: four activity cards (Teach a tiny mind, Watch a mind grow up, Look inside a mind, Hunt for a hidden fact); the minds load by themselves, and a button at the top right switches to an expert view with every tab and a files page. ' +
+  return 'You are the guide on the front page of Tiny Mind, a four-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, a Thought bubble for seeing and swapping what one is thinking, and a Treasure Hunt for finding where a fact lives. This page is the front door: five activity cards (Teach a tiny mind, Watch a mind grow up, Look inside a mind, See what a mind is thinking, Hunt for a hidden fact); the minds load by themselves, and a button at the top right switches to an expert view with every tab and a files page. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is ten or older: plain, concrete language. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: teach, grow, look, hunt, tabs. Tab names: home, nursery, microscope, hunt, files. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: teach, grow, look, think, hunt, tabs. Tab names: home, nursery, microscope, thought, hunt, files. ' +
     ' A TAB directive only offers: the app asks the visitor to confirm before anything moves, so word it as an offer, and never claim you have already taken them. ' +
     ' The time machine lives in the Nursery, below the training controls. ' +
     ' Never offer to open or point at a view the status marks as already visible \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'switch to the Nursery', escalations: 'load or delete models', safeVerb: 'SHOW' });
 }
-const SHOW = { teach: '[data-act="raise"]', grow: '[data-act="grow"]', look: '[data-act="look"]', hunt: '[data-act="hunt"]', tabs: '#modeBtn' };
-const TAB_ALIAS = { files: 'bay', home: 'home', nursery: 'nursery', microscope: 'microscope', hunt: 'hunt' };
+const SHOW = { teach: '[data-act="raise"]', grow: '[data-act="grow"]', look: '[data-act="look"]', think: '[data-act="think"]', hunt: '[data-act="hunt"]', tabs: '#modeBtn' };
+const TAB_ALIAS = { files: 'bay', home: 'home', nursery: 'nursery', microscope: 'microscope', thought: 'thought', hunt: 'hunt' };
 
 function createGuide(){
   const A = {
     id: 'tm-shell',
     ui: { mascot: '\u{1F9E0}', greeting: () => kid()
         ? 'Hi! I am the guide. Press start tour and I will show you around.'
-        : 'Welcome to Tiny Mind. Press start tour for a one-minute look at the four things you can do, or ask me anything.',
+        : 'Welcome to Tiny Mind. Press start tour for a one-minute look at the five things you can do, or ask me anything.',
       voiceEnabled: () => prefs.voice, doneStatus: 'Pick a room — a guide waits in each.' },
     layout: { panelWidth: 300, panelMargin: 302, narrowMax: 700, appBreakpoint: 0 },
     takeover: { events: ['pointerdown'],
