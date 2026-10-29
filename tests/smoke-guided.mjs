@@ -946,13 +946,23 @@ async function main() {
         await b.__tmShell.ingest([{ name: 'tiny-mind-my-work.zip', u8: w1.zip }]);
         await sleep(100);
         check('opening the bundle brings the mind back as one you raised',
-          /a mind you raised/.test(b.document.getElementById('pool').textContent));
+          /you raised it/.test(b.document.getElementById('pool').textContent));
         const w2 = await b.__tmShell.buildWorkZip();
         const files = w2 ? await b.unzip(w2.zip) : [];
         const man = files.find(f => f.name === 'tiny-mind-work.json');
         const back = man && JSON.parse(new TextDecoder().decode(man.u8)).models[0];
         check('... with its character still attached (so the Hunt can quiz it)',
           !!back && back.origin === 'trained' && back.meta && back.meta.storyWorld.sheet.name === 'Sisi');
+        check('opening the bundle says what came back, where you can see it',
+          /Opened your saved work: Sisi's mind/.test((b.document.getElementById('simpleToast') || {}).textContent || '') &&
+          /Sisi's storybook/.test(b.document.getElementById('simpleToast').textContent));
+        check('the raised mind is named after its character', /Sisi's mind/.test(b.document.getElementById('pool').textContent));
+        b.__tmShell.renameMind('sisi-260K.bin', 'Sparkle');
+        check('a mind can be renamed (files page shows the new name)', /Sparkle/.test(b.document.getElementById('pool').textContent));
+        const w3 = await b.__tmShell.buildWorkZip();
+        const man3 = w3 && (await b.unzip(w3.zip)).find(f => f.name === 'tiny-mind-work.json');
+        check('... and the new name travels in a saved bundle',
+          !!man3 && JSON.parse(new TextDecoder().decode(man3.u8)).models[0].displayName === 'Sparkle');
         const first = await b.unzip(w1.zip);
         const sb = first.find(f => f.name === 'my-storybook.json');
         check('... and the storybook travels in the bundle', !!sb &&

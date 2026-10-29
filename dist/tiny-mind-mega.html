@@ -68,6 +68,8 @@ body[data-view="home"] #simpleBar .inApp{display:none}
 #loading p{color:#bbb;margin:0 auto 14px;max-width:520px;line-height:1.5}
 #loadBar{width:min(420px,90%);height:10px;margin:16px auto;background:#262626;border-radius:5px;overflow:hidden}
 #loadBar i{display:block;height:100%;width:0;background:#8fd3a7;transition:width .2s}
+/* the note under the header stays clear of the guide panel when it is open */
+body.vg-open #simpleToast{left:calc((100% - 302px) / 2) !important}
 </style></head><body class="simple" data-view="home">
 <header>
   <b id="brand" title="all activities">🧠 Tiny Mind</b>
@@ -75,6 +77,7 @@ body[data-view="home"] #simpleBar .inApp{display:none}
     <button id="homeBtn" class="inApp">← all activities</button>
     <span id="actTitle" class="inApp"></span>
     <label class="inApp small" id="mindPickWrap">mind: <select id="mindPick" aria-label="which mind"></select></label>
+    <button id="mindRename" class="inApp small" title="rename this mind" style="display:none">✏️</button>
     <span id="actNote" class="inApp small" style="display:none;color:#e9c46a;max-width:420px"></span>
   </span>
   <span id="tabsBar">
@@ -111,9 +114,9 @@ body[data-view="home"] #simpleBar .inApp{display:none}
   <div id="bay" class="hide">
     <div id="dropzone">drop model files here — a .zip of .bin files, a folder, or loose files<br>
       <span class="small">(drops made while an app tab is open go to that app instead)</span></div>
-    <table><thead><tr><th>mind</th><th>vocab</th><th>size</th><th>open in…</th></tr></thead>
+    <table><thead><tr><th>mind</th><th>open in…</th></tr></thead>
       <tbody id="pool"><tr><td colspan="4" class="small">nothing yet</td></tr></tbody></table>
-    <p class="small">tokenizers loaded: <span id="tokList">none</span></p>
+    <p class="small">alphabets (the word pieces a mind reads and writes): <span id="tokList">none</span></p>
     <p class="small">time-machine recordings: <span id="arcList">none</span></p>
     <p class="small">exports from the apps appear as green chips in the top bar — click a chip to save the file.
        trained minds also join this table automatically, ready for the Microscope and the Hunt.</p>
@@ -14029,15 +14032,46 @@ function raisedFor(name) {
 }
 
 /* Plain names for the minds, so nobody has to know a file name to choose one. */
-function mindName(m) {
+/* Every mind has a name (the visitor may rename it) and a line about what it learned. */
+let mindNames = {};
+try { mindNames = JSON.parse(localStorage.getItem('tm-mind-names') || '{}') || {}; } catch (e) { mindNames = {}; }
+function setMindName(file, name) {
+  name = String(name || '').trim().slice(0, 60);
+  if (name) mindNames[file] = name; else delete mindNames[file];
+  try { localStorage.setItem('tm-mind-names', JSON.stringify(mindNames)); } catch (e) {}
+  renderPool(); refreshBar();
+}
+const worldOf = m => (m && m.meta && m.meta.storyWorld) || null;
+function characterOf(m) {
+  const w = worldOf(m);
+  if (!w) return '';
+  if (w.sheet && w.sheet.name) return w.sheet.name;
+  const cast = Object.keys(w.characters || {});
+  return cast.length ? (cast.length > 1 ? cast.slice(0, -1).join(', ') + ' and ' + cast[cast.length - 1] : cast[0]) : (w.label || '');
+}
+function defaultMindName(m) {
   const n = baseName(m).toLowerCase();
-  if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return 'the big storyteller (15 million connections)';
-  if (/^stories260k\.bin$/.test(n)) return 'the tiny storyteller (260 thousand connections)';
-  if (/^stories260k-zog\.bin$/.test(n)) return 'the Zog mind (taught about Zog)';
-  if (/^stories260k-binding\.bin$/.test(n)) return 'the four-friends mind (taught about four characters)';
-  if (/^stories260k-binding-max\.bin$/.test(n)) return 'the four-friends mind, trained longer';
-  if (/^(export|trained)$/.test(m.origin)) return baseName(m) + ' (a mind you raised)';
-  return baseName(m) + (m.vocab === 512 ? ' (a tiny mind you added)' : ' (a mind you added)');
+  if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return 'Big Storyteller';
+  if (/^stories260k\.bin$/.test(n)) return 'Tiny Storyteller';
+  if (/^stories260k-zog\.bin$/.test(n)) return 'Zog mind';
+  if (/^stories260k-binding\.bin$/.test(n)) return 'Four Friends mind';
+  if (/^stories260k-binding-max\.bin$/.test(n)) return 'Four Friends mind (trained longer)';
+  const who = characterOf(m);
+  if (who && /^(export|trained)$/.test(m.origin)) return /,| and /.test(who) ? 'your ' + who + ' mind' : who + "'s mind";
+  return baseName(m).replace(/\.bin$/i, '');
+}
+function mindName(m) { return mindNames[m.name] || defaultMindName(m); }
+function mindAbout(m) {
+  const n = baseName(m).toLowerCase();
+  if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return '15 million connections · learned from about two million children\'s stories';
+  if (/^stories260k\.bin$/.test(n)) return '260 thousand connections · learned from children\'s stories';
+  if (/^stories260k-zog\.bin$/.test(n)) return 'the Tiny Storyteller after lessons about Zog';
+  if (/^stories260k-binding\.bin$/.test(n)) return 'the Tiny Storyteller after lessons about Zog, Mip, Bex and Nia';
+  if (/^stories260k-binding-max\.bin$/.test(n)) return 'the same lessons with extra practice (it starts to memorize)';
+  const who = characterOf(m), w = worldOf(m);
+  if (/^(export|trained)$/.test(m.origin)) return 'you raised it' + (who ? ' · lessons about ' + who : '') +
+    (m.meta && m.meta.trainingStep ? ' · ' + m.meta.trainingStep + ' training steps' : '');
+  return 'a mind you added' + (who ? ' · lessons about ' + who : '');
 }
 
 /* ---------- simple view: the front door's four activities ---------- */
@@ -14077,14 +14111,25 @@ function renderMindPick() {
   const sel = $('mindPick'), app = APPS.includes(activeTab) ? activeTab : null;
   if (!app) { sel.innerHTML = ''; return; }
   const fits = pool.models.filter(m => app === 'microscope' || is512(m));
-  const opts = fits.map(m => `<option value="m:${encodeURIComponent(m.name)}">${escHtml(mindName(m))}</option>`);
+  const opts = fits.map(m => `<option value="m:${encodeURIComponent(m.name)}" title="${escHtml(mindAbout(m))}">${escHtml(mindName(m))}</option>`);
   if (app === 'microscope' && !specimen() && tmCanFetch()) opts.unshift('<option value="big">the big storyteller (downloads 58 MB once)</option>');
   opts.push('<option value="file">📂 open saved work, or a mind file…</option>');
   const cur = frameModel[app] ? 'm:' + encodeURIComponent(frameModel[app]) : '';
+  $('mindRename').style.display = cur ? '' : 'none';
   sel.innerHTML = (cur ? '' : '<option value="" selected>choose a mind…</option>') + opts.join('');
   if (cur) sel.value = cur;
 }
 const frameModel = {};                        // app -> name of the model last sent to its frame
+function renameInPlace(el, model, after) {
+  const inp = document.createElement('input');
+  inp.value = mindName(model); inp.style.cssText = 'font:inherit;background:#222;color:#fff;border:1px solid #8fd3a7;border-radius:4px;padding:2px 6px;width:min(260px,60vw)';
+  inp.title = 'Enter to keep, Esc to cancel; empty brings back the usual name';
+  el.replaceWith(inp); inp.focus(); inp.select();
+  let done = false;
+  const finish = keep => { if (done) return; done = true; if (keep) setMindName(model.name, inp.value === defaultMindName(model) ? '' : inp.value); else { renderPool(); refreshBar(); } if (after) after(); };
+  inp.onkeydown = e => { if (e.key === 'Enter') finish(true); else if (e.key === 'Escape') finish(false); };
+  inp.onblur = () => finish(true);
+}
 function escHtml(x) { return String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
 
 function showLoading(title, msg, alt) {
@@ -14249,6 +14294,12 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => selectTab(t.dat
 document.querySelectorAll('.act').forEach(b => b.onclick = () => startActivity(b.dataset.act));
 $('brand').onclick = () => selectTab('home');
 $('homeBtn').onclick = () => selectTab('home');
+$('mindRename').onclick = () => {
+  const app = activeTab, model = frameModel[app] && pool.models.find(m => m.name === frameModel[app]);
+  if (!model) return;
+  const sel = $('mindPick'); const holder = document.createElement('span'); sel.style.display = 'none'; sel.after(holder);
+  renameInPlace(holder, model, () => { sel.style.display = ''; });
+};
 $('modeBtn').onclick = () => setMode(uiMode === 'simple' ? 'expert' : 'simple');
 $('homeExpert').onclick = e => { e.preventDefault(); setMode('expert'); };
 $('mindPick').onchange = async () => {
@@ -14259,7 +14310,7 @@ $('mindPick').onchange = async () => {
   const model = v.startsWith('m:') && pool.models.find(m => m.name === decodeURIComponent(v.slice(2)));
   if (model) openModelInApp(app, model);
 };
-window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, startActivity, setMode, buildWorkZip: () => buildWorkZip(), ingest: recs => shellIngest(recs), get activeTab(){ return activeTab; }, get uiMode(){ return uiMode; } }; // vg: shell adapter seam
+window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, startActivity, setMode, buildWorkZip: () => buildWorkZip(), ingest: recs => shellIngest(recs), renameMind: (file, name) => setMindName(file, name), get activeTab(){ return activeTab; }, get uiMode(){ return uiMode; } }; // vg: shell adapter seam
 const tmRestoreReady = tmRestorePool(); // vg wave 4: bring back last visit's bay before same-folder discovery
 
 function openModelInApp(app, model) {
@@ -14280,7 +14331,7 @@ function fmtKB(n) { return n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : (n / 1024).t
 function tokFor(vocab) { return pool.toks.find(t => t.vocab === vocab) || (pool.toks.length === 1 ? pool.toks[0] : null); }
 function renderPool() {
   const tb = $('pool'); tb.innerHTML = '';
-  if (!pool.models.length) tb.innerHTML = '<tr><td colspan="4" class="small">nothing yet</td></tr>';
+  if (!pool.models.length) tb.innerHTML = '<tr><td colspan="2" class="small">nothing yet</td></tr>';
   for (const mo of pool.models) {
     const tok = tokFor(mo.vocab);
     const tr = document.createElement('tr');
@@ -14294,11 +14345,15 @@ function renderPool() {
       b.onclick = () => openModelInApp(app, mo);
       cell.appendChild(b);
     }
-    tr.innerHTML = `<td>${escHtml(mo.name)}<br><span class="small">${escHtml(mindName(mo))}</span></td><td>${mo.vocab}</td><td>${fmtKB(mo.u8.length)}</td>`;
+    const nameCell = document.createElement('td');
+    nameCell.innerHTML = `<b class="mname">${escHtml(mindName(mo))}</b> <button class="small ren" title="rename this mind">✏️</button><br>` +
+      `<span class="small">${escHtml(mindAbout(mo))}</span><br><span class="small" style="opacity:.7">${escHtml(mo.name)} · ${fmtKB(mo.u8.length)} · ${mo.vocab}-piece alphabet</span>`;
+    nameCell.querySelector('.ren').onclick = () => renameInPlace(nameCell.querySelector('.mname'), mo);
+    tr.appendChild(nameCell);
     tr.appendChild(cell);
     tb.appendChild(tr);
   }
-  $('tokList').textContent = pool.toks.length ? pool.toks.map(t => `${t.name} (${t.vocab})`).join(', ') : 'none';
+  $('tokList').textContent = pool.toks.length ? pool.toks.map(t => `${t.name} (${t.vocab} pieces)`).join(', ') : 'none';
   $('arcList').textContent = shellArcs.size()
     ? shellArcs.list().map(m => `${m.label || arcKidLabel(m)} (${m.snapshots.length} snapshots to step ${m.snapshots[m.snapshots.length - 1].step})`).join(', ')
     : 'none';
@@ -14481,10 +14536,15 @@ async function shellIngest(recs) {
       + m.snapshots[m.snapshots.length - 1].step + ' — open the Nursery to scrub through it');
   }
   if (res.took) bits.push('took ' + res.took + ' model/tokenizer file(s)');
-  if (res.jsons - atlasJsons) bits.push('sent ' + (res.jsons - atlasJsons) + ' json to the nursery');
+  const workJsons = workOpened ? 1 : 0;
+  if (res.jsons - atlasJsons - workJsons) bits.push('sent ' + (res.jsons - atlasJsons - workJsons) + ' json to the nursery');
   if (atlasJsons) bits.push('neuron atlas ready for the Microscope');
   if (res.skipped.length) bits.push('skipped ' + res.skipped.join(', '));
-  say('bay: ' + (bits.join(' · ') || 'nothing recognizable in that drop'),
+  res.work = !!workOpened;
+  if (workOpened) {
+    const msg = workOpenedMessage(workOpened); workOpened = null;
+    say(msg, 'ok'); alertSimple(msg);
+  } else say('bay: ' + (bits.join(' · ') || 'nothing recognizable in that drop'),
     (res.arcs.length || res.took) ? 'ok' : 'warn');
   return res;
 }
@@ -14503,33 +14563,45 @@ async function buildWorkZip() {
     // the site's own minds come back by themselves (by name too: older visits stored them unlabelled)
     if (m.origin === 'same-folder' || (!/^(trained|export)$/.test(m.origin) && BUILT_IN_MINDS.test(baseName(m)))) continue;
     entries.push({ name: m.name, data: m.u8 });
-    models.push({ file: m.name, origin: m.origin || 'ingest', meta: m.meta || null });
+    models.push({ file: m.name, origin: m.origin || 'ingest', meta: m.meta || null, displayName: mindNames[m.name] || null });
   }
-  let storybook = null;
+  let storybook = null, storybookOf = '';
   try {
     const v = (await shellStorage.get('tm-storybook')).value;
     const data = JSON.parse(v);
     if (data && ((data.train || []).length || (data.heldout || []).length)) {
       storybook = 'my-storybook.json';
+      storybookOf = (data.sheet && data.sheet.name) || (data.characters ? Object.keys(data.characters).join(', ') : '');
       entries.push({ name: storybook, data: new TextEncoder().encode(v) });
     }
   } catch (e) { /* no storybook yet */ }
   if (!entries.length) return null;
-  const manifest = { kind: 'tiny-mind-work', version: 1, savedAt: new Date().toISOString(), models, storybook };
+  const manifest = { kind: 'tiny-mind-work', version: 1, savedAt: new Date().toISOString(), models, storybook, storybookOf };
   entries.push({ name: WORK_MANIFEST, data: new TextEncoder().encode(JSON.stringify(manifest, null, 1)) });
   return { zip: makeZip(entries), models: models.length, storybook: !!storybook };
 }
+let workOpened = null;                          // what the last bundle held, said once the drop is in
 function applyWorkManifest(text) {
   let man; try { man = JSON.parse(text); } catch (e) { return false; }
   if (!man || man.kind !== 'tiny-mind-work') return false;
   for (const m of man.models || []) {
+    if (m.displayName) mindNames[m.file] = m.displayName;
     const have = pool.models.find(x => x.name === m.file);
     if (have) addModel(have.name, have.u8, have.vocab, m.origin, m.meta);
     else pendingWorkMeta.set(m.file, { origin: m.origin, meta: m.meta });
   }
-  say(`opened your saved work: ${(man.models || []).length} mind${(man.models || []).length === 1 ? '' : 's'}` +
-    (man.storybook ? ' and your storybook (in the Nursery)' : ''), 'ok');
+  try { localStorage.setItem('tm-mind-names', JSON.stringify(mindNames)); } catch (e) {}
+  workOpened = man;
   return true;
+}
+function workOpenedMessage(man) {
+  const minds = (man.models || []).map(m => { const mo = pool.models.find(x => x.name === m.file); return mo ? mindName(mo) : m.file; });
+  const parts = [];
+  if (minds.length) parts.push(minds.join(', '));
+  if (man.storybook) parts.push((man.storybookOf ? man.storybookOf + "'s storybook" : 'your storybook') + ' (open 🐣 Nursery to see it)');
+  return parts.length ? 'Opened your saved work: ' + parts.join(', and ') + '.' +
+      (minds.length ? '' : ' There were no trained minds in it: a storybook becomes a mind once you train it in the Nursery.')
+    : 'That saved-work file was empty.';
 }
 $('saveWork').onclick = async () => {
   const w = await buildWorkZip();
@@ -14537,15 +14609,14 @@ $('saveWork').onclick = async () => {
   const stamp = new Date().toISOString().slice(0, 10);
   await onExport(`tiny-mind-my-work-${stamp}.zip`, w.zip, 'shell');
 };
-/* the simple view hides the status line, so a short-lived note under the header */
+/* a short-lived note under the header, in both views (the status line is easy to miss) */
 function alertSimple(text) {
-  if (uiMode !== 'simple') return;
   let n = document.getElementById('simpleToast');
   if (!n) { n = document.createElement('div'); n.id = 'simpleToast';
-    n.style.cssText = 'position:fixed;top:52px;right:16px;z-index:70;background:#2a2f3a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px 12px;font:13px system-ui,sans-serif;max-width:360px';
+    n.style.cssText = 'position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:1000;background:#20351f;color:#eee;border:1px solid #4a7;border-radius:8px;padding:10px 14px;font:14px system-ui,sans-serif;max-width:min(520px,90vw);box-shadow:0 4px 18px rgba(0,0,0,.5)';
     document.body.appendChild(n); }
   n.textContent = text; n.style.display = '';
-  clearTimeout(n._t); n._t = setTimeout(() => { n.style.display = 'none'; }, 5000);
+  clearTimeout(n._t); n._t = setTimeout(() => { n.style.display = 'none'; }, 8000);
 }
 
 /* ---------- shell-level drop (bay + header; app areas keep their own) ---------- */
@@ -14563,7 +14634,8 @@ window.addEventListener('drop', async e => {
   } else {
     recs = await Promise.all(plainFiles.map(async f => ({ name: f.name, u8: new Uint8Array(await f.arrayBuffer()) })));
   }
-  await shellIngest(recs);
+  const before = pool.models.length, res = await shellIngest(recs);
+  if (res && !res.work && pool.models.length > before) alertSimple('Added ' + pool.models.slice(before).map(mindName).join(', ') + ' — choose it from the "mind" menu in any room.');
 });
 
 /* ---------- exports bubbled up from the frames ---------- */
