@@ -223,7 +223,7 @@ window.__vgProviders = {
   async call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
     if (provider === 'openai') {
-      model = model || 'gpt-5.4-mini';   // tools/ai-check.mjs: it answers the guide questions better than gpt-4o-mini
+      model = model || 'gpt-6-luna';   // the app default (src/llm.js); tools/ai-check.mjs tests the guides on it
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
@@ -289,7 +289,7 @@ window.__vgShowBlockedEvent = {
    under tm-key-<provider>; srcdoc frames share the shell's origin, so
    any guide can find a key the visitor already gave the app. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-6-luna', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -2058,7 +2058,7 @@ class TrainPool {
 // hands; nothing here persists anything. The claude.ai artifact edition adds a
 // 'keyless' provider that posts to the artifact's built-in Anthropic endpoint.
 const PROVIDERS = {
-  openai: { label: 'OpenAI API', defaultModel: 'gpt-5.4-mini' },
+  openai: { label: 'OpenAI API', defaultModel: 'gpt-6-luna' },
   anthropic: { label: 'Anthropic API', defaultModel: 'claude-sonnet-4-5' },
   gemini: { label: 'Gemini API', defaultModel: 'gemini-3.1-flash-lite' },
   keyless: { label: 'built-in Claude (no key needed)', defaultModel: '(built-in)' },

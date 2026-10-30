@@ -35,7 +35,7 @@ if (!window.__vgShowBlockedEvent) window.__vgShowBlockedEvent = {
   kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 if (!window.__vgRememberedKey) window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-5.4-mini', gemini: 'gemini-3.5-flash' };
+  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-6-luna', gemini: 'gemini-3.5-flash' };
   try {
     for (const p of ['anthropic', 'openai', 'gemini']) {
       const k = localStorage.getItem('tm-key-' + p);
@@ -50,7 +50,7 @@ if (!window.__vgProviders) window.__vgProviders = {
     if (provider === 'openai') {
       const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-        body: JSON.stringify({ model: model || 'gpt-5.4-mini', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
+        body: JSON.stringify({ model: model || 'gpt-6-luna', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
       if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
       const d = await r.json(); return d.choices[0].message.content;
     }

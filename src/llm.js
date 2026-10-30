@@ -3,7 +3,7 @@
 // hands; nothing here persists anything. The claude.ai artifact edition adds a
 // 'keyless' provider that posts to the artifact's built-in Anthropic endpoint.
 export const PROVIDERS = {
-  openai: { label: 'OpenAI API', defaultModel: 'gpt-5.4-mini' },
+  openai: { label: 'OpenAI API', defaultModel: 'gpt-6-luna' },
   anthropic: { label: 'Anthropic API', defaultModel: 'claude-sonnet-4-5' },
   gemini: { label: 'Gemini API', defaultModel: 'gemini-3.1-flash-lite' },
   keyless: { label: 'built-in Claude (no key needed)', defaultModel: '(built-in)' },

@@ -1,6 +1,6 @@
 // ai-check.mjs — test Tiny Mind's language-model features against a real model (OpenAI).
 //   node tools/ai-check.mjs                 all three parts
-//   node tools/ai-check.mjs ghost detective guide   any of them  (--compare: guides on gpt-4o-mini too)
+//   node tools/ai-check.mjs ghost detective guide   any of them  (--compare: guides on gpt-5.4-mini, the old default, too)
 // Needs OPENAI_API_KEY in the environment. The key is read here and sent only to
 // api.openai.com: it is never written to a file, printed, or put into a web page (the
 // guide part drives the real pages in headless Chrome, captures the prompts the guides
@@ -34,7 +34,7 @@ const parts = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const want = p => !parts.length || parts.includes(p);
 const SITE = process.env.TM_SITE || 'C:/Users/toont/Documents/GitHub/tinymind';
 const APP_MODEL = PROVIDERS.openai.defaultModel;    // what the ghostwriter and detective use
-const GUIDE_MODELS = process.argv.includes('--compare') ? [APP_MODEL, 'gpt-4o-mini'] : [APP_MODEL];   // the guides' default (tm-prelude), and the old one to compare
+const GUIDE_MODELS = process.argv.includes('--compare') ? [APP_MODEL, 'gpt-5.4-mini'] : [APP_MODEL];   // the guides' default (tm-prelude), and the old one to compare
 const JUDGE = 'gpt-5.4';
 const report = { date: new Date().toISOString(), models: { app: APP_MODEL, guide: GUIDE_MODELS, judge: JUDGE }, usage: {} };
 
