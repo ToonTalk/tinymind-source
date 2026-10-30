@@ -47,8 +47,9 @@ for (const m of ['stories260K-zog.bin', 'stories15M.bin', 'tokenizer.bin']) put(
 // the "thinking ahead" lenses (J-lens, fitted in jlens-tinystories); the 110M mind itself is
 // over GitHub's 100 MB limit, so the page fetches it from Hugging Face (shell GIANT_URL)
 for (const m of ['stories15M.jlens', 'stories110M.jlens']) put(join(ROOT, 'models', m), m);
-// the Tiny Eye, a mind that sees drawings (tools/eye/ship.mjs): 4 MB, fetched when its room opens
-for (const f of ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin']) put(join(ROOT, 'eye', f), f);
+// the Tiny Eye, a mind that sees drawings (tools/eye/ship.mjs): 4.3 MB fetched when its room opens, and
+// its training recording (3.8 MB) and squeezed eye (0.1 MB) when the room asks for them
+for (const f of ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin', 'tiny-eye-growth.bin', 'tiny-eye-sq8.json', 'tiny-eye-sq8.bin']) put(join(ROOT, 'eye', f), f);
 
 // the recordings: each manifest and the snapshots it names (no optimizer state)
 const arcs = ['arc-manifest.json', 'newborn/arc-manifest.json', 'binding/arc-manifest.json'];

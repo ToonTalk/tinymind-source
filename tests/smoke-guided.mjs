@@ -733,7 +733,7 @@ async function main() {
     check('eye guide boots', booted);
     if (booted) {
       const G = w.__guide; G.setWordMs(0);
-      check('eye tour: welcome, draw, grid, card, switch', G.steps.map(s => s.name).join(',') === 'welcome,draw,grid,card,switch', G.steps.map(s => s.name).join(','));
+      check('eye tour: welcome, draw, grid, card, switch, grow, squeeze', G.steps.map(s => s.name).join(',') === 'welcome,draw,grid,card,switch,grow,squeeze', G.steps.map(s => s.name).join(','));
       const doc = w.document, wk = w.__vgW.workers[0];
       check('eye worker shimmed', !!wk);
       const man = JSON.parse(readFileSync('eye/tiny-eye.json', 'utf8'));
@@ -784,6 +784,10 @@ async function main() {
       let d = 1; if (see) { d = 0; for (let k = 0; k < 784; k++) d = Math.max(d, Math.abs(see.x[k] - mine[k])); }
       check('the pad sends the eye exactly what eyeDoodle makes of the strokes (the tested path)', !!see && d < 0.02, 'max diff ' + d);
       check('guess bars: dragon first', /dragon/.test((doc.querySelector('#guesses .gbar.top') || {}).textContent || ''));
+      const pcts = [...doc.querySelectorAll('#guesses .gpct')].map(e => e.textContent);
+      check('a tiny chance reads "under 1%", never "0%", and the rest are added up in one row',
+        pcts.includes('under 1%') && !pcts.includes('0%') && /the other 19 kinds together/.test((doc.querySelector('#guesses .gbar.rest') || {}).textContent || ''), pcts.join(' | '));
+      check('a note says why it is never 100% sure (it was taught never to be completely sure)', /taught never to be completely sure/.test(doc.getElementById('whyNot100').textContent));
       await until(() => spoke(w, 'There is its guess'), 3000);
       check('the guide speaks when a stroke ends with a guess', spoke(w, 'There is its guess'));
       doc.querySelectorAll('#grid .cell')[85].click();
@@ -799,6 +803,45 @@ async function main() {
         /castle/.test((doc.querySelector('#guesses .gbar.top') || {}).textContent || '') && doc.querySelectorAll('#guesses .gghost').length > 0 && /now says castle/.test(doc.getElementById('guessNote').textContent));
       await until(() => spoke(w, 'The guess changed'), 3000);
       check('the guide says the switch-off changed the guess', spoke(w, 'The guess changed'));
+      // watch it grow: the training recording comes through the shell's file request (stubbed from disk here)
+      const fromDisk = f => { const b = readFileSync('eye/' + f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
+      w.__tmRPC = async (method, args) => { if (method !== 'eye.file') throw new Error('unexpected rpc ' + method); return fromDisk(args[0]); };
+      check('the growth stories are offered', [...doc.querySelectorAll('#stories button')].map(b => b.textContent).join(' | ').includes('neuron 117: a roof that grows an umbrella offshoot'));
+      wk.sent.length = 0;
+      [...doc.querySelectorAll('#stories button')].find(b => /neuron 2:/.test(b.textContent)).click();
+      await until(() => wk.sent.some(m => m.type === 'growth') && doc.querySelectorAll('#strip .col').length, 4000);
+      check('a story loads the recording into the worker and shows how the neuron grew (7 moments and the end)',
+        wk.sent.some(m => m.type === 'growth' && m.bytesEach === 165408) && doc.querySelectorAll('#strip .col').length === 8 && /castle walls, then fish/.test(doc.getElementById('cardBody').textContent));
+      [...doc.querySelectorAll('#strip .col')].find(c => /1,206/.test(c.textContent)).click();
+      const snapSee = await settle(probs, null);
+      check('going back sends the next look to that snapshot, and the card says when', !!snapSee && snapSee.snap === man.growth.snapshots.findIndex(st => st.step === 1206) && /at step 1,206/.test(doc.getElementById('cardTitle').textContent) && doc.body.dataset.snap === '1206');
+      check('while going back, only the last stage is offered (the recording follows it)', [...doc.querySelectorAll('#stages button')].map(b => b.disabled).join() === 'true,true,false');
+      check('the scrubber says how settled the jobs are', /settled/.test(doc.getElementById('growInfo').textContent) && /step 1,206/.test(doc.getElementById('growInfo').textContent));
+      doc.getElementById('growEnd').click();
+      await settle(probs, null);
+      check('"the end" comes back to the eye you are drawing with', doc.body.dataset.snap === 'end' && /the end of training/.test(doc.getElementById('growInfo').textContent));
+      // squeeze it: the squeezed eye loads beside the full one and gets its own sweep
+      wk.sent.length = 0;
+      doc.getElementById('squeezeBtn').click();
+      await until(() => wk.sent.some(m => m.type === 'load' && m.key === 'sq8'), 3000);
+      check('squeeze it loads the squeezed eye (8 last-stage neurons) into the worker', wk.sent.some(m => m.type === 'load' && m.key === 'sq8' && m.manifest.config.hidden[2] === 8));
+      wk.fakeReceive({ type: 'loaded', key: 'sq8', classes: man.classes, widths: [24, 48, 8], hidden: [96, 192, 8], sizes: [14, 7, 4], params: 34528, accuracy: 0.838 });
+      const sqDone = new Set();
+      for (let round = 0; round < 40; round++) {
+        let more = false;
+        for (const f of w.__vgW.workers) for (const m of f.sent) {
+          if (m.type !== 'sweep' || m.key !== 'sq8' || sqDone.has(m.id)) continue;
+          sqDone.add(m.id); more = true;
+          f.fakeReceive({ type: 'swept', key: 'sq8', id: m.id, start: m.start, count: m.count, table: new Float32Array(m.count * 296).map((_, i) => Math.sin(i * 0.53 + m.start)), guesses: new Uint8Array(m.count) });
+        }
+        if (!more) break;
+      }
+      await settle(probs, null);
+      check('the squeezed eye shows 8 neurons, says so, and compares how many kinds each answers to',
+        doc.querySelectorAll('#grid .cell').length === 8 && /squeezed/.test(doc.getElementById('which').textContent) && /answer to/.test(doc.getElementById('squeezeNote').textContent) && doc.body.dataset.eye === 'squeezed');
+      check('the squeezed eye has no recording: the scrubber waits', doc.getElementById('growSlider').disabled && /without a training recording/.test(doc.getElementById('growInfo').textContent));
+      doc.getElementById('squeezeBtn').click();
+      check('un-squeezing brings back the full eye', doc.querySelectorAll('#grid .cell').length === 256 && doc.body.dataset.eye === 'full');
       check('no unexpected eye page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
     }
   }

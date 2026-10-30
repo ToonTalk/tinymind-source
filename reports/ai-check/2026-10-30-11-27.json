@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-30T11:26:21.095Z",
+  "models": {
+    "app": "gpt-6-luna",
+    "guide": [
+      "gpt-6-luna"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-6-luna": {
+      "in": 20764,
+      "out": 2107,
+      "calls": 9
+    },
+    "gpt-5.4": {
+      "in": 8224,
+      "out": 197,
+      "calls": 9
+    }
+  },
+  "guide": [
+    {
+      "room": "Tiny Eye (a house drawn, a neuron card open)",
+      "question": "What does this neuron do?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "Neuron ninety-nine, in the last stage, fires most for simple houses with peaked roofs; the bigger A I picked four out of four hidden doodles from that end. It fires least for small rounded shapes with loose curved lines, though the A I picked only two out of four, so that end is fuzzier to describe; its strongest class responses are houses and castles, and it fires a lot for your drawing, more than for all one hundred sample doodles.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (a house drawn, a neuron card open)",
+      "question": "Why did it guess that?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "It only knows twenty-four kinds of things and has to choose one; it sees your drawing as a tiny twenty-eight-by-twenty-eight picture, and its guess bars show house at ninety percent. Neuron ninety-nine is firing a lot, and its card links it strongly to simple houses with peaked roofs, but that alone doesn’t prove it caused the guess. To test whether it mattered, switch it off with the button on its card and see whether the guess changes.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (a house drawn, a neuron card open)",
+      "question": "Do bigger eyes have cleaner neurons?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "No. Eyes with about twenty-three thousand, eighty-three thousand, and three hundred eleven thousand connections had neurons that were about equally clean; bigger did not mean cleaner.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (a house drawn, a neuron card open)",
+      "question": "What happens if I switch off a neuron?",
+      "kid": true,
+      "model": "gpt-6-luna",
+      "answer": "That tiny part of the eye goes quiet, and its output becomes zero. The guess might change or stay the same, which shows whether that neuron was helping; you can switch it off with the button on its card or in “switch neurons off.”",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (a house drawn, a neuron card open)",
+      "question": "Why do the other kinds say under 1% instead of 0%?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "Its teachers trained it not to be completely sure: even the right answer counted as about ninety percent, with the rest shared among the other kinds. So each other kind keeps a small slice, often under one percent, even when the eye strongly favors house.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (scrubbed back to step 1,206, neuron 117's growth story open)",
+      "question": "Is the eye finished learning here?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "No. This is step one thousand two hundred six of nine thousand three hundred sixty; at this point, the eye is right on seventy-seven of a hundred sample doodles, and its neurons’ jobs are only about twenty percent settled. It keeps learning after this, and reaches eighty-eight percent by the end.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (scrubbed back to step 1,206, neuron 117's growth story open)",
+      "question": "How did this neuron grow?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "Neuron one hundred seventeen began as a house-roof neuron, from about step six hundred. Later, umbrella doodles joined in as an offshoot; by the end, they made up about a fifth of its top hundred doodles, just below houses. At the step you’re viewing now, it’s still early in that growth.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (squeezed, squeezed neuron 7 open)",
+      "question": "What changed when I squeezed it?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "The squeezed eye has only eight neurons in its last stage instead of two hundred fifty-six, so each neuron has to cover more kinds of things: about four kinds on average, compared with about three in the full eye. Its neurons’ doodle examples still look tidy, and it gets about eighty-four out of a hundred sample doodles right, compared with eighty-eight for the full eye.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Tiny Eye (squeezed, squeezed neuron 7 open)",
+      "question": "Why does this neuron like rainbows and umbrellas?",
+      "kid": true,
+      "model": "gpt-6-luna",
+      "answer": "Its strongest doodles have upside-down U-shaped curves, like the arches in rainbows and umbrellas; a bigger AI’s name for that end matched all four test doodles. Its bars are strongest for rainbows, umbrellas, and castles, and it’s firing more than usual for your drawing; the other end was called cute little animals with ears and faces, but that name matched only one of four test doodles.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Doesn’t mention the squeezed eye has only 8 last-stage neurons, so each neuron has to do more jobs.",
+        "A bit too long for read-aloud to a young child.",
+        "Includes extra details about the weak 'cute little animals' end instead of simply answering why it likes rainbows and umbrellas."
+      ]
+    }
+  ]
+}

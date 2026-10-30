@@ -1233,5 +1233,216 @@
     }
    }
   }
- }
+ },
+ "growth": {
+  "file": "tiny-eye-growth.bin",
+  "bytes": 3784800,
+  "weights": {
+   "dtype": "float16 little-endian",
+   "offset": 0,
+   "bytesEach": 165408,
+   "note": "the same tensors in the same places as tiny-eye.bin"
+  },
+  "summary": {
+   "offset": 3142752,
+   "bytesEach": 33792,
+   "stage": 2,
+   "neurons": 256,
+   "top": 16,
+   "layout": [
+    [
+     "mean",
+     "f32",
+     256
+    ],
+    [
+     "sd",
+     "f32",
+     256
+    ],
+    [
+     "deciles",
+     "f32",
+     2304
+    ],
+    [
+     "top",
+     "u16",
+     4096
+    ],
+    [
+     "bottom",
+     "u16",
+     4096
+    ],
+    [
+     "classZ",
+     "i8",
+     6144
+    ]
+   ],
+   "classZScale": 16,
+   "note": "last-stage neurons over the sample set: deciles are the 10%..90% points; classZ is (class mean - mean) / sd times classZScale; top/bottom are sample doodle numbers, highest (lowest) first"
+  },
+  "snapshots": [
+   {
+    "step": 0,
+    "epoch": 0,
+    "heldOutAcc": 0.035,
+    "sampleRight": 167,
+    "settled": 0.0285
+   },
+   {
+    "step": 20,
+    "epoch": 0.043,
+    "heldOutAcc": 0.041625,
+    "sampleRight": 185,
+    "settled": 0.0281
+   },
+   {
+    "step": 28,
+    "epoch": 0.06,
+    "heldOutAcc": 0.040916666666666664,
+    "sampleRight": 204,
+    "settled": 0.0286
+   },
+   {
+    "step": 40,
+    "epoch": 0.085,
+    "heldOutAcc": 0.04683333333333333,
+    "sampleRight": 232,
+    "settled": 0.0283
+   },
+   {
+    "step": 56,
+    "epoch": 0.12,
+    "heldOutAcc": 0.049833333333333334,
+    "sampleRight": 243,
+    "settled": 0.0306
+   },
+   {
+    "step": 78,
+    "epoch": 0.167,
+    "heldOutAcc": 0.058041666666666665,
+    "sampleRight": 289,
+    "settled": 0.0325
+   },
+   {
+    "step": 110,
+    "epoch": 0.235,
+    "heldOutAcc": 0.119625,
+    "sampleRight": 603,
+    "settled": 0.0347
+   },
+   {
+    "step": 155,
+    "epoch": 0.331,
+    "heldOutAcc": 0.31575,
+    "sampleRight": 1604,
+    "settled": 0.0571
+   },
+   {
+    "step": 219,
+    "epoch": 0.468,
+    "heldOutAcc": 0.43141666666666667,
+    "sampleRight": 2172,
+    "settled": 0.0679
+   },
+   {
+    "step": 307,
+    "epoch": 0.656,
+    "heldOutAcc": 0.5405416666666667,
+    "sampleRight": 2690,
+    "settled": 0.087
+   },
+   {
+    "step": 433,
+    "epoch": 0.925,
+    "heldOutAcc": 0.6220416666666667,
+    "sampleRight": 3106,
+    "settled": 0.1029
+   },
+   {
+    "step": 609,
+    "epoch": 1.301,
+    "heldOutAcc": 0.6987916666666667,
+    "sampleRight": 3495,
+    "settled": 0.123
+   },
+   {
+    "step": 857,
+    "epoch": 1.831,
+    "heldOutAcc": 0.7447083333333333,
+    "sampleRight": 3722,
+    "settled": 0.1543
+   },
+   {
+    "step": 1206,
+    "epoch": 2.577,
+    "heldOutAcc": 0.7770833333333333,
+    "sampleRight": 3864,
+    "settled": 0.1956
+   },
+   {
+    "step": 1696,
+    "epoch": 3.624,
+    "heldOutAcc": 0.8138333333333333,
+    "sampleRight": 4077,
+    "settled": 0.2553
+   },
+   {
+    "step": 2387,
+    "epoch": 5.1,
+    "heldOutAcc": 0.837375,
+    "sampleRight": 4217,
+    "settled": 0.3452
+   },
+   {
+    "step": 3359,
+    "epoch": 7.177,
+    "heldOutAcc": 0.8464583333333333,
+    "sampleRight": 4211,
+    "settled": 0.4715
+   },
+   {
+    "step": 4727,
+    "epoch": 10.1,
+    "heldOutAcc": 0.858625,
+    "sampleRight": 4282,
+    "settled": 0.6494
+   },
+   {
+    "step": 6652,
+    "epoch": 14.214,
+    "heldOutAcc": 0.87925,
+    "sampleRight": 4395,
+    "settled": 0.8331
+   }
+  ],
+  "final": {
+   "step": 9360,
+   "epoch": 20,
+   "heldOutAcc": 0.882875,
+   "sampleRight": 4399,
+   "settled": 1
+  },
+  "stories": [
+   {
+    "neuron": 117,
+    "title": "a roof that grows an umbrella offshoot",
+    "text": "From about step 600 it is a house-roof neuron. Later umbrellas, a peaked top too, join it: by the end they are about a fifth of its top 100 doodles, just below the houses."
+   },
+   {
+    "neuron": 2,
+    "title": "castle walls, then fish",
+    "text": "It starts on castle walls, then switches to fish between steps 1,206 and 2,387, when the eye is already right 78 to 84 times in 100."
+   },
+   {
+    "neuron": 16,
+    "title": "vehicles, then arches, then houses",
+    "text": "Vehicles and puffy animals at first, then arches and rainbows (all rainbows at step 3,359, when the eye is 85% right), and houses at the end."
+   }
+  ]
+ },
+ "squeezed": "tiny-eye-sq8.json"
 }

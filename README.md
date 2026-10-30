@@ -48,7 +48,9 @@ node tools/eye/ship.mjs          # the Tiny Eye from its Phase 0 export -> eye/ 
 - `eye/` — the Tiny Eye, a mind that sees drawings (plans/tiny-eye.md): a tiny ConvNeXt-style
   doodle network (src/eye.js, 83 thousand weights, 24 Quick, Draw! categories). Draw pad made the
   way Quick, Draw!'s bitmaps were, guess bars, every stage's neurons lighting up, neuron cards with
-  both ends computed live over 5,000 held-out doodles (`eye/tiny-eye-sample.bin`), switch-off.
+  both ends computed live over 5,000 held-out doodles (`eye/tiny-eye-sample.bin`), switch-off;
+  "watch it grow" (20 training snapshots, float16, with each snapshot's last-stage summaries in
+  `eye/tiny-eye-growth.bin`) and "squeeze it" (`eye/tiny-eye-sq8.*`, 8 last-stage neurons).
 - `hunt/` — Session C app: the treasure hunt. Probe a question, get falsifiable
   clues from the built-in or LLM detective, prove or bust them with head/neuron/team
   ablations. Voice + little-kid mode toggles.

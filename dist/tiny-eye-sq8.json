@@ -1,0 +1,569 @@
+{
+ "format": "tiny-eye-v1",
+ "name": "Tiny Eye, squeezed",
+ "run": "eye80k-sq8",
+ "params": 34528,
+ "config": {
+  "widths": [
+   24,
+   48,
+   8
+  ],
+  "hidden": [
+   96,
+   192,
+   8
+  ],
+  "depths": [
+   1,
+   1,
+   1
+  ],
+  "n_classes": 24
+ },
+ "classes": [
+  "dragon",
+  "teapot",
+  "cloud",
+  "moon",
+  "castle",
+  "cat",
+  "dog",
+  "fish",
+  "bird",
+  "rabbit",
+  "frog",
+  "owl",
+  "sheep",
+  "tree",
+  "flower",
+  "house",
+  "sun",
+  "star",
+  "apple",
+  "rainbow",
+  "snowman",
+  "umbrella",
+  "ambulance",
+  "police car"
+ ],
+ "held_out_acc": 0.8375,
+ "dtype": "float32 little-endian",
+ "tensors": [
+  {
+   "name": "stem.0.weight",
+   "shape": [
+    24,
+    1,
+    2,
+    2
+   ],
+   "offset": 0,
+   "length": 96
+  },
+  {
+   "name": "stem.0.bias",
+   "shape": [
+    24
+   ],
+   "offset": 96,
+   "length": 24
+  },
+  {
+   "name": "stem.1.ln.weight",
+   "shape": [
+    24
+   ],
+   "offset": 120,
+   "length": 24
+  },
+  {
+   "name": "stem.1.ln.bias",
+   "shape": [
+    24
+   ],
+   "offset": 144,
+   "length": 24
+  },
+  {
+   "name": "downs.0.0.ln.weight",
+   "shape": [
+    24
+   ],
+   "offset": 168,
+   "length": 24
+  },
+  {
+   "name": "downs.0.0.ln.bias",
+   "shape": [
+    24
+   ],
+   "offset": 192,
+   "length": 24
+  },
+  {
+   "name": "downs.0.1.weight",
+   "shape": [
+    48,
+    24,
+    2,
+    2
+   ],
+   "offset": 216,
+   "length": 4608
+  },
+  {
+   "name": "downs.0.1.bias",
+   "shape": [
+    48
+   ],
+   "offset": 4824,
+   "length": 48
+  },
+  {
+   "name": "downs.1.0.ln.weight",
+   "shape": [
+    48
+   ],
+   "offset": 4872,
+   "length": 48
+  },
+  {
+   "name": "downs.1.0.ln.bias",
+   "shape": [
+    48
+   ],
+   "offset": 4920,
+   "length": 48
+  },
+  {
+   "name": "downs.1.1.weight",
+   "shape": [
+    8,
+    48,
+    2,
+    2
+   ],
+   "offset": 4968,
+   "length": 1536
+  },
+  {
+   "name": "downs.1.1.bias",
+   "shape": [
+    8
+   ],
+   "offset": 6504,
+   "length": 8
+  },
+  {
+   "name": "stages.0.0.gamma",
+   "shape": [
+    24
+   ],
+   "offset": 6512,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.dw.weight",
+   "shape": [
+    24,
+    1,
+    7,
+    7
+   ],
+   "offset": 6536,
+   "length": 1176
+  },
+  {
+   "name": "stages.0.0.dw.bias",
+   "shape": [
+    24
+   ],
+   "offset": 7712,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.ln.weight",
+   "shape": [
+    24
+   ],
+   "offset": 7736,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.ln.bias",
+   "shape": [
+    24
+   ],
+   "offset": 7760,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.fc1.weight",
+   "shape": [
+    96,
+    24
+   ],
+   "offset": 7784,
+   "length": 2304
+  },
+  {
+   "name": "stages.0.0.fc1.bias",
+   "shape": [
+    96
+   ],
+   "offset": 10088,
+   "length": 96
+  },
+  {
+   "name": "stages.0.0.fc2.weight",
+   "shape": [
+    24,
+    96
+   ],
+   "offset": 10184,
+   "length": 2304
+  },
+  {
+   "name": "stages.0.0.fc2.bias",
+   "shape": [
+    24
+   ],
+   "offset": 12488,
+   "length": 24
+  },
+  {
+   "name": "stages.1.0.gamma",
+   "shape": [
+    48
+   ],
+   "offset": 12512,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.dw.weight",
+   "shape": [
+    48,
+    1,
+    7,
+    7
+   ],
+   "offset": 12560,
+   "length": 2352
+  },
+  {
+   "name": "stages.1.0.dw.bias",
+   "shape": [
+    48
+   ],
+   "offset": 14912,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.ln.weight",
+   "shape": [
+    48
+   ],
+   "offset": 14960,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.ln.bias",
+   "shape": [
+    48
+   ],
+   "offset": 15008,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.fc1.weight",
+   "shape": [
+    192,
+    48
+   ],
+   "offset": 15056,
+   "length": 9216
+  },
+  {
+   "name": "stages.1.0.fc1.bias",
+   "shape": [
+    192
+   ],
+   "offset": 24272,
+   "length": 192
+  },
+  {
+   "name": "stages.1.0.fc2.weight",
+   "shape": [
+    48,
+    192
+   ],
+   "offset": 24464,
+   "length": 9216
+  },
+  {
+   "name": "stages.1.0.fc2.bias",
+   "shape": [
+    48
+   ],
+   "offset": 33680,
+   "length": 48
+  },
+  {
+   "name": "stages.2.0.gamma",
+   "shape": [
+    8
+   ],
+   "offset": 33728,
+   "length": 8
+  },
+  {
+   "name": "stages.2.0.dw.weight",
+   "shape": [
+    8,
+    1,
+    7,
+    7
+   ],
+   "offset": 33736,
+   "length": 392
+  },
+  {
+   "name": "stages.2.0.dw.bias",
+   "shape": [
+    8
+   ],
+   "offset": 34128,
+   "length": 8
+  },
+  {
+   "name": "stages.2.0.ln.weight",
+   "shape": [
+    8
+   ],
+   "offset": 34136,
+   "length": 8
+  },
+  {
+   "name": "stages.2.0.ln.bias",
+   "shape": [
+    8
+   ],
+   "offset": 34144,
+   "length": 8
+  },
+  {
+   "name": "stages.2.0.fc1.weight",
+   "shape": [
+    8,
+    8
+   ],
+   "offset": 34152,
+   "length": 64
+  },
+  {
+   "name": "stages.2.0.fc1.bias",
+   "shape": [
+    8
+   ],
+   "offset": 34216,
+   "length": 8
+  },
+  {
+   "name": "stages.2.0.fc2.weight",
+   "shape": [
+    8,
+    8
+   ],
+   "offset": 34224,
+   "length": 64
+  },
+  {
+   "name": "stages.2.0.fc2.bias",
+   "shape": [
+    8
+   ],
+   "offset": 34288,
+   "length": 8
+  },
+  {
+   "name": "head_ln.weight",
+   "shape": [
+    8
+   ],
+   "offset": 34296,
+   "length": 8
+  },
+  {
+   "name": "head_ln.bias",
+   "shape": [
+    8
+   ],
+   "offset": 34304,
+   "length": 8
+  },
+  {
+   "name": "head.weight",
+   "shape": [
+    24,
+    8
+   ],
+   "offset": 34312,
+   "length": 192
+  },
+  {
+   "name": "head.bias",
+   "shape": [
+    24
+   ],
+   "offset": 34504,
+   "length": 24
+  }
+ ],
+ "architecture": "stem: conv 2x2 stride 2 (1->w0) + LayerNorm over channels; stage i>0 starts with LayerNorm + conv 2x2 stride 2 (padding 1 when the grid is odd: 14->7->4); each block: depthwise 7x7 conv (padding 3) -> LayerNorm -> fc1 -> GELU (erf) -> fc2 -> times gamma -> add to the block input; head: mean over the grid -> LayerNorm -> linear. LayerNorm eps 1e-5. Conv weights are [out, in/groups, kh, kw]; Linear weights are [out, in].",
+ "neurons": "fc1 outputs (before GELU) of each block; a drawing's value for a neuron is its mean over the grid.",
+ "input": "28x28 grayscale, row-major, ink = 1.0 and paper = 0.0 (bitmap / 255). In the Quick, Draw! bitmaps the drawing is scaled so its longer side spans 26 pixels (a 1-pixel margin), centered on the shorter side, with soft anti-aliased strokes about 2 pixels wide (about 27% of pixels have ink).",
+ "attribution": "Quick, Draw! drawings: made available by Google, Inc. under the Creative Commons Attribution 4.0 International license (https://github.com/googlecreativelab/quickdraw-dataset).",
+ "weights": "tiny-eye-sq8.bin",
+ "sample": {
+  "file": "tiny-eye-sample.bin",
+  "count": 5000,
+  "size": 28,
+  "dtype": "uint8, ink = 255",
+  "sortedByClass": true,
+  "classCounts": [
+   209,
+   209,
+   209,
+   209,
+   209,
+   209,
+   209,
+   209,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208
+  ],
+  "note": "held-out doodles the eye never trained on, about 208 a category"
+ },
+ "names": {
+  "stage": 3,
+  "model": "gpt-6-luna",
+  "how": "Phase 0 (reports/eye/feasibility.md): a vision model named each pole from its top 16 held-out doodles, then from the name alone tried to pick 4 of that pole's doodles out of 16; \"passed\" = 3 or 4 right",
+  "neurons": {
+   "0": {
+    "most": {
+     "name": "Small houses with pointed roofs",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Fluffy wide tops with little lines hanging below",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "1": {
+    "most": {
+     "name": "Complete shapes with dark details",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Open, curved strokes and partial shapes",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "2": {
+    "most": {
+     "name": "Crescent shapes like moons",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Pointy shapes with tips or spikes",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "3": {
+    "most": {
+     "name": "Pointy ears or peaked roofs",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Simple rounded shapes with little detail",
+     "hits": 0,
+     "passed": false
+    }
+   },
+   "4": {
+    "most": {
+     "name": "Castles with tall towers and notched walls",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Mostly round suns with short rays around them",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "5": {
+    "most": {
+     "name": "Suns with rays around them",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Umbrellas with curved tops and handles",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "6": {
+    "most": {
+     "name": "Animals with bumpy, rounded outlines",
+     "hits": 1,
+     "passed": false
+    },
+    "least": {
+     "name": "Tall straight sides with arches or square tops",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "7": {
+    "most": {
+     "name": "parallel upside-down U-shaped curved lines",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "cute little animals with ears and faces",
+     "hits": 1,
+     "passed": false
+    }
+   }
+  }
+ },
+ "squeezes": {
+  "eye": "eye80k",
+  "note": "the same eye and training with its last stage cut from 64 channels and 256 neurons to 8 and 8, and no wide bypass: everything the eye sees goes through 8 numbers"
+ }
+}

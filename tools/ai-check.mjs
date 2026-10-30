@@ -268,6 +268,26 @@ const ROOMS = [
       { q: 'Why did it guess that?', expect: 'Refers to the guess bars in the status; it only knows 24 kinds of things and always picks one; it sees the drawing shrunk to 28 by 28 dots; neurons light up and vote; to find which neurons matter, switch some off and watch the guess. Grounded in the status.' },
       { q: 'Do bigger eyes have cleaner neurons?', expect: 'No: that was tested (three sizes of eye, about equally clean), so bigger is not cleaner; most neurons have one main job you can name at every size. Must not claim bigger eyes are cleaner.' },
       { q: 'What happens if I switch off a neuron?', kid: true, expect: 'For a young child: that part of the eye goes quiet (its output becomes zero) and the guess might change, which shows whether it was helping; try the switch-off button on the card or in box four.' },
+      { q: 'Why do the other kinds say under 1% instead of 0%?', expect: 'It was taught never to be completely sure (label smoothing: each right answer counted as about 90% right in training), so even a confident guess stops near 97% and every other kind keeps a sliver under 1%; the "other kinds together" row adds the slivers up. Plain words; the term label smoothing is optional.' },
+    ] },
+  { room: 'Tiny Eye (scrubbed back to step 1,206, neuron 117\'s growth story open)', app: 'eye',
+    setup: `const d = __ai.frame('eye').document;
+      [...d.querySelectorAll('#stories button')].find(b => /neuron 117/.test(b.textContent)).click();
+      await __ai.until(() => d.querySelectorAll('#strip .col').length, 30000);
+      [...d.querySelectorAll('#strip .col')].find(c => /1,206/.test(c.textContent)).click();
+      await __ai.until(() => /at step 1,206/.test(d.getElementById('cardTitle').textContent) && d.querySelector('#guesses .gbar'), 20000);`,
+    qs: [
+      { q: 'Is the eye finished learning here?', expect: 'No: box five shows step 1,206 of 9,360, not the end; it is right about 77 times in 100 there and its neurons\' jobs are only about 20% settled; the jobs settle late, and "the end" button returns to the finished eye. Numbers must match the status.' },
+      { q: 'How did this neuron grow?', expect: 'About neuron 117 (its card and growth story): it becomes a house or roof neuron early, and later umbrellas (also peaked tops) join it as an offshoot, just below the houses; the strip shows its top doodles at several moments. May add that neurons try jobs, settle late, sometimes switch, and a few grow offshoots.' },
+    ] },
+  { room: 'Tiny Eye (squeezed, squeezed neuron 7 open)', app: 'eye',
+    setup: `const d = __ai.frame('eye').document;
+      d.getElementById('growEnd').click(); await new Promise(r => setTimeout(r, 500));
+      d.getElementById('sq7Btn').click();
+      await __ai.until(() => /answer to/.test(d.getElementById('squeezeNote').textContent) && d.querySelector('#cardBody .poles') && /squeezed eye/.test(d.getElementById('cardTitle').textContent), 90000);`,
+    qs: [
+      { q: 'What changed when I squeezed it?', expect: 'The squeezed eye has only 8 last-stage neurons (and 8 channels); each has to cover more kinds of things: box six\'s numbers (about 4 kinds each against about 3 for the full eye); it is still right about 84 times in 100; its top doodles still look tidy. Must not call the neurons muddled or confused.' },
+      { q: 'Why does this neuron like rainbows and umbrellas?', kid: true, expect: 'For a young child: the squeezed eye has only 8 neurons at the end, so each one has to do more jobs; rainbows, umbrellas and castles all have an arch or bump on top, so this neuron fires for all of them. Grounded in the card (rainbow, umbrella, castle bars).' },
     ] },
   { room: 'Hunt', app: 'hunt',
     setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=hunt]').click();

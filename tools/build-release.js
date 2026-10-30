@@ -22,9 +22,10 @@ const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neu
 const WORKER_CORE = { eye: [] };
 // page-only extras for one app (the others' pages stay byte-identical)
 const PAGE_APP_EXTRA = { nursery: ['ghostwriter.js'], microscope: ['neuron-atlas.js'], hunt: [], thought: [], eye: ['eye.js'] };
-// the Tiny Eye's files: too big to inline (the sample doodles are 3.9 MB), so they ship beside the
-// pages and the shell fetches them the way it fetches the story minds (tools/eye/ship.mjs makes them)
-const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];
+// the Tiny Eye's files: too big to inline (the sample doodles are 3.9 MB, the training recording 3.8 MB),
+// so they ship beside the pages and the shell fetches them the way it fetches the story minds; the
+// recording and the squeezed eye only when the room asks (tools/eye/ship.mjs makes them all)
+const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin', 'tiny-eye-growth.bin', 'tiny-eye-sq8.json', 'tiny-eye-sq8.bin'];
 const INLINE_SCRIPT_MAX = 800 * 1024;   // one inline script in a room's page, at most (the eye's must stay well under)
 
 // the boot that replaces the dev marker block: real blob Worker, or the same-thread
@@ -111,8 +112,10 @@ const eyeFiles = {};
 for (const f of EYE_FILES) eyeFiles[f] = await readFile(join(ROOT, 'eye', f));
 const eyeManifest = JSON.parse(eyeFiles['tiny-eye.json'].toString('utf8'));
 if (eyeManifest.format !== 'tiny-eye-v1' || eyeManifest.weights !== 'tiny-eye.bin' || eyeManifest.sample.file !== 'tiny-eye-sample.bin' ||
-    eyeFiles['tiny-eye.bin'].length !== 4 * eyeManifest.params || eyeFiles['tiny-eye-sample.bin'].length !== 784 * eyeManifest.sample.count) {
-  throw new Error('eye: tiny-eye.json, tiny-eye.bin and tiny-eye-sample.bin do not match (run tools/eye/ship.mjs)');
+    eyeFiles['tiny-eye.bin'].length !== 4 * eyeManifest.params || eyeFiles['tiny-eye-sample.bin'].length !== 784 * eyeManifest.sample.count ||
+    !eyeManifest.growth || eyeFiles[eyeManifest.growth.file].length !== eyeManifest.growth.bytes ||
+    eyeFiles['tiny-eye-sq8.bin'].length !== 4 * JSON.parse(eyeFiles[eyeManifest.squeezed].toString('utf8')).params) {
+  throw new Error('eye: tiny-eye.json and the files it names do not match (run tools/eye/ship.mjs)');
 }
 if (!neuronAtlas.slice(0, 200).includes('"tiny-mind-neuron-atlas-v1"')) {
   throw new Error('microscope: tiny-mind-neuron-atlas.json is not a tiny-mind-neuron-atlas-v1 file');

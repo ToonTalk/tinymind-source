@@ -18832,6 +18832,7 @@ window.__vgDeferBoot(createGuide);
   #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; margin-top: .3rem; }
   #progress { height: 6px; background: #262c38; border-radius: 4px; overflow: hidden; margin: .3rem 0; display: none; }
   #progress div { height: 100%; width: 0; background: var(--gold); transition: width .15s; }
+  #which { display: inline-block; margin-left: .5rem; font-size: 12.5px; color: var(--gold); }
   .drawrow { display: flex; gap: .9rem; align-items: flex-start; flex-wrap: wrap; }
   #pad { width: min(100%, 300px); aspect-ratio: 1; background: #0d0f14; border: 1px solid var(--edge); border-radius: 10px;
          touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; display: block; }
@@ -18843,8 +18844,13 @@ window.__vgDeferBoot(createGuide);
   .gbar .gtrack { flex: 1; height: 14px; background: #262c38; border-radius: 4px; position: relative; overflow: hidden; }
   .gbar .gfill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--green); border-radius: 4px; }
   .gbar .gghost { position: absolute; left: 0; top: 0; bottom: 0; border: 1px dashed var(--dim); border-radius: 4px; }
-  .gbar .gpct { width: 4.6em; flex: none; text-align: right; font-size: 12.5px; color: var(--dim); }
+  .gbar .gpct { width: 5.2em; flex: none; text-align: right; font-size: 12.5px; color: var(--dim); }
   .gbar.top .gname { color: #fff; font-weight: 600; }
+  .gbar.rest .gname, .gbar.rest .gpct { color: var(--dim); font-size: 12.5px; }
+  .gbar.rest .gfill { background: #4b5566; }
+  details.why { font-size: 12.5px; color: var(--dim); margin-top: .2rem; }
+  details.why summary { cursor: pointer; }
+  details.why p { margin: .3rem 0 0; line-height: 1.45; }
   .stages button { background: #232937; }
   .stages button.on { background: #6b5320; color: #fff3d6; }
   #grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin: .5rem 0; max-width: 480px; }
@@ -18854,11 +18860,12 @@ window.__vgDeferBoot(createGuide);
   #grid .cell.off::after { content: ''; position: absolute; inset: 20%; border: 2px solid var(--red); border-radius: 50%;
                            background: linear-gradient(45deg, transparent 44%, var(--red) 44%, var(--red) 56%, transparent 56%); }
   #grid .cell.named::before { content: ''; position: absolute; right: 1px; top: 1px; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .7; }
-  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; align-items: center; }
   .nchip { background: #232937; color: var(--ink); font-size: 12px; padding: .15rem .5rem; margin: 0; border-radius: 999px; }
   .nchip.up { color: rgb(var(--more)); }
   .nchip.down { color: rgb(var(--less)); }
   .nchip.offc { color: var(--red); }
+  .nchip.story { color: var(--green); }
   .poles { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .3rem; }
   @media (max-width: 520px) { .poles { grid-template-columns: 1fr; } }
   .pole h3 { font-size: 13px; margin: 0 0 .3rem; font-weight: 600; }
@@ -18868,6 +18875,7 @@ window.__vgDeferBoot(createGuide);
   .pname { font-size: 13px; margin: .35rem 0 .1rem; }
   .pname q { color: #fff; }
   .ptest { font-size: 11.5px; color: var(--dim); }
+  .storyline { color: var(--green); font-size: 13px; margin: 0 0 .4rem; }
   .cbar { display: flex; align-items: center; gap: .35rem; font-size: 12.5px; margin: .12rem 0; }
   .cbar .cname { width: 8.5em; flex: none; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cbar .ctrack { flex: 1; height: 11px; position: relative; max-width: 260px; }
@@ -18875,6 +18883,13 @@ window.__vgDeferBoot(createGuide);
   .cbar .cfill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
   .where { display: flex; gap: .7rem; align-items: center; margin-top: .5rem; flex-wrap: wrap; }
   #whereCv { width: 96px; height: 96px; image-rendering: pixelated; border-radius: 6px; border: 1px solid var(--edge); background: #0d0f14; }
+  .strip { display: flex; gap: 4px; overflow-x: auto; margin-top: .3rem; padding-bottom: 2px; }
+  .strip .col { flex: none; text-align: center; cursor: pointer; border-radius: 6px; padding: 2px; }
+  .strip .col.on { outline: 2px solid var(--gold); }
+  .strip .col canvas { width: 40px; height: 166px; display: block; }
+  .strip .col span { display: block; font-size: 10.5px; color: var(--dim); line-height: 1.2; }
+  #growCurve { width: 100%; height: 76px; display: block; }
+  #growSlider { width: 100%; margin: .2rem 0; }
   .lesson { color: var(--gold); font-size: 12.5px; margin-top: .45rem; }
   [data-vg-explain] { cursor: help; text-decoration: underline dotted rgba(135, 145, 163, .6); text-underline-offset: 3px; }
   .foot { color: var(--dim); font-size: 12px; margin-top: .8rem; line-height: 1.5; }
@@ -19192,7 +19207,7 @@ window.__vgDeferBoot = async function(create){
 };
 })();
 </script>
-<h1>👁 Tiny Mind — the Tiny Eye</h1>
+<h1>👁 Tiny Mind — the Tiny Eye <span id="which"></span></h1>
 <div class="sub">draw something, and a tiny mind that sees guesses what it is; then look at the neurons that decide</div>
 <div id="drop" class="tm-file-ctl">drop the Tiny Eye here: tiny-eye.json, tiny-eye.bin and tiny-eye-sample.bin</div>
 
@@ -19210,6 +19225,10 @@ window.__vgDeferBoot = async function(create){
       </div>
     </div>
     <div id="guesses" class="hint" style="margin-top:.5rem">draw something…</div>
+    <details class="why" id="whyNot100"><summary>why is it never 100% sure?</summary>
+      <p><span data-vg-explain="sure">It was taught never to be completely sure.</span> While it learned, every right answer counted as only about 90% right and the other 23 kinds shared the rest
+        (a training trick called label smoothing, which makes a mind less overconfident). So even when it is sure, its top guess stops at about 97%,
+        and every other kind keeps a sliver: under 1% each. That is why the small kinds never show 0%.</p></details>
     <div id="guessNote" class="hint"></div>
     <div id="knows" class="hint" style="margin-top:.4rem"></div>
   </div>
@@ -19236,6 +19255,29 @@ window.__vgDeferBoot = async function(create){
     <button id="offNone" class="alt" disabled>switch them all back on</button>
     <div id="offNote" class="hint" style="margin-top:.3rem"></div>
     <div class="lesson">Try: switch off two neurons so the eye can no longer tell a cloud from a sheep. Or draw something that isn't a dragon but makes it say dragon.</div>
+  </div>
+
+  <div class="card" id="growCard">
+    <h2>5 · 🌱 watch it grow <span class="hint">— go back in its training; the guesses, neurons and cards follow</span></h2>
+    <canvas id="growCurve" width="560" height="76" aria-label="how right it was, and how settled its neurons' jobs were, through training"></canvas>
+    <input type="range" id="growSlider" min="0" max="1000" value="1000" step="1" disabled aria-label="training step">
+    <div>
+      <button id="growPrev" class="small alt" disabled>◀ earlier</button>
+      <button id="growNext" class="small alt" disabled>later ▶</button>
+      <button id="growPlay" class="small" disabled>▶ play it all</button>
+      <button id="growEnd" class="small alt" disabled>the end</button>
+    </div>
+    <div id="growInfo" class="hint" style="margin-top:.3rem">the end of training: the eye you are drawing with</div>
+    <div class="chips" id="stories"><span class="hint">growth stories:</span></div>
+    <div class="lesson" data-vg-explain="grow">Neurons try jobs, settle late, and sometimes switch; a few grow offshoots.</div>
+  </div>
+
+  <div class="card" id="squeezeCard">
+    <h2>6 · 🗜 squeeze it <span class="hint">— the same eye with only 8 neurons in its last stage</span></h2>
+    <button id="squeezeBtn" disabled>🗜 squeeze it</button>
+    <button id="sq7Btn" class="small alt" disabled>squeezed neuron 7: rainbows, umbrellas and castles</button>
+    <div id="squeezeNote" class="hint" style="margin-top:.3rem">It was trained the same way, but everything it sees has to pass through 8 numbers instead of 64, with 8 neurons instead of 256.</div>
+    <div class="lesson" data-vg-explain="squeeze">Squeeze it, and each neuron has to cover more kinds of things.</div>
   </div>
 </div>
 <div id="status"></div>
@@ -19336,7 +19378,7 @@ window.__vgDeferBoot = async function(create){
 })();
 </script>
 <script type="module">
-const __WORKER_SRC__ = "'use strict';\n// ---- inlined src/eye.js ----\n// eye.js — the Tiny Eye (plans/tiny-eye.md): a tiny ConvNeXt-style doodle classifier,\n// trained offline on 24 Quick, Draw! categories (tools/eye/train.py, eye80k: 82,704\n// weights), run here in plain JS. Two jobs:\n//   - TinyEye: the forward pass from tiny-eye.json + tiny-eye.bin, with a tap on every\n//     neuron of every stage and a switch-off mask. The neurons are the MLP hidden channels\n//     (fc1 outputs, before the GELU); a drawing's value for a neuron is its mean over the\n//     grid, the number Phase 0 labeled. Switching a neuron off zeroes its GELU output,\n//     as train.py's mask does.\n//   - eyeDoodle: pad strokes -> the 28x28 picture the eye was trained on, made the way\n//     Quick, Draw!'s bitmaps were made from its simplified drawings: align to the top-left,\n//     scale the longer side to 255, simplify (Ramer-Douglas-Peucker, epsilon 2), then\n//     draw centered with round, anti-aliased 16-unit lines on a 304-unit canvas scaled to\n//     28 px (the longer side spans about 26 pixels; strokes about 1.5 pixels wide).\n// Top-level names start with eye/EYE/TinyEye: the release build concatenates modules.\n\nconst EYE_FORMAT = 'tiny-eye-v1';\nconst EYE_LN_EPS = 1e-5;\n\n// erf, Abramowitz & Stegun 7.1.26 (|error| < 1.5e-7): GELU is 0.5 x (1 + erf(x / sqrt 2))\nfunction eyeErf(x) {\n  const s = x < 0 ? -1 : 1; x = Math.abs(x);\n  const t = 1 / (1 + 0.3275911 * x);\n  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496735) * t + 0.254829592) * t * Math.exp(-x * x);\n  return s * y;\n}\n\n// out[oi + r] += W[wo + r*cols ...] . x[xi ...] for r < rows: four rows at a time, so each\n// input number is loaded once per four products (rows is a multiple of 4 here)\nfunction eyeMatVecAdd(W, wo, x, xi, out, oi, rows, cols) {\n  for (let r = 0; r < rows; r += 4) {\n    const w0 = wo + r * cols, w1 = w0 + cols, w2 = w1 + cols, w3 = w2 + cols;\n    let a0 = 0, a1 = 0, a2 = 0, a3 = 0;\n    for (let i = 0; i < cols; i++) {\n      const v = x[xi + i];\n      a0 += v * W[w0 + i]; a1 += v * W[w1 + i]; a2 += v * W[w2 + i]; a3 += v * W[w3 + i];\n    }\n    out[oi + r] += a0; out[oi + r + 1] += a1; out[oi + r + 2] += a2; out[oi + r + 3] += a3;\n  }\n}\n\n// the same for two input vectors at once (two grid places share every weight they load)\nfunction eyeMatVecAdd2(W, x, xa, xb, out, oa, ob, rows, cols) {\n  for (let r = 0; r < rows; r += 4) {\n    const w0 = r * cols, w1 = w0 + cols, w2 = w1 + cols, w3 = w2 + cols;\n    let a0 = 0, a1 = 0, a2 = 0, a3 = 0, b0 = 0, b1 = 0, b2 = 0, b3 = 0;\n    for (let i = 0; i < cols; i++) {\n      const u = x[xa + i], v = x[xb + i];\n      let w = W[w0 + i]; a0 += u * w; b0 += v * w;\n      w = W[w1 + i]; a1 += u * w; b1 += v * w;\n      w = W[w2 + i]; a2 += u * w; b2 += v * w;\n      w = W[w3 + i]; a3 += u * w; b3 += v * w;\n    }\n    out[oa + r] += a0; out[oa + r + 1] += a1; out[oa + r + 2] += a2; out[oa + r + 3] += a3;\n    out[ob + r] += b0; out[ob + r + 1] += b1; out[ob + r + 2] += b2; out[ob + r + 3] += b3;\n  }\n}\n\n// LayerNorm in place over each run of c numbers (channels-last), from `src` into `dst`\nfunction eyeLayerNorm(src, dst, n, c, w, b) {\n  for (let p = 0; p < n; p++) {\n    const o = p * c;\n    let m = 0; for (let i = 0; i < c; i++) m += src[o + i];\n    m /= c;\n    let v = 0; for (let i = 0; i < c; i++) { const d = src[o + i] - m; v += d * d; }\n    const r = 1 / Math.sqrt(v / c + EYE_LN_EPS);\n    for (let i = 0; i < c; i++) dst[o + i] = (src[o + i] - m) * r * w[i] + b[i];\n  }\n}\n\nclass TinyEye {\n  // manifest: tiny-eye.json (parsed); weights: ArrayBuffer / Uint8Array of tiny-eye.bin\n  constructor(manifest, weights) {\n    if (!manifest || !manifest.config || !Array.isArray(manifest.tensors)) throw new Error('not a Tiny Eye manifest');\n    const u8 = ArrayBuffer.isView(weights) ? new Uint8Array(weights.buffer, weights.byteOffset, weights.byteLength) : new Uint8Array(weights);\n    const f32 = new Float32Array(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));\n    const T = {};\n    for (const t of manifest.tensors) {\n      if (t.offset + t.length > f32.length) throw new Error('tiny-eye.bin is shorter than its manifest says (' + t.name + ')');\n      T[t.name] = Float64Array.from(f32.subarray(t.offset, t.offset + t.length));   // doubles: no float32 conversions in the loops\n    }\n    const { widths, hidden, depths } = manifest.config;\n    if (depths.some(d => d !== 1)) throw new Error('this engine runs one block per stage');\n    if ([...widths, ...hidden].some(w => w % 4)) throw new Error('widths and hidden sizes must be multiples of 4');\n    this.manifest = manifest;\n    this.classes = manifest.classes;\n    this.widths = widths; this.hidden = hidden;\n    this.T = T;\n    // grid sizes: 28 -> 14 (stem), then 14 -> 7 -> 4 (padding 1 when the grid is odd)\n    this.sizes = [14];\n    this.pads = [0];\n    for (let i = 1; i < widths.length; i++) {\n      const s = this.sizes[i - 1], pad = s % 2;\n      this.pads.push(pad); this.sizes.push(Math.floor((s + 2 * pad - 2) / 2) + 1);\n    }\n    // weights rearranged so the inner loops run over contiguous memory\n    this.dwT = widths.map((c, i) => {                // [ch][7][7] -> [k][ch]\n      const w = T[`stages.${i}.0.dw.weight`], out = new Float64Array(49 * c);\n      for (let ch = 0; ch < c; ch++) for (let k = 0; k < 49; k++) out[k * c + ch] = w[ch * 49 + k];\n      return out;\n    });\n    this.downT = widths.slice(1).map((cout, j) => {  // [o][i][ky][kx] -> [ky*2+kx][o][i]\n      const cin = widths[j], w = T[`downs.${j}.1.weight`], out = new Float64Array(4 * cout * cin);\n      for (let o = 0; o < cout; o++) for (let i = 0; i < cin; i++) for (let k = 0; k < 4; k++)\n        out[(k * cout + o) * cin + i] = w[(o * cin + i) * 4 + k];\n      return out;\n    });\n    // scratch, sized for the biggest stage\n    let big = 0;\n    for (let i = 0; i < widths.length; i++) big = Math.max(big, this.sizes[i] * this.sizes[i] * Math.max(widths[i], hidden[i]));\n    this.x = new Float64Array(big); this.t = new Float64Array(big); this.h = new Float64Array(big);\n    this.y = new Float64Array(big); this.v = new Float64Array(2 * Math.max(...widths));\n  }\n\n  get nClasses() { return this.classes.length; }\n\n  // x: 784 numbers, row-major, ink 1 and paper 0. opts.off: [Uint8Array per stage] with\n  // 1 = switched off. opts.maps: also return each stage's neurons at every grid place.\n  // Returns { logits, probs, neurons: [Float32Array per stage], maps? }.\n  forward(input, opts = {}) {\n    const { widths, hidden, sizes, pads, T } = this;\n    const off = opts.off || [];\n    let x = this.x, t = this.t;\n    // stem: 2x2 stride-2 conv, 1 -> w0, then LayerNorm over the channels\n    const c0 = widths[0], S0 = sizes[0], sw = T['stem.0.weight'], sb = T['stem.0.bias'];\n    for (let oy = 0; oy < S0; oy++) for (let ox = 0; ox < S0; ox++) {\n      const i00 = input[(2 * oy) * 28 + 2 * ox], i01 = input[(2 * oy) * 28 + 2 * ox + 1];\n      const i10 = input[(2 * oy + 1) * 28 + 2 * ox], i11 = input[(2 * oy + 1) * 28 + 2 * ox + 1];\n      const o = (oy * S0 + ox) * c0;\n      for (let ch = 0; ch < c0; ch++)\n        t[o + ch] = sb[ch] + i00 * sw[ch * 4] + i01 * sw[ch * 4 + 1] + i10 * sw[ch * 4 + 2] + i11 * sw[ch * 4 + 3];\n    }\n    eyeLayerNorm(t, x, S0 * S0, c0, T['stem.1.ln.weight'], T['stem.1.ln.bias']);\n    const neurons = [], maps = opts.maps ? [] : null;\n    for (let s = 0; s < widths.length; s++) {\n      const c = widths[s], H = hidden[s], S = sizes[s], n = S * S;\n      if (s > 0) {                                   // LayerNorm, then 2x2 stride-2 conv (zero padding)\n        const cin = widths[s - 1], Sin = sizes[s - 1], pad = pads[s], wT = this.downT[s - 1], db = T[`downs.${s - 1}.1.bias`];\n        eyeLayerNorm(x, t, Sin * Sin, cin, T[`downs.${s - 1}.0.ln.weight`], T[`downs.${s - 1}.0.ln.bias`]);\n        for (let oy = 0; oy < S; oy++) for (let ox = 0; ox < S; ox++) {\n          const o = (oy * S + ox) * c;\n          for (let co = 0; co < c; co++) x[o + co] = db[co];\n          for (let k = 0; k < 4; k++) {\n            const iy = 2 * oy + (k >> 1) - pad, ix = 2 * ox + (k & 1) - pad;\n            if (iy < 0 || ix < 0 || iy >= Sin || ix >= Sin) continue;\n            const ib = (iy * Sin + ix) * cin;\n            eyeMatVecAdd(wT, k * c * cin, t, ib, x, o, c, cin);\n          }\n        }\n      }\n      // block: depthwise 7x7 conv (padding 3) -> LayerNorm -> fc1 (the neurons) -> GELU -> fc2 -> x gamma -> + x\n      const dw = this.dwT[s], dbias = T[`stages.${s}.0.dw.bias`], y = this.y;\n      for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {\n        const o = (py * S + px) * c;\n        for (let ch = 0; ch < c; ch++) y[o + ch] = dbias[ch];\n        for (let ky = 0; ky < 7; ky++) {\n          const iy = py + ky - 3; if (iy < 0 || iy >= S) continue;\n          for (let kx = 0; kx < 7; kx++) {\n            const ix = px + kx - 3; if (ix < 0 || ix >= S) continue;\n            const ib = (iy * S + ix) * c, wb = (ky * 7 + kx) * c;\n            for (let ch = 0; ch < c; ch++) y[o + ch] += x[ib + ch] * dw[wb + ch];\n          }\n        }\n      }\n      eyeLayerNorm(y, t, n, c, T[`stages.${s}.0.ln.weight`], T[`stages.${s}.0.ln.bias`]);\n      const w1 = T[`stages.${s}.0.fc1.weight`], b1 = T[`stages.${s}.0.fc1.bias`];\n      const w2 = T[`stages.${s}.0.fc2.weight`], b2 = T[`stages.${s}.0.fc2.bias`], g = T[`stages.${s}.0.gamma`];\n      const h = this.h, mean = new Float32Array(H), mask = off[s];\n      for (let p = 0; p < n; p++) for (let j = 0; j < H; j++) h[p * H + j] = b1[j];\n      for (let p = 0; p < n; p += 2) {\n        if (p + 1 < n) eyeMatVecAdd2(w1, t, p * c, (p + 1) * c, h, p * H, (p + 1) * H, H, c);\n        else eyeMatVecAdd(w1, 0, t, p * c, h, p * H, H, c);\n      }\n      if (maps) maps.push(h.slice(0, n * H));\n      for (let p = 0; p < n; p++) {\n        const hb = p * H;\n        for (let j = 0; j < H; j++) {\n          const v = h[hb + j];\n          mean[j] += v;\n          h[hb + j] = mask && mask[j] ? 0 : 0.5 * v * (1 + eyeErf(v * Math.SQRT1_2));\n        }\n      }\n      const v = this.v;                             // fc2 for two places at a time, into v, then x += gamma * v\n      for (let p = 0; p < n; p += 2) {\n        const two = p + 1 < n;\n        for (let ch = 0; ch < c; ch++) { v[ch] = b2[ch]; v[c + ch] = b2[ch]; }\n        if (two) eyeMatVecAdd2(w2, h, p * H, (p + 1) * H, v, 0, c, c, H);\n        else eyeMatVecAdd(w2, 0, h, p * H, v, 0, c, H);\n        for (let ch = 0; ch < c; ch++) x[p * c + ch] += g[ch] * v[ch];\n        if (two) for (let ch = 0; ch < c; ch++) x[(p + 1) * c + ch] += g[ch] * v[c + ch];\n      }\n      for (let j = 0; j < H; j++) mean[j] /= n;\n      neurons.push(mean);\n    }\n    // head: mean over the grid -> LayerNorm -> linear\n    const cL = widths[widths.length - 1], SL = sizes[sizes.length - 1], nL = SL * SL;\n    const pooled = new Float32Array(cL);\n    for (let p = 0; p < nL; p++) for (let ch = 0; ch < cL; ch++) pooled[ch] += x[p * cL + ch];\n    for (let ch = 0; ch < cL; ch++) pooled[ch] /= nL;\n    const normed = new Float32Array(cL);\n    eyeLayerNorm(pooled, normed, 1, cL, T['head_ln.weight'], T['head_ln.bias']);\n    const hw = T['head.weight'], hb = T['head.bias'], K = this.classes.length;\n    const logits = new Float32Array(K);\n    for (let k = 0; k < K; k++) {\n      let acc = hb[k];\n      for (let ch = 0; ch < cL; ch++) acc += normed[ch] * hw[k * cL + ch];\n      logits[k] = acc;\n    }\n    const probs = new Float32Array(K);\n    let mx = -Infinity; for (const v of logits) mx = Math.max(mx, v);\n    let z = 0; for (let k = 0; k < K; k++) { probs[k] = Math.exp(logits[k] - mx); z += probs[k]; }\n    for (let k = 0; k < K; k++) probs[k] /= z;\n    const out = { logits, probs, neurons };\n    if (maps) out.maps = maps;\n    return out;\n  }\n}\n\n// a 784-number input from one 28x28 doodle of a uint8 sample set (ink 255)\nfunction eyeSampleInput(u8, i, out = new Float32Array(784)) {\n  const o = i * 784;\n  for (let k = 0; k < 784; k++) out[k] = u8[o + k] / 255;\n  return out;\n}\n\n// ---- the draw pad's path: strokes -> the eye's 28x28 picture ---------------------------\n\n// Ramer-Douglas-Peucker on one stroke ([[x, y], ...]), as Quick, Draw!'s simplification\nfunction eyeSimplify(pts, eps) {\n  if (pts.length < 3) return pts.slice();\n  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;\n  const stack = [[0, pts.length - 1]];\n  while (stack.length) {\n    const [a, b] = stack.pop();\n    const [ax, ay] = pts[a], [bx, by] = pts[b];\n    const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);\n    let far = -1, fd = eps;\n    for (let i = a + 1; i < b; i++) {\n      const [px, py] = pts[i];\n      const d = L > 0 ? Math.abs(dy * px - dx * py + bx * ay - by * ax) / L : Math.hypot(px - ax, py - ay);\n      if (d > fd) { fd = d; far = i; }\n    }\n    if (far >= 0) { keep[far] = 1; stack.push([a, far], [far, b]); }\n  }\n  return pts.filter((_, i) => keep[i]);\n}\n\n// strokes in any coordinates (y down) -> Quick, Draw! \"simplified\" strokes: aligned to the\n// top-left, the longer side scaled to 255, points at most 1 unit apart, then simplified\n// with epsilon 2 and rounded to whole units\nfunction eyeNormalizeStrokes(strokes) {\n  const ss = (strokes || []).filter(s => s && s.length);\n  if (!ss.length) return [];\n  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;\n  for (const s of ss) for (const [x, y] of s) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }\n  const span = Math.max(x1 - x0, y1 - y0), k = span > 0 ? 255 / span : 1;\n  return ss.map(s => {\n    const dense = [];\n    for (let i = 0; i < s.length; i++) {\n      const x = (s[i][0] - x0) * k, y = (s[i][1] - y0) * k;\n      if (i) {\n        const [px, py] = dense[dense.length - 1], d = Math.hypot(x - px, y - py), m = Math.floor(d);\n        for (let j = 1; j < m; j++) dense.push([px + (x - px) * j / m, py + (y - py) * j / m]);\n      }\n      dense.push([x, y]);\n    }\n    return eyeSimplify(dense, 2).map(([x, y]) => [Math.round(x), Math.round(y)]);\n  });\n}\n\n// simplified strokes (0..255) -> 784 numbers, ink 1, the way the 28x28 bitmaps were drawn:\n// centered on a 256-unit square, 24 units of padding each side, round 16-unit lines,\n// anti-aliased (16 x 16 samples per pixel), each stroke laid over the ones before\nconst EYE_SUB = 16;\nfunction eyeRaster(simplified, out = new Float32Array(784)) {\n  out.fill(0);\n  const ss = simplified.filter(s => s.length);\n  if (!ss.length) return out;\n  let mx = 0, my = 0;\n  for (const s of ss) for (const [x, y] of s) { mx = Math.max(mx, x); my = Math.max(my, y); }\n  const scale = 28 / 304, ox = (256 - mx) / 2 + 24, oy = (256 - my) / 2 + 24;\n  const r = 8 * scale, r2 = r * r, G = 28 * EYE_SUB;\n  const mark = new Uint16Array(G * G), cnt = new Uint16Array(784), touched = [];\n  ss.forEach((s, si) => {\n    const id = si + 1;\n    const pts = s.map(([x, y]) => [(x + ox) * scale, (y + oy) * scale]);\n    const segs = pts.length === 1 ? [[pts[0], pts[0]]] : pts.slice(1).map((p, i) => [pts[i], p]);\n    for (const [[ax, ay], [bx, by]] of segs) {\n      const dx = bx - ax, dy = by - ay, LL = dx * dx + dy * dy;\n      const gx0 = Math.max(0, Math.floor((Math.min(ax, bx) - r) * EYE_SUB)), gx1 = Math.min(G - 1, Math.ceil((Math.max(ax, bx) + r) * EYE_SUB));\n      const gy0 = Math.max(0, Math.floor((Math.min(ay, by) - r) * EYE_SUB)), gy1 = Math.min(G - 1, Math.ceil((Math.max(ay, by) + r) * EYE_SUB));\n      for (let gy = gy0; gy <= gy1; gy++) {\n        const py = (gy + 0.5) / EYE_SUB;\n        for (let gx = gx0; gx <= gx1; gx++) {\n          const g = gy * G + gx;\n          if (mark[g] === id) continue;\n          const px = (gx + 0.5) / EYE_SUB;\n          let u = LL > 0 ? ((px - ax) * dx + (py - ay) * dy) / LL : 0;\n          u = u < 0 ? 0 : u > 1 ? 1 : u;\n          const ex = ax + u * dx - px, ey = ay + u * dy - py;\n          if (ex * ex + ey * ey > r2) continue;\n          mark[g] = id;\n          const pix = ((gy / EYE_SUB) | 0) * 28 + ((gx / EYE_SUB) | 0);\n          if (!cnt[pix]) touched.push(pix);\n          cnt[pix]++;\n        }\n      }\n    }\n    for (const pix of touched) { const a = cnt[pix] / (EYE_SUB * EYE_SUB); out[pix] = a + out[pix] * (1 - a); cnt[pix] = 0; }\n    touched.length = 0;\n  });\n  for (let i = 0; i < 784; i++) out[i] = Math.round(out[i] * 255) / 255;   // the bitmaps are 8-bit\n  return out;\n}\n\n// the whole pad path: what the eye sees of a drawing\nfunction eyeDoodle(strokes, out) {\n  return eyeRaster(eyeNormalizeStrokes(strokes), out);\n}\n\n\n// ---- eye/worker.js ----\n// eye/worker.js — the Tiny Eye's engine thread (src/eye.js): looks at a drawing, with and\n// without the neurons the visitor switched off, and sweeps slices of the 5,000-doodle sample\n// set so the page can build neuron cards live. A sweep yields between small batches, so a\n// drawing sent meanwhile is still answered quickly (and the same-thread fallback the\n// artifact sandbox may need keeps the page alive). NOTE for the artifact edition: this file\n// + src/eye.js are inlined into the single-file HTML and the worker is built from a Blob.\n\nlet eye = null, sweepToken = 0;\nconst pause = () => new Promise(r => setTimeout(r, 0));\n\nself.onmessage = async (e) => {\n  const m = e.data;\n  try {\n    if (m.type === 'load') {\n      eye = new TinyEye(typeof m.manifest === 'string' ? JSON.parse(m.manifest) : m.manifest, m.weights);\n      sweepToken++;\n      self.postMessage({ type: 'loaded', classes: eye.classes, widths: eye.widths, hidden: eye.hidden, sizes: eye.sizes,\n        params: eye.manifest.params, accuracy: eye.manifest.held_out_acc });\n    } else if (m.type === 'see') {\n      if (!eye) throw new Error('no eye loaded yet');\n      const t0 = performance.now();\n      const anyOff = m.off && m.off.some(a => a && a.some(v => v));\n      const r = eye.forward(m.x, { off: anyOff ? m.off : null, maps: !!m.maps });\n      const base = anyOff ? eye.forward(m.x) : null;   // the guess with every neuron on, to compare\n      const out = { type: 'seen', id: m.id, probs: r.probs, neurons: r.neurons, maps: r.maps || null,\n        baseProbs: base ? base.probs : null, ms: performance.now() - t0 };\n      self.postMessage(out);\n    } else if (m.type === 'sweep') {\n      // every neuron's value for doodles [start, start + count) of the sample (in m.doodles)\n      if (!eye) throw new Error('no eye loaded yet');\n      const token = sweepToken, total = eye.hidden.reduce((a, b) => a + b, 0);\n      const u8 = ArrayBuffer.isView(m.doodles) ? new Uint8Array(m.doodles.buffer, m.doodles.byteOffset, m.doodles.byteLength) : new Uint8Array(m.doodles);\n      const table = new Float32Array(m.count * total), guesses = new Uint8Array(m.count), x = new Float32Array(784);\n      for (let i = 0; i < m.count; i++) {\n        const r = eye.forward(eyeSampleInput(u8, i, x));\n        let at = i * total;\n        for (const n of r.neurons) { table.set(n, at); at += n.length; }\n        let best = 0; for (let k = 1; k < r.probs.length; k++) if (r.probs[k] > r.probs[best]) best = k;\n        guesses[i] = best;\n        if (i % 25 === 24) {\n          self.postMessage({ type: 'sweep-progress', id: m.id, done: i + 1 });\n          await pause();\n          if (token !== sweepToken) return;          // a new eye came in: this sweep is stale\n        }\n      }\n      self.postMessage({ type: 'swept', id: m.id, start: m.start, count: m.count, table, guesses }, [table.buffer, guesses.buffer]);\n    }\n  } catch (err) {\n    self.postMessage({ type: 'error', id: m && m.id, message: String((err && err.message) || err) });\n  }\n};\n";
+const __WORKER_SRC__ = "'use strict';\n// ---- inlined src/eye.js ----\n// eye.js — the Tiny Eye (plans/tiny-eye.md): a tiny ConvNeXt-style doodle classifier,\n// trained offline on 24 Quick, Draw! categories (tools/eye/train.py, eye80k: 82,704\n// weights), run here in plain JS. Two jobs:\n//   - TinyEye: the forward pass from tiny-eye.json + tiny-eye.bin, with a tap on every\n//     neuron of every stage and a switch-off mask. The neurons are the MLP hidden channels\n//     (fc1 outputs, before the GELU); a drawing's value for a neuron is its mean over the\n//     grid, the number Phase 0 labeled. Switching a neuron off zeroes its GELU output,\n//     as train.py's mask does. Training snapshots (float16) load the same way.\n//   - eyeDoodle: pad strokes -> the 28x28 picture the eye was trained on, made the way\n//     Quick, Draw!'s bitmaps were made from its simplified drawings: align to the top-left,\n//     scale the longer side to 255, simplify (Ramer-Douglas-Peucker, epsilon 2), then\n//     draw centered with round, anti-aliased 16-unit lines on a 304-unit canvas scaled to\n//     28 px (the longer side spans about 26 pixels; strokes about 1.5 pixels wide).\n// Top-level names start with eye/EYE/TinyEye: the release build concatenates modules.\n\nconst EYE_FORMAT = 'tiny-eye-v1';\nconst EYE_LN_EPS = 1e-5;\n\n// erf, Abramowitz & Stegun 7.1.26 (|error| < 1.5e-7): GELU is 0.5 x (1 + erf(x / sqrt 2))\nfunction eyeErf(x) {\n  const s = x < 0 ? -1 : 1; x = Math.abs(x);\n  const t = 1 / (1 + 0.3275911 * x);\n  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496735) * t + 0.254829592) * t * Math.exp(-x * x);\n  return s * y;\n}\n\n// out[oi + r] += W[wo + r*cols ...] . x[xi ...] for r < rows: four rows at a time, so each\n// input number is loaded once per four products (rows is a multiple of 4 here)\nfunction eyeMatVecAdd(W, wo, x, xi, out, oi, rows, cols) {\n  for (let r = 0; r < rows; r += 4) {\n    const w0 = wo + r * cols, w1 = w0 + cols, w2 = w1 + cols, w3 = w2 + cols;\n    let a0 = 0, a1 = 0, a2 = 0, a3 = 0;\n    for (let i = 0; i < cols; i++) {\n      const v = x[xi + i];\n      a0 += v * W[w0 + i]; a1 += v * W[w1 + i]; a2 += v * W[w2 + i]; a3 += v * W[w3 + i];\n    }\n    out[oi + r] += a0; out[oi + r + 1] += a1; out[oi + r + 2] += a2; out[oi + r + 3] += a3;\n  }\n}\n\n// the same for two input vectors at once (two grid places share every weight they load)\nfunction eyeMatVecAdd2(W, x, xa, xb, out, oa, ob, rows, cols) {\n  for (let r = 0; r < rows; r += 4) {\n    const w0 = r * cols, w1 = w0 + cols, w2 = w1 + cols, w3 = w2 + cols;\n    let a0 = 0, a1 = 0, a2 = 0, a3 = 0, b0 = 0, b1 = 0, b2 = 0, b3 = 0;\n    for (let i = 0; i < cols; i++) {\n      const u = x[xa + i], v = x[xb + i];\n      let w = W[w0 + i]; a0 += u * w; b0 += v * w;\n      w = W[w1 + i]; a1 += u * w; b1 += v * w;\n      w = W[w2 + i]; a2 += u * w; b2 += v * w;\n      w = W[w3 + i]; a3 += u * w; b3 += v * w;\n    }\n    out[oa + r] += a0; out[oa + r + 1] += a1; out[oa + r + 2] += a2; out[oa + r + 3] += a3;\n    out[ob + r] += b0; out[ob + r + 1] += b1; out[ob + r + 2] += b2; out[ob + r + 3] += b3;\n  }\n}\n\n// LayerNorm in place over each run of c numbers (channels-last), from `src` into `dst`\nfunction eyeLayerNorm(src, dst, n, c, w, b) {\n  for (let p = 0; p < n; p++) {\n    const o = p * c;\n    let m = 0; for (let i = 0; i < c; i++) m += src[o + i];\n    m /= c;\n    let v = 0; for (let i = 0; i < c; i++) { const d = src[o + i] - m; v += d * d; }\n    const r = 1 / Math.sqrt(v / c + EYE_LN_EPS);\n    for (let i = 0; i < c; i++) dst[o + i] = (src[o + i] - m) * r * w[i] + b[i];\n  }\n}\n\n// IEEE half-precision bytes (little-endian) -> Float32Array: the training snapshots are stored this way\nfunction eyeHalfToFloat(bytes) {\n  const u8 = ArrayBuffer.isView(bytes) ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength) : new Uint8Array(bytes);\n  const n = u8.length >> 1, out = new Float32Array(n);\n  for (let i = 0; i < n; i++) {\n    const h = u8[2 * i] | (u8[2 * i + 1] << 8), sign = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, m = h & 1023;\n    out[i] = e === 0 ? sign * m * 2 ** -24 : e === 31 ? (m ? NaN : sign * Infinity) : sign * (1 + m / 1024) * 2 ** (e - 15);\n  }\n  return out;\n}\n\nclass TinyEye {\n  // manifest: tiny-eye.json (parsed); weights: ArrayBuffer / Uint8Array of tiny-eye.bin (float32), or of\n  // one training snapshot with opts.float16 (the same tensors in the same places, two bytes each)\n  constructor(manifest, weights, opts = {}) {\n    if (!manifest || !manifest.config || !Array.isArray(manifest.tensors)) throw new Error('not a Tiny Eye manifest');\n    const u8 = ArrayBuffer.isView(weights) ? new Uint8Array(weights.buffer, weights.byteOffset, weights.byteLength) : new Uint8Array(weights);\n    const f32 = opts.float16 ? eyeHalfToFloat(u8) : new Float32Array(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));\n    const T = {};\n    for (const t of manifest.tensors) {\n      if (t.offset + t.length > f32.length) throw new Error('the weights are shorter than the manifest says (' + t.name + ')');\n      T[t.name] = Float64Array.from(f32.subarray(t.offset, t.offset + t.length));   // doubles: no float32 conversions in the loops\n    }\n    const { widths, hidden, depths } = manifest.config;\n    if (depths.some(d => d !== 1)) throw new Error('this engine runs one block per stage');\n    if ([...widths, ...hidden].some(w => w % 4)) throw new Error('widths and hidden sizes must be multiples of 4');\n    this.manifest = manifest;\n    this.classes = manifest.classes;\n    this.widths = widths; this.hidden = hidden;\n    this.T = T;\n    // grid sizes: 28 -> 14 (stem), then 14 -> 7 -> 4 (padding 1 when the grid is odd)\n    this.sizes = [14];\n    this.pads = [0];\n    for (let i = 1; i < widths.length; i++) {\n      const s = this.sizes[i - 1], pad = s % 2;\n      this.pads.push(pad); this.sizes.push(Math.floor((s + 2 * pad - 2) / 2) + 1);\n    }\n    // weights rearranged so the inner loops run over contiguous memory\n    this.dwT = widths.map((c, i) => {                // [ch][7][7] -> [k][ch]\n      const w = T[`stages.${i}.0.dw.weight`], out = new Float64Array(49 * c);\n      for (let ch = 0; ch < c; ch++) for (let k = 0; k < 49; k++) out[k * c + ch] = w[ch * 49 + k];\n      return out;\n    });\n    this.downT = widths.slice(1).map((cout, j) => {  // [o][i][ky][kx] -> [ky*2+kx][o][i]\n      const cin = widths[j], w = T[`downs.${j}.1.weight`], out = new Float64Array(4 * cout * cin);\n      for (let o = 0; o < cout; o++) for (let i = 0; i < cin; i++) for (let k = 0; k < 4; k++)\n        out[(k * cout + o) * cin + i] = w[(o * cin + i) * 4 + k];\n      return out;\n    });\n    // scratch, sized for the biggest stage\n    let big = 0;\n    for (let i = 0; i < widths.length; i++) big = Math.max(big, this.sizes[i] * this.sizes[i] * Math.max(widths[i], hidden[i]));\n    this.x = new Float64Array(big); this.t = new Float64Array(big); this.h = new Float64Array(big);\n    this.y = new Float64Array(big); this.v = new Float64Array(2 * Math.max(...widths));\n  }\n\n  get nClasses() { return this.classes.length; }\n\n  // x: 784 numbers, row-major, ink 1 and paper 0. opts.off: [Uint8Array per stage] with\n  // 1 = switched off. opts.maps: also return each stage's neurons at every grid place.\n  // Returns { logits, probs, neurons: [Float32Array per stage], maps? }.\n  forward(input, opts = {}) {\n    const { widths, hidden, sizes, pads, T } = this;\n    const off = opts.off || [];\n    let x = this.x, t = this.t;\n    // stem: 2x2 stride-2 conv, 1 -> w0, then LayerNorm over the channels\n    const c0 = widths[0], S0 = sizes[0], sw = T['stem.0.weight'], sb = T['stem.0.bias'];\n    for (let oy = 0; oy < S0; oy++) for (let ox = 0; ox < S0; ox++) {\n      const i00 = input[(2 * oy) * 28 + 2 * ox], i01 = input[(2 * oy) * 28 + 2 * ox + 1];\n      const i10 = input[(2 * oy + 1) * 28 + 2 * ox], i11 = input[(2 * oy + 1) * 28 + 2 * ox + 1];\n      const o = (oy * S0 + ox) * c0;\n      for (let ch = 0; ch < c0; ch++)\n        t[o + ch] = sb[ch] + i00 * sw[ch * 4] + i01 * sw[ch * 4 + 1] + i10 * sw[ch * 4 + 2] + i11 * sw[ch * 4 + 3];\n    }\n    eyeLayerNorm(t, x, S0 * S0, c0, T['stem.1.ln.weight'], T['stem.1.ln.bias']);\n    const neurons = [], maps = opts.maps ? [] : null;\n    for (let s = 0; s < widths.length; s++) {\n      const c = widths[s], H = hidden[s], S = sizes[s], n = S * S;\n      if (s > 0) {                                   // LayerNorm, then 2x2 stride-2 conv (zero padding)\n        const cin = widths[s - 1], Sin = sizes[s - 1], pad = pads[s], wT = this.downT[s - 1], db = T[`downs.${s - 1}.1.bias`];\n        eyeLayerNorm(x, t, Sin * Sin, cin, T[`downs.${s - 1}.0.ln.weight`], T[`downs.${s - 1}.0.ln.bias`]);\n        for (let oy = 0; oy < S; oy++) for (let ox = 0; ox < S; ox++) {\n          const o = (oy * S + ox) * c;\n          for (let co = 0; co < c; co++) x[o + co] = db[co];\n          for (let k = 0; k < 4; k++) {\n            const iy = 2 * oy + (k >> 1) - pad, ix = 2 * ox + (k & 1) - pad;\n            if (iy < 0 || ix < 0 || iy >= Sin || ix >= Sin) continue;\n            const ib = (iy * Sin + ix) * cin;\n            eyeMatVecAdd(wT, k * c * cin, t, ib, x, o, c, cin);\n          }\n        }\n      }\n      // block: depthwise 7x7 conv (padding 3) -> LayerNorm -> fc1 (the neurons) -> GELU -> fc2 -> x gamma -> + x\n      const dw = this.dwT[s], dbias = T[`stages.${s}.0.dw.bias`], y = this.y;\n      for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {\n        const o = (py * S + px) * c;\n        for (let ch = 0; ch < c; ch++) y[o + ch] = dbias[ch];\n        for (let ky = 0; ky < 7; ky++) {\n          const iy = py + ky - 3; if (iy < 0 || iy >= S) continue;\n          for (let kx = 0; kx < 7; kx++) {\n            const ix = px + kx - 3; if (ix < 0 || ix >= S) continue;\n            const ib = (iy * S + ix) * c, wb = (ky * 7 + kx) * c;\n            for (let ch = 0; ch < c; ch++) y[o + ch] += x[ib + ch] * dw[wb + ch];\n          }\n        }\n      }\n      eyeLayerNorm(y, t, n, c, T[`stages.${s}.0.ln.weight`], T[`stages.${s}.0.ln.bias`]);\n      const w1 = T[`stages.${s}.0.fc1.weight`], b1 = T[`stages.${s}.0.fc1.bias`];\n      const w2 = T[`stages.${s}.0.fc2.weight`], b2 = T[`stages.${s}.0.fc2.bias`], g = T[`stages.${s}.0.gamma`];\n      const h = this.h, mean = new Float32Array(H), mask = off[s];\n      for (let p = 0; p < n; p++) for (let j = 0; j < H; j++) h[p * H + j] = b1[j];\n      for (let p = 0; p < n; p += 2) {\n        if (p + 1 < n) eyeMatVecAdd2(w1, t, p * c, (p + 1) * c, h, p * H, (p + 1) * H, H, c);\n        else eyeMatVecAdd(w1, 0, t, p * c, h, p * H, H, c);\n      }\n      if (maps) maps.push(h.slice(0, n * H));\n      for (let p = 0; p < n; p++) {\n        const hb = p * H;\n        for (let j = 0; j < H; j++) {\n          const v = h[hb + j];\n          mean[j] += v;\n          h[hb + j] = mask && mask[j] ? 0 : 0.5 * v * (1 + eyeErf(v * Math.SQRT1_2));\n        }\n      }\n      const v = this.v;                             // fc2 for two places at a time, into v, then x += gamma * v\n      for (let p = 0; p < n; p += 2) {\n        const two = p + 1 < n;\n        for (let ch = 0; ch < c; ch++) { v[ch] = b2[ch]; v[c + ch] = b2[ch]; }\n        if (two) eyeMatVecAdd2(w2, h, p * H, (p + 1) * H, v, 0, c, c, H);\n        else eyeMatVecAdd(w2, 0, h, p * H, v, 0, c, H);\n        for (let ch = 0; ch < c; ch++) x[p * c + ch] += g[ch] * v[ch];\n        if (two) for (let ch = 0; ch < c; ch++) x[(p + 1) * c + ch] += g[ch] * v[c + ch];\n      }\n      for (let j = 0; j < H; j++) mean[j] /= n;\n      neurons.push(mean);\n    }\n    // head: mean over the grid -> LayerNorm -> linear\n    const cL = widths[widths.length - 1], SL = sizes[sizes.length - 1], nL = SL * SL;\n    const pooled = new Float32Array(cL);\n    for (let p = 0; p < nL; p++) for (let ch = 0; ch < cL; ch++) pooled[ch] += x[p * cL + ch];\n    for (let ch = 0; ch < cL; ch++) pooled[ch] /= nL;\n    const normed = new Float32Array(cL);\n    eyeLayerNorm(pooled, normed, 1, cL, T['head_ln.weight'], T['head_ln.bias']);\n    const hw = T['head.weight'], hb = T['head.bias'], K = this.classes.length;\n    const logits = new Float32Array(K);\n    for (let k = 0; k < K; k++) {\n      let acc = hb[k];\n      for (let ch = 0; ch < cL; ch++) acc += normed[ch] * hw[k * cL + ch];\n      logits[k] = acc;\n    }\n    const probs = new Float32Array(K);\n    let mx = -Infinity; for (const v of logits) mx = Math.max(mx, v);\n    let z = 0; for (let k = 0; k < K; k++) { probs[k] = Math.exp(logits[k] - mx); z += probs[k]; }\n    for (let k = 0; k < K; k++) probs[k] /= z;\n    const out = { logits, probs, neurons };\n    if (maps) out.maps = maps;\n    return out;\n  }\n}\n\n// a 784-number input from one 28x28 doodle of a uint8 sample set (ink 255)\nfunction eyeSampleInput(u8, i, out = new Float32Array(784)) {\n  const o = i * 784;\n  for (let k = 0; k < 784; k++) out[k] = u8[o + k] / 255;\n  return out;\n}\n\n// ---- the draw pad's path: strokes -> the eye's 28x28 picture ---------------------------\n\n// Ramer-Douglas-Peucker on one stroke ([[x, y], ...]), as Quick, Draw!'s simplification\nfunction eyeSimplify(pts, eps) {\n  if (pts.length < 3) return pts.slice();\n  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;\n  const stack = [[0, pts.length - 1]];\n  while (stack.length) {\n    const [a, b] = stack.pop();\n    const [ax, ay] = pts[a], [bx, by] = pts[b];\n    const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);\n    let far = -1, fd = eps;\n    for (let i = a + 1; i < b; i++) {\n      const [px, py] = pts[i];\n      const d = L > 0 ? Math.abs(dy * px - dx * py + bx * ay - by * ax) / L : Math.hypot(px - ax, py - ay);\n      if (d > fd) { fd = d; far = i; }\n    }\n    if (far >= 0) { keep[far] = 1; stack.push([a, far], [far, b]); }\n  }\n  return pts.filter((_, i) => keep[i]);\n}\n\n// strokes in any coordinates (y down) -> Quick, Draw! \"simplified\" strokes: aligned to the\n// top-left, the longer side scaled to 255, points at most 1 unit apart, then simplified\n// with epsilon 2 and rounded to whole units\nfunction eyeNormalizeStrokes(strokes) {\n  const ss = (strokes || []).filter(s => s && s.length);\n  if (!ss.length) return [];\n  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;\n  for (const s of ss) for (const [x, y] of s) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }\n  const span = Math.max(x1 - x0, y1 - y0), k = span > 0 ? 255 / span : 1;\n  return ss.map(s => {\n    const dense = [];\n    for (let i = 0; i < s.length; i++) {\n      const x = (s[i][0] - x0) * k, y = (s[i][1] - y0) * k;\n      if (i) {\n        const [px, py] = dense[dense.length - 1], d = Math.hypot(x - px, y - py), m = Math.floor(d);\n        for (let j = 1; j < m; j++) dense.push([px + (x - px) * j / m, py + (y - py) * j / m]);\n      }\n      dense.push([x, y]);\n    }\n    return eyeSimplify(dense, 2).map(([x, y]) => [Math.round(x), Math.round(y)]);\n  });\n}\n\n// simplified strokes (0..255) -> 784 numbers, ink 1, the way the 28x28 bitmaps were drawn:\n// centered on a 256-unit square, 24 units of padding each side, round 16-unit lines,\n// anti-aliased (16 x 16 samples per pixel), each stroke laid over the ones before\nconst EYE_SUB = 16;\nfunction eyeRaster(simplified, out = new Float32Array(784)) {\n  out.fill(0);\n  const ss = simplified.filter(s => s.length);\n  if (!ss.length) return out;\n  let mx = 0, my = 0;\n  for (const s of ss) for (const [x, y] of s) { mx = Math.max(mx, x); my = Math.max(my, y); }\n  const scale = 28 / 304, ox = (256 - mx) / 2 + 24, oy = (256 - my) / 2 + 24;\n  const r = 8 * scale, r2 = r * r, G = 28 * EYE_SUB;\n  const mark = new Uint16Array(G * G), cnt = new Uint16Array(784), touched = [];\n  ss.forEach((s, si) => {\n    const id = si + 1;\n    const pts = s.map(([x, y]) => [(x + ox) * scale, (y + oy) * scale]);\n    const segs = pts.length === 1 ? [[pts[0], pts[0]]] : pts.slice(1).map((p, i) => [pts[i], p]);\n    for (const [[ax, ay], [bx, by]] of segs) {\n      const dx = bx - ax, dy = by - ay, LL = dx * dx + dy * dy;\n      const gx0 = Math.max(0, Math.floor((Math.min(ax, bx) - r) * EYE_SUB)), gx1 = Math.min(G - 1, Math.ceil((Math.max(ax, bx) + r) * EYE_SUB));\n      const gy0 = Math.max(0, Math.floor((Math.min(ay, by) - r) * EYE_SUB)), gy1 = Math.min(G - 1, Math.ceil((Math.max(ay, by) + r) * EYE_SUB));\n      for (let gy = gy0; gy <= gy1; gy++) {\n        const py = (gy + 0.5) / EYE_SUB;\n        for (let gx = gx0; gx <= gx1; gx++) {\n          const g = gy * G + gx;\n          if (mark[g] === id) continue;\n          const px = (gx + 0.5) / EYE_SUB;\n          let u = LL > 0 ? ((px - ax) * dx + (py - ay) * dy) / LL : 0;\n          u = u < 0 ? 0 : u > 1 ? 1 : u;\n          const ex = ax + u * dx - px, ey = ay + u * dy - py;\n          if (ex * ex + ey * ey > r2) continue;\n          mark[g] = id;\n          const pix = ((gy / EYE_SUB) | 0) * 28 + ((gx / EYE_SUB) | 0);\n          if (!cnt[pix]) touched.push(pix);\n          cnt[pix]++;\n        }\n      }\n    }\n    for (const pix of touched) { const a = cnt[pix] / (EYE_SUB * EYE_SUB); out[pix] = a + out[pix] * (1 - a); cnt[pix] = 0; }\n    touched.length = 0;\n  });\n  for (let i = 0; i < 784; i++) out[i] = Math.round(out[i] * 255) / 255;   // the bitmaps are 8-bit\n  return out;\n}\n\n// the whole pad path: what the eye sees of a drawing\nfunction eyeDoodle(strokes, out) {\n  return eyeRaster(eyeNormalizeStrokes(strokes), out);\n}\n\n\n// ---- eye/worker.js ----\n// eye/worker.js — the Tiny Eye's engine thread (src/eye.js): looks at a drawing, with and\n// without the neurons the visitor switched off, and sweeps slices of the 5,000-doodle sample\n// set so the page can build neuron cards live. It can hold more than one eye (by key: the full\n// eye and the squeezed one) and the training snapshots of the full eye (float16, made into an\n// eye the first time the scrubber stops there). A sweep yields between small batches, so a\n// drawing sent meanwhile is still answered quickly (and the same-thread fallback the artifact\n// sandbox may need keeps the page alive). NOTE for the artifact edition: this file + src/eye.js\n// are inlined into the single-file HTML and the worker is built from a Blob.\n\nconst eyes = {}, sweepTokens = {};\nlet growth = null;                                  // { bytes, bytesEach, eyes: [] } for the full eye's snapshots\nconst pause = () => new Promise(r => setTimeout(r, 0));\nconst bytesOf = b => ArrayBuffer.isView(b) ? new Uint8Array(b.buffer, b.byteOffset, b.byteLength) : new Uint8Array(b);\n\nfunction eyeFor(m) {\n  if (m.snap !== null && m.snap !== undefined) {\n    if (!growth) throw new Error('the training snapshots are not here yet');\n    return growth.eyes[m.snap] || (growth.eyes[m.snap] = new TinyEye(eyes.full.manifest,\n      growth.bytes.subarray(m.snap * growth.bytesEach, (m.snap + 1) * growth.bytesEach), { float16: true }));\n  }\n  const e = eyes[m.key || 'full'];\n  if (!e) throw new Error('no eye loaded yet');\n  return e;\n}\n\nself.onmessage = async (e) => {\n  const m = e.data;\n  try {\n    if (m.type === 'load') {\n      const key = m.key || 'full';\n      eyes[key] = new TinyEye(typeof m.manifest === 'string' ? JSON.parse(m.manifest) : m.manifest, m.weights);\n      sweepTokens[key] = (sweepTokens[key] || 0) + 1;\n      if (key === 'full') growth = null;\n      const eye = eyes[key];\n      self.postMessage({ type: 'loaded', key, classes: eye.classes, widths: eye.widths, hidden: eye.hidden, sizes: eye.sizes,\n        params: eye.manifest.params, accuracy: eye.manifest.held_out_acc });\n    } else if (m.type === 'growth') {\n      growth = { bytes: bytesOf(m.weights), bytesEach: m.bytesEach, eyes: [] };\n      self.postMessage({ type: 'growth-ready', count: Math.floor(growth.bytes.length / m.bytesEach) });\n    } else if (m.type === 'see') {\n      const eye = eyeFor(m), t0 = performance.now();\n      const anyOff = m.off && m.off.some(a => a && a.some(v => v));\n      const r = eye.forward(m.x, { off: anyOff ? m.off : null, maps: !!m.maps });\n      const base = anyOff ? eye.forward(m.x) : null;   // the guess with every neuron on, to compare\n      self.postMessage({ type: 'seen', id: m.id, key: m.key || 'full', snap: m.snap ?? null, probs: r.probs, neurons: r.neurons, maps: r.maps || null,\n        baseProbs: base ? base.probs : null, ms: performance.now() - t0 });\n    } else if (m.type === 'sweep') {\n      // every neuron's value for doodles [start, start + count) of the sample (in m.doodles)\n      const key = m.key || 'full', eye = eyeFor({ key });\n      const token = sweepTokens[key], total = eye.hidden.reduce((a, b) => a + b, 0);\n      const u8 = bytesOf(m.doodles);\n      const table = new Float32Array(m.count * total), guesses = new Uint8Array(m.count), x = new Float32Array(784);\n      for (let i = 0; i < m.count; i++) {\n        const r = eye.forward(eyeSampleInput(u8, i, x));\n        let at = i * total;\n        for (const n of r.neurons) { table.set(n, at); at += n.length; }\n        let best = 0; for (let k = 1; k < r.probs.length; k++) if (r.probs[k] > r.probs[best]) best = k;\n        guesses[i] = best;\n        if (i % 25 === 24) {\n          self.postMessage({ type: 'sweep-progress', id: m.id, key, done: i + 1 });\n          await pause();\n          if (token !== sweepTokens[key]) return;     // a new eye came in under this key: this sweep is stale\n        }\n      }\n      self.postMessage({ type: 'swept', id: m.id, key, start: m.start, count: m.count, table, guesses }, [table.buffer, guesses.buffer]);\n    }\n  } catch (err) {\n    self.postMessage({ type: 'error', id: m && m.id, message: String((err && err.message) || err) });\n  }\n};\n";
 // ---- inlined src/bin-reader.js ----
 // bin-reader.js — llama2.c legacy (v0) checkpoint reader/writer.
 // Format verified against vendor/llama2.c/run.c (read_checkpoint + memory_map_weights):
@@ -21596,7 +21638,7 @@ const EMBEDDED_BASE_STORIES = ["Once upon a time, there was a little girl named 
 //     neuron of every stage and a switch-off mask. The neurons are the MLP hidden channels
 //     (fc1 outputs, before the GELU); a drawing's value for a neuron is its mean over the
 //     grid, the number Phase 0 labeled. Switching a neuron off zeroes its GELU output,
-//     as train.py's mask does.
+//     as train.py's mask does. Training snapshots (float16) load the same way.
 //   - eyeDoodle: pad strokes -> the 28x28 picture the eye was trained on, made the way
 //     Quick, Draw!'s bitmaps were made from its simplified drawings: align to the top-left,
 //     scale the longer side to 255, simplify (Ramer-Douglas-Peucker, epsilon 2), then
@@ -21658,15 +21700,27 @@ function eyeLayerNorm(src, dst, n, c, w, b) {
   }
 }
 
+// IEEE half-precision bytes (little-endian) -> Float32Array: the training snapshots are stored this way
+function eyeHalfToFloat(bytes) {
+  const u8 = ArrayBuffer.isView(bytes) ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength) : new Uint8Array(bytes);
+  const n = u8.length >> 1, out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const h = u8[2 * i] | (u8[2 * i + 1] << 8), sign = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, m = h & 1023;
+    out[i] = e === 0 ? sign * m * 2 ** -24 : e === 31 ? (m ? NaN : sign * Infinity) : sign * (1 + m / 1024) * 2 ** (e - 15);
+  }
+  return out;
+}
+
 class TinyEye {
-  // manifest: tiny-eye.json (parsed); weights: ArrayBuffer / Uint8Array of tiny-eye.bin
-  constructor(manifest, weights) {
+  // manifest: tiny-eye.json (parsed); weights: ArrayBuffer / Uint8Array of tiny-eye.bin (float32), or of
+  // one training snapshot with opts.float16 (the same tensors in the same places, two bytes each)
+  constructor(manifest, weights, opts = {}) {
     if (!manifest || !manifest.config || !Array.isArray(manifest.tensors)) throw new Error('not a Tiny Eye manifest');
     const u8 = ArrayBuffer.isView(weights) ? new Uint8Array(weights.buffer, weights.byteOffset, weights.byteLength) : new Uint8Array(weights);
-    const f32 = new Float32Array(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
+    const f32 = opts.float16 ? eyeHalfToFloat(u8) : new Float32Array(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
     const T = {};
     for (const t of manifest.tensors) {
-      if (t.offset + t.length > f32.length) throw new Error('tiny-eye.bin is shorter than its manifest says (' + t.name + ')');
+      if (t.offset + t.length > f32.length) throw new Error('the weights are shorter than the manifest says (' + t.name + ')');
       T[t.name] = Float64Array.from(f32.subarray(t.offset, t.offset + t.length));   // doubles: no float32 conversions in the loops
     }
     const { widths, hidden, depths } = manifest.config;
@@ -21921,13 +21975,21 @@ try {
   workerMode = 'inline (sandboxed page — compute shares the UI thread)';
 }
 
-// more engines for the one-time look through the sample set, when real workers are allowed
+// more engines for looking through the sample set, when real workers are allowed
 function spawnHelper() {
   if (workerMode !== 'background worker') return null;
   try {
     if (typeof __WORKER_SRC__ !== 'undefined') return new Worker(URL.createObjectURL(new Blob([__WORKER_SRC__], { type: 'text/javascript' })));
     return window.__eyeDevSpawn ? window.__eyeDevSpawn() : null;
   } catch (e) { return null; }
+}
+// the eye's other files (the training recording, the squeezed eye): from the shell inside Tiny Mind
+// (beside the app, or the artifact's asset store), else from beside this page
+async function eyeFile(name) {
+  if (window.__tmRPC) return await window.__tmRPC('eye.file', [name]);
+  const r = await fetch(new URL(name, window.location.href));
+  if (!r.ok) throw new Error(name + ' was not found beside this page');
+  return await r.arrayBuffer();
 }
 
 const EMOJI = { dragon: '🐉', teapot: '🫖', cloud: '☁️', moon: '🌙', castle: '🏰', cat: '🐱', dog: '🐶', fish: '🐟', bird: '🐦',
@@ -21936,17 +21998,22 @@ const EMOJI = { dragon: '🐉', teapot: '🫖', cloud: '☁️', moon: '🌙', c
 const MORE = '255, 210, 127', LESS = '120, 180, 255';   // gold: fires more than usual; blue: less
 const STAGE_ABOUT = ['looks at small bits: 14 by 14 places', 'looks at bigger parts: 7 by 7 places', 'the last stage: looks at the whole drawing, 4 by 4 places, and votes'];
 
+// one record per eye (key 'full': the Tiny Eye; 'sq8': the squeezed one), each with its own sweep
+const EYES = {};
+let cur = 'full';
+const E = () => EYES[cur];
 const S = {
-  ready: false, man: null, classes: [], hidden: [], total: 0, offsets: [], names: null,
-  sample: null, labels: null, count: 0, weights: null,
+  ready: false, classes: [], sample: null, labels: null, count: 0,
   strokes: [], penId: null, rect: null, sampleIdx: null,
   x: new Float32Array(784), blank: true, last: null,
-  stage: 2, sel: null, off: null,
-  table: null, guess: null, stats: null, swept: false,
+  stage: 2, sel: null, snap: null,            // snap: a training snapshot (index), or null for the end of training
 };
-const pct = p => window.__vgPct ? window.__vgPct(p, 0) : Math.round(100 * p) + '%';
+let G = null;                                  // the training recording, once loaded (tiny-eye-growth.bin)
+const fmtP = p => (window.__vgPrefs && window.__vgPrefs.kid && window.__vgPct) ? window.__vgPct(p, 0)
+  : p < 0.01 ? 'under 1%' : Math.round(100 * p) + '%';
 const label = c => (EMOJI[S.classes[c]] || '') + ' ' + S.classes[c];
 const nid = (s, j) => `stage ${s + 1} · neuron ${j}`;
+const stepText = n => n.toLocaleString();
 function status(msg, isErr) { $('status').textContent = msg; $('status').style.color = isErr ? 'var(--red)' : 'var(--dim)'; }
 function progress(frac) {
   const p = $('progress');
@@ -21956,24 +22023,27 @@ function progress(frac) {
 const emit = (n, p) => { try { if (window.vgEmit) window.vgEmit(n, p); } catch (e) {} };
 
 // ---------- loading ----------
+function eyeRecord(key, man, weights) {
+  const rec = { key, man, hidden: man.config.hidden, offsets: [], total: 0, weights,
+    names: man.names && man.names.neurons ? { stage: (man.names.stage || man.config.hidden.length) - 1, neurons: man.names.neurons } : null,
+    off: man.config.hidden.map(h => new Uint8Array(h)), table: null, guess: null, stats: null, ready: false };
+  for (const h of rec.hidden) { rec.offsets.push(rec.total); rec.total += h; }
+  return rec;
+}
+const bufOf = b => ArrayBuffer.isView(b) ? b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) : b;   // isView: bytes may come from another frame's realm
 function loadEye({ manifest, weights, sample }) {
   let man;
   try { man = typeof manifest === 'string' ? JSON.parse(manifest) : manifest; } catch (e) { man = null; }
   if (!man || man.format !== 'tiny-eye-v1') { status('that is not a Tiny Eye (tiny-eye.json)', true); return; }
-  // (isView, not instanceof: the bytes may come from another frame's realm)
   const u8 = ArrayBuffer.isView(sample) ? new Uint8Array(sample.buffer, sample.byteOffset, sample.byteLength) : new Uint8Array(sample);
   if (u8.length !== man.sample.count * 784) { status('the doodle file does not match this eye', true); return; }
-  S.man = man; S.classes = man.classes; S.hidden = man.config.hidden;
-  S.offsets = []; S.total = 0;
-  for (const h of S.hidden) { S.offsets.push(S.total); S.total += h; }
-  S.names = man.names && man.names.neurons ? { stage: (man.names.stage || S.hidden.length) - 1, neurons: man.names.neurons } : null;
-  S.sample = u8; S.count = man.sample.count;
+  S.classes = man.classes; S.sample = u8; S.count = man.sample.count;
   S.labels = new Uint8Array(S.count);
   let at = 0; man.sample.classCounts.forEach((n, c) => { S.labels.fill(c, at, at + n); at += n; });
-  S.weights = ArrayBuffer.isView(weights) ? weights.buffer.slice(weights.byteOffset, weights.byteOffset + weights.byteLength) : weights;
-  S.off = S.hidden.map(h => new Uint8Array(h));
-  S.table = null; S.stats = null; S.swept = false; S.sel = null; S.ready = false; cardKey = '';
-  worker.postMessage({ type: 'load', manifest: man, weights: S.weights });
+  for (const k of Object.keys(EYES)) delete EYES[k];
+  EYES.full = eyeRecord('full', man, bufOf(weights));
+  cur = 'full'; S.snap = null; S.sel = null; S.ready = false; G = null; cardKey = '';
+  worker.postMessage({ type: 'load', key: 'full', manifest: man, weights: EYES.full.weights });
   drop.style.display = 'none';
   status('waking the eye…');
 }
@@ -21999,8 +22069,8 @@ window.addEventListener('drop', async e => {
 // on its own (not inside Tiny Mind), the eye's files sit beside this page
 if (!window.__tmBridge && typeof fetch === 'function') {
   Promise.all(['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'].map(f => fetch(new URL(f, window.location.href)).then(r => r.ok ? r.arrayBuffer() : null)))
-    .then(([m, w, s]) => { if (m && w && s && !S.man) loadEye({ manifest: new TextDecoder().decode(m), weights: w, sample: s }); else if (!S.man) status('drop the Tiny Eye\'s three files here to begin'); })
-    .catch(() => { if (!S.man) status('drop the Tiny Eye\'s three files here to begin'); });
+    .then(([m, w, s]) => { if (m && w && s && !EYES.full) loadEye({ manifest: new TextDecoder().decode(m), weights: w, sample: s }); else if (!EYES.full) status('drop the Tiny Eye\'s three files here to begin'); })
+    .catch(() => { if (!EYES.full) status('drop the Tiny Eye\'s three files here to begin'); });
 }
 
 // ---------- the engine's answers ----------
@@ -22008,18 +22078,25 @@ worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'error') { status(m.message, true); inFlight = false; return; }
   if (m.type === 'loaded') {
-    S.ready = true;
-    $('knows').textContent = 'It knows ' + S.classes.length + ' kinds of things: ' + S.classes.map((c, i) => label(i)).join(', ') + '.';
-    renderStages(); renderGrid(); renderOff();
-    $('offBusy').disabled = false;
-    status(`the eye is awake (${Math.round(m.params / 1000)} thousand connections, right ${Math.round(100 * m.accuracy)} times in 100 on doodles it never saw) — draw something`);
-    startSweep();
+    const key = m.key || 'full', rec = EYES[key];   // (no key: the full eye)
+    if (!rec) return;
+    rec.ready = true;
+    if (key === 'full') {
+      S.ready = true;
+      $('knows').textContent = 'It knows ' + S.classes.length + ' kinds of things: ' + S.classes.map((c, i) => label(i)).join(', ') + '.';
+      $('offBusy').disabled = false;
+      renderStories(); renderGrow();
+      status(`the eye is awake (${Math.round(m.params / 1000)} thousand connections, right ${Math.round(100 * m.accuracy)} times in 100 on doodles it never saw) — draw something`);
+    }
+    renderAll();
+    startSweep(rec);
     requestSee();
     return;
   }
   if (m.type === 'seen') { onSeen(m); return; }
   if (m.type === 'sweep-progress' || m.type === 'swept') { onSweepMsg(m); return; }
 };
+function renderAll() { renderStages(); renderGrid(); renderCard(); renderOff(); renderGuesses(); renderSqueeze(); }
 
 // ---------- the draw pad ----------
 const pad = $('pad'), pctx = pad.getContext('2d');
@@ -22033,9 +22110,8 @@ function redrawPad() {
   const w = pad.width, ctx = pctx;
   ctx.fillStyle = '#0d0f14'; ctx.fillRect(0, 0, w, w);
   if (S.sampleIdx !== null && S.sample) {
-    const cv = doodleCanvas(S.sampleIdx);
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(cv, 0, 0, w, w);
+    ctx.drawImage(doodleCanvas(S.sampleIdx), 0, 0, w, w);
     return;
   }
   ctx.strokeStyle = '#e8ecff'; ctx.fillStyle = '#e8ecff';
@@ -22087,7 +22163,7 @@ function showSample(i) {
 let inFlight = false, dirty = false, seq = 0, penLifted = false;
 function requestSee(lifted) { dirty = true; if (lifted) penLifted = true; if (!inFlight) pump(); }
 function pump() {
-  if (!S.ready || !dirty) return;
+  if (!S.ready || !dirty || !E() || !E().ready) return;
   dirty = false;
   if (S.sampleIdx !== null) eyeSampleInput(S.sample, S.sampleIdx, S.x);
   else eyeDoodle(S.strokes, S.x);
@@ -22095,13 +22171,15 @@ function pump() {
   drawSeen();
   if (S.blank) { S.last = null; renderGuesses(); renderGrid(); renderCard(); return; }
   inFlight = true;
-  worker.postMessage({ type: 'see', id: ++seq, x: S.x, off: S.off, maps: true, lifted: penLifted });
+  worker.postMessage({ type: 'see', id: ++seq, key: cur, snap: cur === 'full' ? S.snap : null, x: S.x, off: E().off, maps: true, lifted: penLifted });
   penLifted = false;
 }
 function onSeen(m) {
   inFlight = false;
-  S.last = m;
-  renderGuesses(); renderGrid(); renderCard(); renderOff();
+  if ((m.key || 'full') === cur && (m.snap ?? null) === (cur === 'full' ? S.snap : null)) {   // an answer for another eye or moment is stale
+    S.last = m;
+    renderGuesses(); renderGrid(); renderCard(); renderOff();
+  } else dirty = true;
   if (dirty) pump();
 }
 function drawSeen() {
@@ -22117,17 +22195,21 @@ function drawSeen() {
 function topOf(p, n) { return Array.from(p, (v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, n); }
 function renderGuesses() {
   const box = $('guesses');
-  if (!S.last || S.blank) { box.className = 'hint'; box.textContent = S.ready ? 'draw something…' : ''; $('guessNote').textContent = ''; document.body.dataset.guess = ''; return; }
+  if (!S.last || S.blank) { box.className = 'hint'; box.textContent = S.ready ? 'draw something…' : ''; if (S.sampleIdx === null) $('guessNote').textContent = ''; document.body.dataset.guess = ''; return; }
   box.className = ''; box.innerHTML = '';
-  const p = S.last.probs, base = S.last.baseProbs;
-  topOf(p, 5).forEach(([v, c], rank) => {
-    const row = document.createElement('div'); row.className = 'gbar' + (rank ? '' : ' top');
-    const ghost = base ? `<span class="gghost" style="width:${(100 * base[c]).toFixed(1)}%" title="with every neuron on: ${pct(base[c])}"></span>` : '';
-    row.innerHTML = `<span class="gname"></span><span class="gtrack"><span class="gfill" style="width:${(100 * v).toFixed(1)}%"></span>${ghost}</span><span class="gpct">${pct(v)}</span>`;
-    row.querySelector('.gname').textContent = label(c);
+  const p = S.last.probs, base = S.last.baseProbs, shown = topOf(p, 5);
+  const bar = (cls, name, v, ghost) => {
+    const row = document.createElement('div'); row.className = 'gbar' + cls;
+    const g = ghost !== undefined ? `<span class="gghost" style="width:${(100 * ghost).toFixed(1)}%" title="with every neuron on: ${fmtP(ghost)}"></span>` : '';
+    row.innerHTML = `<span class="gname"></span><span class="gtrack"><span class="gfill" style="width:${(100 * v).toFixed(1)}%"></span>${g}</span><span class="gpct">${fmtP(v)}</span>`;
+    row.querySelector('.gname').textContent = name;
     box.appendChild(row);
-  });
-  const best = topOf(p, 1)[0][1];
+  };
+  shown.forEach(([v, c], rank) => bar(rank ? '' : ' top', label(c), v, base ? base[c] : undefined));
+  // the rest, together: a confident eye still spreads a few percent thinly over every other kind
+  const rest = 1 - shown.reduce((a, [v]) => a + v, 0);
+  bar(' rest', `the other ${S.classes.length - shown.length} kinds together`, Math.max(0, rest));
+  const best = shown[0][1];
   document.body.dataset.guess = S.classes[best];
   if (base) {
     const was = topOf(base, 1)[0][1];
@@ -22139,18 +22221,62 @@ function renderGuesses() {
   if (S.announce) {
     const changed = base ? topOf(base, 1)[0][1] !== best : false;
     if (S.announce === 'switch') emit('switchResult', { guess: S.classes[best], changed, off: offCount() });
-    else emit('guessed', { guess: S.classes[best], p: p[best], sample: S.sampleIdx !== null });
+    else emit('guessed', { guess: S.classes[best], p: p[best], sample: S.sampleIdx !== null, rest });
     S.announce = null;
   }
 }
 
+// ---------- what the cards and the grid read: a live sweep, or a snapshot's summary ----------
+function liveView(rec) {
+  let colKey = '', col = null;
+  const column = (s, j) => {
+    const k = rec.offsets[s] + j;
+    if (colKey !== rec.key + k) { colKey = rec.key + k; col = new Float32Array(S.count); for (let i = 0; i < S.count; i++) col[i] = rec.table[i * rec.total + k]; }
+    return col;
+  };
+  return {
+    has: () => !!rec.stats,
+    meanSd: (s, j) => { const k = rec.offsets[s] + j; return [rec.stats.mean[k], rec.stats.sd[k] || 1]; },
+    order: (s, j) => {
+      const v = column(s, j), o = Array.from({ length: S.count }, (_, i) => i).sort((a, b) => v[b] - v[a]);
+      return { top: o.slice(0, 16), bottom: o.slice(-16).reverse() };
+    },
+    classZ: (s, j) => { const k = rec.offsets[s] + j, sd = rec.stats.sd[k] || 1;
+      return S.classes.map((_, c) => (rec.stats.cmean[c * rec.total + k] - rec.stats.mean[k]) / sd); },
+    below: (s, j, v) => { const c = column(s, j); let n = 0; for (let i = 0; i < S.count; i++) n += c[i] < v; return n / S.count; },
+    exact: true,
+  };
+}
+function growthView(i) {
+  const g = G.sum[i], st = G.stage;
+  return {
+    has: s => s === st,
+    meanSd: (s, j) => [g.mean[j], g.sd[j] || 1],
+    order: (s, j) => ({ top: Array.from(g.top.subarray(j * 16, j * 16 + 16)), bottom: Array.from(g.bottom.subarray(j * 16, j * 16 + 16)) }),
+    classZ: (s, j) => Array.from(g.classZ.subarray(j * 24, j * 24 + 24), v => v / G.zScale),
+    below: (s, j, v) => {                        // between its deciles
+      const d = g.deciles.subarray(j * 9, j * 9 + 9);
+      if (v <= d[0]) return 0.05;
+      for (let k = 0; k < 8; k++) if (v <= d[k + 1]) return 0.1 * (k + 1) + 0.1 * (v - d[k]) / ((d[k + 1] - d[k]) || 1);
+      return 0.95;
+    },
+    exact: false,
+  };
+}
+const atEnd = () => cur !== 'full' || S.snap === null;
+const view = () => atEnd() ? liveView(E()) : growthView(S.snap);
+
 // ---------- 2 · the neuron grid ----------
 function renderStages() {
   const box = $('stages'); box.innerHTML = '';
-  S.hidden.forEach((h, s) => {
+  const rec = E(); if (!rec) return;
+  if (!atEnd()) S.stage = rec.hidden.length - 1;   // the recording follows the last stage, where the jobs are clearest
+  rec.hidden.forEach((h, s) => {
     const b = document.createElement('button'); b.className = 'small' + (s === S.stage ? ' on' : '');
-    b.textContent = `stage ${s + 1}${s === S.hidden.length - 1 ? ' (last)' : ''} · ${h}`;
-    b.title = STAGE_ABOUT[s] || ''; b.dataset.stage = s;
+    b.textContent = `stage ${s + 1}${s === rec.hidden.length - 1 ? ' (last)' : ''} · ${h}`;
+    b.title = atEnd() || s === rec.hidden.length - 1 ? (STAGE_ABOUT[s] || '') : 'the training recording follows the last stage; earlier stages show at the end of training';
+    b.disabled = !atEnd() && s !== rec.hidden.length - 1;
+    b.dataset.stage = s;
     b.onclick = () => { S.stage = s; renderStages(); renderGrid(); };
     box.appendChild(b);
   });
@@ -22159,11 +22285,15 @@ function renderStages() {
 }
 // how unusual a neuron's value is: standard deviations from its mean over the sample doodles
 function zOf(s, j, v) {
-  if (S.stats) { const k = S.offsets[s] + j; return (v - S.stats.mean[k]) / (S.stats.sd[k] || 1); }
+  const vw = view();
+  if (vw.has(s)) { const [m, sd] = vw.meanSd(s, j); return (v - m) / sd; }
   return v;   // until the sample has been looked through, raw values
 }
 function renderGrid() {
-  const box = $('grid'), s = S.stage, H = S.hidden[s] || 0;
+  const rec = E(), box = $('grid'); if (!rec) return;
+  const s = S.stage, H = rec.hidden[s] || 0;
+  box.style.gridTemplateColumns = `repeat(${Math.min(16, H)}, 1fr)`;
+  box.style.maxWidth = H <= 16 ? '320px' : '480px';
   if (box.children.length !== H) {
     box.innerHTML = '';
     for (let j = 0; j < H; j++) {
@@ -22173,18 +22303,19 @@ function renderGrid() {
     }
   }
   const vals = S.last && !S.blank ? S.last.neurons[s] : null;
-  const named = S.names && S.names.stage === s ? S.names.neurons : {};
+  const named = rec.names && rec.names.stage === s ? rec.names.neurons : {};
+  const hasStats = view().has(s);
   let scale = 3;
-  if (vals && !S.stats) { scale = 0; for (const v of vals) scale = Math.max(scale, Math.abs(v)); scale = scale || 1; }
+  if (vals && !hasStats) { scale = 0; for (const v of vals) scale = Math.max(scale, Math.abs(v)); scale = scale || 1; }
   const ranked = [];
   for (let j = 0; j < H; j++) {
     const c = box.children[j];
     const z = vals ? zOf(s, j, vals[j]) : 0, a = Math.min(1, Math.abs(z) / scale);
     c.style.background = !vals ? '#262c38' : `rgba(${z >= 0 ? MORE : LESS}, ${(0.12 + 0.88 * a).toFixed(3)})`;
     c.classList.toggle('sel', !!S.sel && S.sel.s === s && S.sel.j === j);
-    c.classList.toggle('off', !!(S.off && S.off[s][j]));
+    c.classList.toggle('off', !!rec.off[s][j]);
     c.classList.toggle('named', j in named);
-    c.title = nid(s, j) + (named[j] && named[j].most ? ` — fires most for “${named[j].most.name}”` : '') + (vals ? ` · now ${z >= 0 ? '+' : ''}${z.toFixed(1)}${S.stats ? ' (how unusual)' : ''}` : '');
+    c.title = nid(s, j) + (named[j] && named[j].most ? ` — at the end of training it fires most for “${named[j].most.name}”` : '') + (vals ? ` · now ${z >= 0 ? '+' : ''}${z.toFixed(1)}${hasStats ? ' (how unusual)' : ''}` : '');
     if (vals) ranked.push([z, j]);
   }
   const busy = $('busy'); busy.innerHTML = '';
@@ -22193,47 +22324,49 @@ function renderGrid() {
     const chip = ([z, j], cls) => { const b = document.createElement('button'); b.className = 'nchip ' + cls; b.textContent = (cls === 'up' ? '▲ ' : '▼ ') + 'neuron ' + j;
       b.title = nid(s, j); b.onclick = () => openCard(s, j); return b; };
     const t1 = document.createElement('span'); t1.className = 'hint'; t1.textContent = 'firing most now:'; busy.appendChild(t1);
-    ranked.slice(0, 5).forEach(r => busy.appendChild(chip(r, 'up')));
+    ranked.slice(0, Math.min(5, H)).forEach(r => busy.appendChild(chip(r, 'up')));
     const t2 = document.createElement('span'); t2.className = 'hint'; t2.textContent = ' least:'; busy.appendChild(t2);
-    ranked.slice(-3).reverse().forEach(r => busy.appendChild(chip(r, 'down')));
+    ranked.slice(-Math.min(3, H)).reverse().forEach(r => busy.appendChild(chip(r, 'down')));
   }
 }
 
-// ---------- the sample set, looked through once (for the neuron cards) ----------
+// ---------- the sample set, looked through once per eye (for the live neuron cards) ----------
 let sweep = null;
-function startSweep() {
+function startSweep(rec) {
   if (sweep) for (const w of sweep.crew) if (w !== worker) { try { w.terminate(); } catch (e) {} }
   const CH = 250, chunks = [];
   for (let s = 0; s < S.count; s += CH) chunks.push([s, Math.min(CH, S.count - s)]);
   const want = Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 2) - 2));
   const helpers = [];
   for (let i = 0; i < want; i++) { const h = spawnHelper(); if (h) helpers.push(h); else break; }
-  sweep = { chunks, next: 0, done: new Map(), finished: 0, crew: helpers.length ? helpers : [worker], t0: performance.now() };
-  S.table = new Float32Array(S.count * S.total); S.guess = new Uint8Array(S.count);
+  sweep = { rec, chunks, next: 0, done: new Map(), finished: 0, crew: helpers.length ? helpers : [worker], t0: performance.now() };
+  rec.table = new Float32Array(S.count * rec.total); rec.guess = new Uint8Array(S.count); rec.stats = null;
   const me = sweep;
   for (const w of sweep.crew) {
     if (w !== worker) {
       w.onmessage = ev => { if (sweep === me) onSweepMsg(ev.data, w); };
-      w.postMessage({ type: 'load', manifest: S.man, weights: S.weights });
+      w.postMessage({ type: 'load', key: rec.key, manifest: rec.man, weights: rec.weights });
     }
     giveChunk(w);
   }
-  status('the eye is looking through 5,000 doodles so the neuron cards can show what each neuron does…');
+  status(rec.key === 'full' ? 'the eye is looking through 5,000 doodles so the neuron cards can show what each neuron does…'
+    : 'the squeezed eye is looking through the same 5,000 doodles…');
   progress(0);
 }
 function giveChunk(w) {
   if (sweep.next >= sweep.chunks.length) return false;
   const [start, count] = sweep.chunks[sweep.next++];
   const doodles = S.sample.slice(start * 784, (start + count) * 784);
-  w.postMessage({ type: 'sweep', id: 'c' + start, start, count, doodles }, [doodles.buffer]);
+  w.postMessage({ type: 'sweep', key: sweep.rec.key, id: 'c' + start, start, count, doodles }, [doodles.buffer]);
   return true;
 }
 function onSweepMsg(m, from) {
-  if (!sweep || m.type === 'loaded') return;
+  if (!sweep || m.type === 'loaded' || (m.key && m.key !== sweep.rec.key)) return;
   if (m.type === 'error') { status(m.message, true); return; }
+  const rec = sweep.rec;
   if (m.type === 'sweep-progress') sweep.done.set(m.id, m.done);
   if (m.type === 'swept') {
-    S.table.set(m.table, m.start * S.total); S.guess.set(m.guesses, m.start);
+    rec.table.set(m.table, m.start * rec.total); rec.guess.set(m.guesses, m.start);
     sweep.done.set(m.id, m.count); sweep.finished++;
     giveChunk(from || worker);
   }
@@ -22241,30 +22374,40 @@ function onSweepMsg(m, from) {
   progress(got / S.count);
   if (sweep.finished === sweep.chunks.length) {
     for (const w of sweep.crew) if (w !== worker) { try { w.terminate(); } catch (e) {} }
-    finishSweep();
+    const secs = ((performance.now() - sweep.t0) / 1000).toFixed(0);
+    sweep = null;
+    finishSweep(rec, secs);
   }
 }
-function finishSweep() {
-  const N = S.count, K = S.total, mean = new Float64Array(K), sq = new Float64Array(K);
+function finishSweep(rec, secs) {
+  const N = S.count, K = rec.total, mean = new Float64Array(K), sq = new Float64Array(K);
   const cls = S.classes.length, cmean = new Float64Array(cls * K), ccount = new Float64Array(cls);
   for (let i = 0; i < N; i++) {
     const o = i * K, c = S.labels[i]; ccount[c]++;
-    for (let k = 0; k < K; k++) { const v = S.table[o + k]; mean[k] += v; sq[k] += v * v; cmean[c * K + k] += v; }
+    for (let k = 0; k < K; k++) { const v = rec.table[o + k]; mean[k] += v; sq[k] += v * v; cmean[c * K + k] += v; }
   }
   const sd = new Float64Array(K);
   for (let k = 0; k < K; k++) { mean[k] /= N; sd[k] = Math.sqrt(Math.max(0, sq[k] / N - mean[k] * mean[k])); }
   for (let c = 0; c < cls; c++) for (let k = 0; k < K; k++) cmean[c * K + k] /= ccount[c] || 1;
-  let right = 0; for (let i = 0; i < N; i++) right += S.guess[i] === S.labels[i];
-  S.stats = { mean, sd, cmean, right };
-  S.swept = true; document.body.dataset.swept = '1';
+  let right = 0; for (let i = 0; i < N; i++) right += rec.guess[i] === S.labels[i];
+  // breadth (Phase 0's measure): how many kinds each last-stage neuron answers strongly to, either way
+  // (a kind's average more than 1 sd above or below the neuron's own)
+  const L = rec.hidden.length - 1, kL = rec.offsets[L];
+  let strong = 0;
+  for (let j = 0; j < rec.hidden[L]; j++) for (let c = 0; c < cls; c++) strong += Math.abs((cmean[c * K + kL + j] - mean[kL + j]) / (sd[kL + j] || 1)) > 1;
+  rec.stats = { mean, sd, cmean, right, breadth: strong / rec.hidden[L] };
   progress(null);
-  const secs = ((performance.now() - sweep.t0) / 1000).toFixed(0);
-  status(`ready: the eye looked through all ${N.toLocaleString()} doodles in ${secs} s (it guessed ${right.toLocaleString()} of them right). Tap any neuron to see its job.`);
-  renderGrid(); renderCard();
-  emit('swept', { right, n: N });
+  if (rec.key === 'full') {
+    document.body.dataset.swept = '1';
+    $('squeezeBtn').disabled = false;
+    status(`ready: the eye looked through all ${N.toLocaleString()} doodles in ${secs} s (it guessed ${right.toLocaleString()} of them right). Tap any neuron to see its job.`);
+  } else status(`the squeezed eye is ready: it guessed ${right.toLocaleString()} of the ${N.toLocaleString()} doodles right.`);
+  renderGrid(); renderCard(); renderSqueeze();
+  emit('swept', { key: rec.key, right, n: N });
+  if (rec.key === 'sq8') emit('squeezed', { on: cur === 'sq8', breadthFull: EYES.full.stats && EYES.full.stats.breadth, breadthSq: rec.stats.breadth });
 }
 
-// ---------- 3 · a neuron's card (always both poles) ----------
+// ---------- 3 · a neuron's card (always both ends) ----------
 const doodleCache = new Map();
 function doodleCanvas(i) {
   if (doodleCache.has(i)) return doodleCache.get(i);
@@ -22275,7 +22418,7 @@ function doodleCanvas(i) {
     img.data[4 * k] = 13 + v * 219; img.data[4 * k + 1] = 15 + v * 221; img.data[4 * k + 2] = 20 + v * 235; img.data[4 * k + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  if (doodleCache.size > 400) doodleCache.clear();
+  if (doodleCache.size > 600) doodleCache.clear();
   doodleCache.set(i, cv);
   return cv;
 }
@@ -22294,53 +22437,54 @@ function poleCanvas(ids) {
   };
   return cv;
 }
+const storyOf = j => { const g = EYES.full && EYES.full.man.growth; return (g && g.stories.find(st => st.neuron === j)) || null; };
 function openCard(s, j) {
   S.sel = { s, j };
   if (s !== S.stage) { S.stage = s; renderStages(); }
   renderGrid(); renderCard();
   document.body.dataset.card = s + ':' + j;
-  emit('cardOpened', { stage: s + 1, neuron: j, waiting: !S.stats, named: !!(S.names && S.names.stage === s && S.names.neurons[j]) });
+  const rec = E();
+  emit('cardOpened', { stage: s + 1, neuron: j, waiting: !view().has(s), named: !!(rec.names && rec.names.stage === s && rec.names.neurons[j]), squeezed: cur === 'sq8' });
 }
 let savedNames = {};
 try { savedNames = JSON.parse(localStorage.getItem('tm-eye-names') || '{}') || {}; } catch (e) { savedNames = {}; }
 let cardKey = '';
 function renderCard() {
-  const body = $('cardBody');
-  if (!S.sel) return;
-  const { s, j } = S.sel, k = S.offsets[s] + j;
-  $('cardTitle').textContent = nid(s, j);
-  if (!S.stats) { cardKey = ''; body.className = 'hint'; body.textContent = 'one moment: the eye is still looking through the sample doodles to find what this neuron does…'; return; }
-  if (cardKey === s + ':' + j) { updateCardLive(); return; }
-  cardKey = s + ':' + j;
+  const body = $('cardBody'), rec = E();
+  if (!S.sel || !rec) return;
+  const { s, j } = S.sel;
+  if (j >= rec.hidden[s]) { S.sel = null; cardKey = ''; $('cardTitle').textContent = "a neuron's job"; body.className = 'hint'; body.textContent = 'tap a neuron in box 2…'; return; }
+  const vw = view(), when = atEnd() ? '' : ` · at step ${stepText(G.stops[S.snap].step)}`;
+  $('cardTitle').textContent = (cur === 'sq8' ? 'squeezed eye · ' : '') + nid(s, j) + when;
+  if (!vw.has(s)) { cardKey = ''; body.className = 'hint'; body.textContent = 'one moment: the eye is still looking through the sample doodles to find what this neuron does…'; return; }
+  const key = [cur, S.snap, s, j, !!G].join(':');
+  if (cardKey === key) { updateCardLive(); return; }
+  cardKey = key;
   body.className = '';
-  // the sample doodles, ordered by this neuron's value
-  const N = S.count, K = S.total, vals = new Float32Array(N);
-  for (let i = 0; i < N; i++) vals[i] = S.table[i * K + k];
-  const order = Array.from({ length: N }, (_, i) => i).sort((a, b) => vals[b] - vals[a]);
-  const most = order.slice(0, 16), least = order.slice(-16).reverse();
-  const named = S.names && S.names.stage === s ? S.names.neurons[j] : null;
+  const { top, bottom } = vw.order(s, j);
+  const named = rec.names && rec.names.stage === s ? rec.names.neurons[j] : null;
+  const story = cur === 'full' && s === rec.hidden.length - 1 ? storyOf(j) : null;
   const poleHtml = p => {
     if (!p) return '<div class="pname hint">No name for this end yet.</div>';
-    const ok = p.passed;
-    return `<div class="pname">A bigger AI named it <q></q></div>` +
-      `<div class="ptest">${ok ? '✓' : '✗'} tested: from the name alone it picked ${p.hits} of 4 hidden doodles from this end${ok ? '' : ' (a fuzzier job, or a hard one to put into words)'}</div>`;
+    return `<div class="pname">${atEnd() ? 'A bigger AI named it' : 'At the end of training, a bigger AI named this end'} <q></q></div>` +
+      `<div class="ptest">${p.passed ? '✓' : '✗'} tested: from the name alone it picked ${p.hits} of 4 hidden doodles from this end${p.passed ? '' : ' (a fuzzier job, or a hard one to put into words)'}</div>`;
   };
-  body.innerHTML =
+  body.innerHTML = (story ? `<div class="storyline">🌱 growth story: <b></b> <span></span></div>` : '') +
     `<div class="poles"><div class="pole most"><h3 data-vg-explain="ends">▲ fires most for</h3><div class="pc"></div>${poleHtml(named && named.most)}</div>` +
     `<div class="pole least"><h3 data-vg-explain="ends">▼ fires least for (the other end)</h3><div class="pc"></div>${poleHtml(named && named.least)}</div></div>` +
     `<div class="hint" style="margin-top:.6rem" data-vg-explain="bars">what kinds of things make it fire <span class="hint">(compared with all the sample doodles)</span></div><div id="cbars"></div>` +
+    (cur === 'full' && s === rec.hidden.length - 1 ? `<div class="hint" style="margin-top:.6rem" data-vg-explain="grow">how it grew: its top 4 doodles through training <span class="hint">(click a moment to go there)</span></div><div class="strip" id="strip"></div>` : '') +
     `<div class="where"><canvas id="whereCv" width="112" height="112"></canvas><div id="whereNote" class="hint" style="flex:1;min-width:12em"></div></div>` +
     `<div style="margin-top:.5rem"><button id="cardOff" class="small"></button> <label class="hint">your name for it: <input type="text" id="myName" maxlength="60" placeholder="what would you call it?"></label></div>`;
+  if (story) { body.querySelector('.storyline b').textContent = story.title + '.'; body.querySelector('.storyline span').textContent = story.text; }
   const pcs = body.querySelectorAll('.pc');
-  pcs[0].appendChild(poleCanvas(most)); pcs[1].appendChild(poleCanvas(least));
+  pcs[0].appendChild(poleCanvas(top)); pcs[1].appendChild(poleCanvas(bottom));
   const qs = body.querySelectorAll('.pname q');
   let qi = 0;
   if (named && named.most) qs[qi++].textContent = named.most.name;
   if (named && named.least) qs[qi++].textContent = named.least.name;
   // class bars: each kind's average, in standard deviations from the neuron's average
-  const cls = S.classes.length, z = [];
-  for (let c = 0; c < cls; c++) z.push([(S.stats.cmean[c * K + k] - S.stats.mean[k]) / (S.stats.sd[k] || 1), c]);
-  z.sort((a, b) => b[0] - a[0]);
+  const z = vw.classZ(s, j).map((v, c) => [v, c]).sort((a, b) => b[0] - a[0]);
   const shown = [...z.slice(0, 5), ...z.slice(-5)];
   const strong = z.filter(([v]) => v > 1).length, weak = z.filter(([v]) => v < -1).length;
   const cb = body.querySelector('#cbars');
@@ -22353,46 +22497,45 @@ function renderCard() {
     cb.appendChild(row);
   });
   const sum = document.createElement('div'); sum.className = 'hint'; sum.style.marginTop = '.25rem';
-  sum.textContent = `It answers strongly (more than 1 on this scale) to ${strong} kind${strong === 1 ? '' : 's'} of thing${strong === 1 ? '' : 's'}, and is quiet for ${weak}.`;
+  sum.textContent = `It answers strongly (more than 1 on this scale, either way) to ${strong + weak} kind${strong + weak === 1 ? '' : 's'} of thing${strong + weak === 1 ? '' : 's'}: ${strong} make it fire more, ${weak} make it quiet.`;
   cb.appendChild(sum);
-  S.cardVals = vals;
-  const inp = body.querySelector('#myName'), key = s + ':' + j;
-  inp.value = savedNames[key] || '';
-  inp.oninput = () => { const t = inp.value.trim().slice(0, 60); if (t) savedNames[key] = t; else delete savedNames[key];
+  renderStrip(j);
+  const inp = body.querySelector('#myName'), nkey = (cur === 'sq8' ? 'sq8:' : '') + s + ':' + j;
+  inp.value = savedNames[nkey] || '';
+  inp.oninput = () => { const t = inp.value.trim().slice(0, 60); if (t) savedNames[nkey] = t; else delete savedNames[nkey];
     try { localStorage.setItem('tm-eye-names', JSON.stringify(savedNames)); } catch (e) {} };
   updateCardLive();
 }
 // the card's live part: how this neuron fires for your drawing, where, and its switch
 function updateCardLive() {
-  const body = $('cardBody'), { s, j } = S.sel, vals = S.cardVals, N = S.count;
+  const body = $('cardBody'), { s, j } = S.sel, vw = view();
   const note = body.querySelector('#whereNote'), wc = body.querySelector('#whereCv');
   if (!note) return;
   if (S.last && !S.blank) {
-    const v = S.last.neurons[s][j];
-    let below = 0; for (let i = 0; i < N; i++) below += vals[i] < v;
-    const r = below / N;
-    note.textContent = `For your drawing it is higher than ${Math.round(100 * r)} of 100 sample doodles` +
+    const r = vw.below(s, j, S.last.neurons[s][j]);
+    note.textContent = `For your drawing it is higher than ${vw.exact ? '' : 'about '}${Math.round(100 * r)} of 100 sample doodles` +
       (r > 0.9 ? ': it is firing a lot.' : r < 0.1 ? ': it is very quiet, the "fires least" end.' : '.') +
       ` Left: where in your drawing (gold = fires more, blue = less).`;
-    drawWhere(wc, s, j);
-  } else { note.textContent = 'Draw something to see how this neuron fires for it, and where.'; drawWhere(wc, s, j); }
-  const btn = body.querySelector('#cardOff');
-  const isOff = !!S.off[s][j];
+  } else note.textContent = 'Draw something to see how this neuron fires for it, and where.';
+  drawWhere(wc, s, j);
+  const btn = body.querySelector('#cardOff'), isOff = !!E().off[s][j];
   btn.textContent = isOff ? '🔌 switch it back on' : '🔌 switch it off';
-  btn.onclick = () => setOff(s, j, !S.off[s][j]);
+  btn.onclick = () => setOff(s, j, !E().off[s][j]);
+  const strip = body.querySelector('#strip');
+  if (strip) strip.querySelectorAll('.col').forEach(c => c.classList.toggle('on', +c.dataset.stop === (S.snap === null ? -1 : S.snap)));
 }
 function drawWhere(cv, s, j) {
   const ctx = cv.getContext('2d'), W = cv.width;
   ctx.fillStyle = '#0d0f14'; ctx.fillRect(0, 0, W, W);
   if (!S.last || S.blank || !S.last.maps) return;
-  const img = ctx.createImageData(W, W), map = S.last.maps[s], H = S.hidden[s];
-  const G = Math.round(Math.sqrt(map.length / H)), k = S.offsets[s] + j;
-  const mu = S.stats ? S.stats.mean[k] : 0, sd = S.stats ? (S.stats.sd[k] || 1) : 1;
-  const at = (gy, gx) => map[(Math.min(G - 1, Math.max(0, gy)) * G + Math.min(G - 1, Math.max(0, gx))) * H + j];
+  const img = ctx.createImageData(W, W), map = S.last.maps[s], H = E().hidden[s];
+  const Gs = Math.round(Math.sqrt(map.length / H));
+  const [mu, sd] = view().has(s) ? view().meanSd(s, j) : [0, 1];
+  const at = (gy, gx) => map[(Math.min(Gs - 1, Math.max(0, gy)) * Gs + Math.min(Gs - 1, Math.max(0, gx))) * H + j];
   for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
     const ink = S.x[Math.floor(y * 28 / W) * 28 + Math.floor(x * 28 / W)];
     // the neuron's grid, smoothly stretched over the 28 x 28 picture
-    const fy = (y + 0.5) * G / W - 0.5, fx = (x + 0.5) * G / W - 0.5, y0 = Math.floor(fy), x0 = Math.floor(fx), ty = fy - y0, tx = fx - x0;
+    const fy = (y + 0.5) * Gs / W - 0.5, fx = (x + 0.5) * Gs / W - 0.5, y0 = Math.floor(fy), x0 = Math.floor(fx), ty = fy - y0, tx = fx - x0;
     const val = (at(y0, x0) * (1 - tx) + at(y0, x0 + 1) * tx) * (1 - ty) + (at(y0 + 1, x0) * (1 - tx) + at(y0 + 1, x0 + 1) * tx) * ty;
     const z = (val - mu) / sd, a = 0.6 * Math.min(1, Math.abs(z) / 3);
     const o = 4 * (y * W + x), base = 13 + ink * 220;
@@ -22401,39 +22544,207 @@ function drawWhere(cv, s, j) {
   }
   ctx.putImageData(img, 0, 0);
 }
+// how a last-stage neuron grew: its top 4 at a few moments of training (needs the recording)
+function renderStrip(j) {
+  const box = $('strip'); if (!box) return;
+  box.innerHTML = '';
+  if (!G) {
+    const b = document.createElement('button'); b.className = 'small'; b.textContent = '🌱 get the training recording (3.8 MB, once) to see how it grew';
+    b.onclick = () => loadGrowth().then(() => renderCard());
+    box.appendChild(b); return;
+  }
+  const end = liveView(EYES.full);
+  const moments = G.strip.map(i => ({ i, label: stepText(G.stops[i].step), right: G.stops[i].sampleRight, top: growthView(i).order(2, j).top }));
+  if (EYES.full.stats) moments.push({ i: -1, label: 'end', right: EYES.full.stats.right, top: end.order(2, j).top });
+  for (const m of moments) {
+    const col = document.createElement('div'); col.className = 'col'; col.dataset.stop = m.i;
+    const cv = document.createElement('canvas'); cv.width = 40; cv.height = 166;
+    const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = true;
+    m.top.slice(0, 4).forEach((d, n) => ctx.drawImage(doodleCanvas(d), 0, n * 42, 40, 40));
+    col.appendChild(cv);
+    const t = document.createElement('span'); t.textContent = m.label === 'end' ? 'the end' : 'step ' + m.label; col.appendChild(t);
+    const r = document.createElement('span'); r.textContent = Math.round(100 * m.right / S.count) + '% right'; col.appendChild(r);
+    col.title = 'go to this moment of training';
+    col.onclick = () => setSnap(m.i < 0 ? null : m.i);
+    box.appendChild(col);
+  }
+}
 
 // ---------- 4 · switch neurons off ----------
-const offCount = () => S.off ? S.off.reduce((n, a) => n + a.reduce((x, v) => x + v, 0), 0) : 0;
+const offCount = () => E() ? E().off.reduce((n, a) => n + a.reduce((x, v) => x + v, 0), 0) : 0;
 function setOff(s, j, on) {
-  S.off[s][j] = on ? 1 : 0; S.announce = 'switch';
+  E().off[s][j] = on ? 1 : 0; S.announce = 'switch';
   renderOff(); renderGrid(); renderCard();
   requestSee();
   emit('switched', { stage: s + 1, neuron: j, off: !!on, count: offCount() });
 }
 function renderOff() {
   const box = $('offList'); box.innerHTML = '';
-  const n = offCount();
+  const n = offCount(), rec = E();
   document.body.dataset.off = String(n);
   $('offNone').disabled = !n;
-  if (!S.off || !n) { box.innerHTML = '<span class="hint">none switched off — use the button on a neuron\'s card, or the one below</span>'; $('offNote').textContent = ''; return; }
-  S.off.forEach((a, s) => a.forEach((v, j) => {
+  if (!rec || !n) { box.innerHTML = '<span class="hint">none switched off — use the button on a neuron\'s card, or the one below</span>'; $('offNote').textContent = ''; return; }
+  rec.off.forEach((a, s) => a.forEach((v, j) => {
     if (!v) return;
-    const b = document.createElement('button'); b.className = 'nchip offc'; b.textContent = '⊘ ' + (s === S.hidden.length - 1 ? '' : `stage ${s + 1} · `) + 'neuron ' + j;
+    const b = document.createElement('button'); b.className = 'nchip offc'; b.textContent = '⊘ ' + (s === rec.hidden.length - 1 ? '' : `stage ${s + 1} · `) + 'neuron ' + j;
     b.title = 'switched off — click to switch it back on'; b.onclick = () => setOff(s, j, false);
     box.appendChild(b);
   }));
   $('offNote').textContent = S.last && S.last.baseProbs ? $('guessNote').textContent : '';
 }
-$('offNone').onclick = () => { for (const a of S.off) a.fill(0); S.announce = 'switch'; renderOff(); renderGrid(); renderCard(); requestSee(); emit('switched', { count: 0 }); };
+$('offNone').onclick = () => { for (const a of E().off) a.fill(0); S.announce = 'switch'; renderOff(); renderGrid(); renderCard(); requestSee(); emit('switched', { count: 0 }); };
 $('offBusy').onclick = () => {
   if (!S.last || S.blank) { status('draw something first: these are the neurons busiest for your drawing'); return; }
-  const s = S.stage, vals = S.last.neurons[s];
-  const ranked = Array.from(vals, (v, j) => [zOf(s, j, v), j]).filter(([, j]) => !S.off[s][j]).sort((a, b) => b[0] - a[0]).slice(0, 5);
-  for (const [, j] of ranked) S.off[s][j] = 1;
+  const s = S.stage, vals = S.last.neurons[s], off = E().off[s];
+  const ranked = Array.from(vals, (v, j) => [zOf(s, j, v), j]).filter(([, j]) => !off[j]).sort((a, b) => b[0] - a[0]).slice(0, 5);
+  for (const [, j] of ranked) off[j] = 1;
   S.announce = 'switch';
   renderOff(); renderGrid(); renderCard(); requestSee();
   emit('switched', { stage: s + 1, count: offCount(), busiest: true });
 };
+
+// ---------- 5 · watch it grow (the training recording) ----------
+// Stops sit half evenly and half by the square root of the training step: the early snapshots are
+// crowded (they were saved on a log scale) yet still clickable, and the second half of training,
+// where the jobs settle, keeps a fifth of the slider instead of its last few pixels.
+const growStops = () => {
+  const g = EYES.full && EYES.full.man.growth; if (!g) return [];
+  const all = [...g.snapshots, g.final], last = g.final.step, n = all.length - 1;
+  return all.map((s, i) => ({ ...s, pos: 0.5 * (i / n) + 0.5 * Math.sqrt(s.step / last), index: i < n ? i : null }));
+};
+let loadingGrowth = null;
+function loadGrowth() {
+  if (G) return Promise.resolve(G);
+  if (loadingGrowth) return loadingGrowth;
+  const g = EYES.full.man.growth;
+  status('getting the training recording (3.8 MB, once)…');
+  loadingGrowth = eyeFile(g.file).then(buf => {
+    if (buf.byteLength !== g.bytes) throw new Error('the training recording does not match this eye');
+    const sum = [], L = g.summary, T = { f32: Float32Array, u16: Uint16Array, i8: Int8Array };
+    for (let i = 0; i < g.snapshots.length; i++) {
+      let at = L.offset + i * L.bytesEach; const rec = {};
+      for (const [name, t, len] of L.layout) { rec[name] = new T[t](buf, at, len); at += len * T[t].BYTES_PER_ELEMENT; }
+      sum.push(rec);
+    }
+    G = { sum, stage: L.stage, zScale: L.classZScale, stops: g.snapshots,
+      strip: [155, 433, 1206, 2387, 3359, 4727, 6652].map(st => g.snapshots.findIndex(s => s.step === st)).filter(i => i >= 0) };
+    worker.postMessage({ type: 'growth', weights: buf.slice(0, g.snapshots.length * g.weights.bytesEach), bytesEach: g.weights.bytesEach });
+    status('the training recording is here: scrub back to watch the eye grow');
+    return G;
+  }).catch(e => { status('could not get the training recording: ' + ((e && e.message) || e), true); loadingGrowth = null; throw e; });
+  return loadingGrowth;
+}
+async function setSnap(i) {
+  if (cur !== 'full') return;
+  if (i !== null && !G) { try { await loadGrowth(); } catch (e) { return; } }
+  S.snap = i; cardKey = '';
+  if (S.sel && S.sel.s !== EYES.full.hidden.length - 1 && i !== null) S.sel = null;
+  document.body.dataset.snap = i === null ? 'end' : String(G.stops[i].step);
+  renderGrow(); renderStages(); renderGrid(); renderCard();
+  S.last = null; requestSee();
+  const st = growStops()[i === null ? growStops().length - 1 : i];
+  emit('scrubbed', { step: st.step, end: i === null, right: st.sampleRight / S.count, settled: st.settled });
+}
+function renderGrow() {
+  const stops = growStops(); if (!stops.length) return;
+  const k = S.snap === null ? stops.length - 1 : S.snap, st = stops[k];
+  $('growSlider').value = Math.round(1000 * st.pos);
+  $('growInfo').textContent = cur !== 'full' ? 'the squeezed eye comes without a training recording: un-squeeze to scrub'
+    : S.snap === null ? `the end of training (step ${stepText(st.step)}, ${st.epoch} times through the doodles): the eye you are drawing with, right on ${Math.round(100 * st.sampleRight / S.count)} of 100 sample doodles`
+    : `step ${stepText(st.step)} of ${stepText(stops[stops.length - 1].step)} (${st.epoch < 1 ? 'not yet once' : st.epoch.toFixed(1) + ' times'} through the doodles): right on ${Math.round(100 * st.sampleRight / S.count)} of 100 sample doodles; ` +
+      `its neurons' jobs are ${Math.round(100 * st.settled)}% settled (that much of each neuron's final top 100 doodles is already in its top 100)`;
+  for (const id of ['growSlider', 'growPrev', 'growNext', 'growPlay', 'growEnd']) $(id).disabled = cur !== 'full' || !S.ready;
+  drawGrowCurve(stops, k);
+}
+function drawGrowCurve(stops, k) {
+  const cv = $('growCurve'), ctx = cv.getContext('2d'), W = cv.width, H = cv.height, pad = 6;
+  ctx.fillStyle = '#1b1f28'; ctx.fillRect(0, 0, W, H);
+  const X = p => pad + p * (W - 2 * pad), Y = v => H - 14 - v * (H - 24);
+  ctx.strokeStyle = '#2b3140'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad, Y(0)); ctx.lineTo(W - pad, Y(0)); ctx.moveTo(pad, Y(1)); ctx.lineTo(W - pad, Y(1)); ctx.stroke();
+  const line = (vals, color) => {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    stops.forEach((s, i) => { const x = X(s.pos), y = Y(vals[i]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+    ctx.stroke();
+    stops.forEach((s, i) => { ctx.beginPath(); ctx.arc(X(s.pos), Y(vals[i]), 2.5, 0, 6.2832); ctx.fill(); });
+  };
+  line(stops.map(s => s.sampleRight / S.count), '#8fd3a7');
+  line(stops.map(s => s.settled), '#ffd27f');
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(stops[k].pos), 2); ctx.lineTo(X(stops[k].pos), H - 12); ctx.stroke();
+  ctx.font = '11px system-ui, sans-serif'; ctx.fillStyle = '#8fd3a7'; ctx.fillText('right answers', pad + 2, 11);
+  ctx.fillStyle = '#ffd27f'; ctx.fillText('jobs settled', pad + 92, 11);
+  ctx.fillStyle = '#8791a3'; ctx.fillText('start', pad, H - 2); ctx.fillText('half way', X(stops.find(s => s.step >= stops[stops.length - 1].step / 2).pos) - 18, H - 2);
+  ctx.fillText('end', W - pad - 18, H - 2);
+}
+const nearestStop = v => { const stops = growStops(); let best = 0; stops.forEach((s, i) => { if (Math.abs(s.pos - v) < Math.abs(stops[best].pos - v)) best = i; }); return best; };
+let playTimer = null;
+const stopPlay = () => { if (playTimer) { clearInterval(playTimer); playTimer = null; $('growPlay').textContent = '▶ play it all'; } };
+const goStop = k => { const stops = growStops(); k = Math.max(0, Math.min(stops.length - 1, k)); return setSnap(k === stops.length - 1 ? null : k); };
+$('growSlider').oninput = () => { stopPlay(); goStop(nearestStop($('growSlider').value / 1000)); };
+$('growPrev').onclick = () => { stopPlay(); goStop((S.snap === null ? growStops().length - 1 : S.snap) - 1); };
+$('growNext').onclick = () => { stopPlay(); goStop((S.snap === null ? growStops().length - 1 : S.snap) + 1); };
+$('growEnd').onclick = () => { stopPlay(); setSnap(null); };
+$('growPlay').onclick = async () => {
+  if (playTimer) { stopPlay(); return; }
+  try { await loadGrowth(); } catch (e) { return; }
+  await goStop(0);
+  $('growPlay').textContent = '■ stop';
+  playTimer = setInterval(() => { const n = growStops().length; if (S.snap === null || S.snap >= n - 2) { stopPlay(); setSnap(null); } else goStop(S.snap + 1); }, 900);
+};
+function renderStories() {
+  const box = $('stories'); box.querySelectorAll('button').forEach(b => b.remove());
+  const g = EYES.full && EYES.full.man.growth; if (!g) return;
+  for (const st of g.stories) {
+    const b = document.createElement('button'); b.className = 'nchip story'; b.textContent = `neuron ${st.neuron}: ${st.title}`;
+    b.title = st.text;
+    b.onclick = async () => {
+      if (cur !== 'full') await setEye('full');
+      try { await loadGrowth(); } catch (e) { return; }
+      S.stage = 2; openCard(2, st.neuron);
+      emit('storyOpened', { neuron: st.neuron, title: st.title });
+    };
+    box.appendChild(b);
+  }
+}
+
+// ---------- 6 · squeeze it ----------
+async function setEye(key) {
+  stopPlay();
+  if (key === 'sq8' && !EYES.sq8) {
+    $('squeezeBtn').disabled = true;
+    try {
+      status('getting the squeezed eye…');
+      const name = EYES.full.man.squeezed || 'tiny-eye-sq8.json';
+      const man = JSON.parse(new TextDecoder().decode(await eyeFile(name)));
+      const weights = await eyeFile(man.weights);
+      EYES.sq8 = eyeRecord('sq8', man, weights);
+      worker.postMessage({ type: 'load', key: 'sq8', manifest: man, weights });
+    } catch (e) { status('could not get the squeezed eye: ' + ((e && e.message) || e), true); $('squeezeBtn').disabled = false; return; }
+  }
+  cur = key; cardKey = '';
+  if (S.sel && S.sel.j >= E().hidden[S.sel.s]) S.sel = null;
+  if (key === 'sq8' && S.stage !== 2) S.stage = 2;
+  document.body.dataset.eye = key === 'sq8' ? 'squeezed' : 'full';
+  S.last = null;
+  renderAll(); renderGrow();
+  requestSee();
+  if (key === 'full') emit('squeezed', { on: false });
+  else if (EYES.sq8.stats) emit('squeezed', { on: true, breadthFull: EYES.full.stats && EYES.full.stats.breadth, breadthSq: EYES.sq8.stats.breadth });
+}
+function renderSqueeze() {
+  const on = cur === 'sq8', sq = EYES.sq8, full = EYES.full;
+  $('which').textContent = on ? '🗜 squeezed: 8 neurons in its last stage' : '';
+  $('squeezeBtn').textContent = on ? '↩ back to the full eye' : '🗜 squeeze it';
+  $('squeezeBtn').disabled = !(full && full.stats) || (sq && !sq.ready);
+  $('sq7Btn').disabled = !(full && full.stats);
+  const note = $('squeezeNote');
+  if (sq && sq.stats && full && full.stats) {
+    note.textContent = `The full eye's ${full.hidden[2]} last-stage neurons each answer strongly (either way) to ${full.stats.breadth.toFixed(1)} kinds of things, on average. ` +
+      `The squeezed eye's ${sq.hidden[2]} answer to ${sq.stats.breadth.toFixed(1)}: each one has to cover more kinds of things. Their top doodles still look tidy; the class bars show the spread. ` +
+      `It is still right on ${Math.round(100 * sq.stats.right / S.count)} of 100 sample doodles (the full eye: ${Math.round(100 * full.stats.right / S.count)}).`;
+  } else if (on) note.textContent = 'one moment: the squeezed eye is looking through the sample doodles…';
+}
+$('squeezeBtn').onclick = () => setEye(cur === 'sq8' ? 'full' : 'sq8');
+$('sq7Btn').onclick = async () => { if (cur !== 'sq8') await setEye('sq8'); S.stage = 2; openCard(2, 7); };
 
 // kid mode turns the percentages into "7 in 10" odds: redraw the bars when it is switched
 window.addEventListener('message', e => { if (e.data && e.data.tm === 'pref' && e.data.key === 'tm-guide-kid') renderGuesses(); });
@@ -23283,6 +23594,9 @@ const TERMS = {
   sees: { label: 'what the eye sees', note: 'your drawing shrunk to 28 by 28 dots, centered and with soft lines, made exactly the way the eye\'s practice doodles were made from people\'s drawings; this little picture is all the eye gets.', kidNote: 'your drawing made tiny, 28 dots across, the way the eye saw all its practice drawings.' },
   neuron: { label: 'neuron', note: 'one tiny part of the eye that adds up what it sees into one number; gold squares are neurons firing more than usual for your drawing, blue ones less.', kidNote: 'one tiny part of the eye. It lights up gold when your drawing has the thing it looks for, and blue when it really does not.' },
   ends: { label: 'both ends of a neuron', note: 'the 16 sample doodles that make a neuron fire most, and the 16 that make it fire least. A neuron\'s job often shows best when you look at both ends.', kidNote: 'the drawings that make a neuron light up the most, and the ones that make it the quietest.' },
+  grow: { label: 'watch it grow', note: 'the eye at 20 moments of its training; its neurons try jobs, settle late (half way through training most of each neuron\'s final top doodles are not in place yet), and sometimes switch; a few grow offshoots.', kidNote: 'go back in time to when the eye was still learning, and see how its neurons found their jobs.' },
+  squeeze: { label: 'squeeze it', note: 'the same eye trained with only 8 neurons, and 8 channels, in its last stage; each neuron has to cover more kinds of things, so its class bars spread wider, though its top doodles still look tidy.', kidNote: 'a version of the eye with only 8 neurons at the end, so each one has to do more jobs.' },
+  sure: { label: 'never 100% sure', note: 'it was taught never to be completely sure (label smoothing): each right answer counted as about 90% right in training, so its top guess stops near 97% and every other kind keeps a sliver, under 1% each.', kidNote: 'its teachers told it never to be totally sure, so it always keeps a tiny bit of doubt for the other kinds.' },
   bars: { label: 'what kinds of things make it fire', note: 'for each of the 24 kinds of thing, how much this neuron fires on average for those sample doodles, compared with all of them: right and gold = more, left and blue = less.', kidNote: 'which kinds of drawings make this neuron light up, and which make it quiet.' },
 };
 
@@ -23301,6 +23615,18 @@ const EVENTS = {
     lines: p => p && p.waiting ? 'The eye is still looking through its 5,000 sample doodles; the card fills in by itself in a few seconds.'
       : 'Its card shows both ends: the sample doodles that make it fire most, and the ones that make it fire least. ' + (p && p.named ? 'Under each end is a name a bigger A I gave it, and whether that name passed a test.' : 'This one has no name yet: what would you call it?'),
     kidLines: p => p && p.waiting ? 'One moment, the eye is still looking at its drawings.' : 'These drawings make the neuron light up the most, and these make it the quietest. Can you see what it looks for?' },
+  scrubbed: { priority: 'moment', cooldownMs: 25000,
+    lines: p => p && p.end ? 'Back at the end of training: the eye you were drawing with.'
+      : `This is the eye at step ${p ? p.step.toLocaleString() : ''}: right about ${p ? Math.round(100 * p.right) : ''} times in 100, with its neurons' jobs about ${p ? Math.round(100 * p.settled) : ''}% settled. The guesses, the neurons and the cards all show this moment.`,
+    kidLines: p => p && p.end ? 'Back to the grown-up eye!' : 'We went back in time! This is the eye while it was still learning.' },
+  storyOpened: { priority: 'moment', cooldownMs: 10000,
+    lines: 'Look at the strip under its class bars: its top doodles at different moments of training. Click a moment, or scrub back, to watch its job change.',
+    kidLines: 'See the row of little drawings? That is this neuron growing up. Click one to go back in time.' },
+  squeezed: { priority: 'moment', cooldownMs: 8000,
+    lines: p => p && p.on && p.breadthSq ? `The squeezed eye has only 8 neurons at the end, so each covers more: they answer strongly to ${p.breadthSq.toFixed(1)} kinds of things each, against ${(p.breadthFull || 0).toFixed(1)} for the full eye. Look at a card's class bars.`
+      : p && p.on ? 'This is the squeezed eye: only 8 neurons in its last stage. It is looking through the sample doodles; then its cards are ready.'
+      : 'Back to the full eye, with its 256 last-stage neurons.',
+    kidLines: p => p && p.on ? 'Now the eye has only 8 neurons at the end, so each one has to do more jobs!' : 'Back to the big eye!' },
   swept: { priority: 'ambient', once: true,
     lines: 'The eye has looked through all 5,000 sample doodles, so every neuron\'s card is ready. Tap any square in box two.',
     kidLines: 'Ready! Tap any square in box two to meet a neuron.' },
@@ -23325,6 +23651,12 @@ function STEPS(){
   { name: 'switch', spot: '#offCard', text: () => kid()
       ? 'Now switch some neurons off and see if the eye changes its guess!'
       : 'Box four is the experiment: switch neurons off, from a card or the five busiest at once, and watch whether the guess changes.' },
+  { name: 'grow', spot: '#growCard', text: () => kid()
+      ? 'Box five is a time machine: go back to when the eye was still learning.'
+      : 'Box five goes back in its training: drag the slider and the guesses, neurons and cards follow. Try a growth story: neurons try jobs, settle late, and sometimes switch.' },
+  { name: 'squeeze', spot: '#squeezeCard', text: () => kid()
+      ? 'Box six squeezes the eye down to 8 neurons at the end. Then each one has to do more jobs!'
+      : 'Box six squeezes it: the same eye with only 8 last-stage neurons. Each one has to cover more kinds of things; the class bars show it.' },
   ];
 }
 
@@ -23335,30 +23667,37 @@ function statusText(){
   const card = $('cardBody');
   const cardText = card && !card.classList.contains('hint') ? card.textContent.replace(/your name for it:/, '').replace(/\s+/g, ' ').trim().slice(0, 900) : txt('cardBody');
   const drawn = !!(document.body.dataset.guess);
+  const snap = document.body.dataset.snap, squeezed = document.body.dataset.eye === 'squeezed';
   return `Drawing: ${drawn ? 'yes' : 'NOTHING drawn yet (the pad is empty)'}. Guess bars (box one): ${bars || 'none yet'}. ${txt('guessNote')} ` +
     `Neuron grid (box two) shows ${stageBtn ? stageBtn.textContent : 'the last stage'}. ${txt('busy')}. ` +
     `Sample doodles looked through: ${document.body.dataset.swept === '1' ? 'yes, every card is ready' : 'not yet (cards wait a few seconds)'}. ` +
     `Neuron card (box three): ${txt('cardTitle')}: ${cardText || 'none open'}. ` +
-    `Switched off (box four): ${document.body.dataset.off || '0'} neurons: ${txt('offList')}. Status: ${txt('status')}.`;
+    `Switched off (box four): ${document.body.dataset.off || '0'} neurons: ${txt('offList')}. ` +
+    `Training moment shown (box five): ${squeezed ? 'none: the squeezed eye has no training recording' : snap && snap !== 'end' ? 'step ' + snap + ', NOT the end of training' : 'the end of training'}: ${txt('growInfo')}. ` +
+    `Eye: ${squeezed ? 'the SQUEEZED eye (8 last-stage neurons)' : 'the full eye (256 last-stage neurons)'}; box six says: ${txt('squeezeNote')}. Status: ${txt('status')}.`;
 }
 function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Tiny Eye, a room where a visitor draws and a tiny mind that sees drawings guesses what it is. It is a small image network (82 thousand connections, three stages, a ConvNeXt-like design) trained on 240,000 Quick, Draw! doodles of 24 kinds of things: dragon, teapot, cloud, moon, castle, cat, dog, fish, bird, rabbit, frog, owl, sheep, tree, flower, house, sun, star, apple, rainbow, snowman, umbrella, ambulance, police car. It always picks one of those 24, even for a drawing of something else; it is right about 88 times in 100 on doodles it never saw. ' +
     'The boxes, by their names on the page: box one, "draw": the pad, "what the eye sees" (the drawing shrunk to 28 by 28 dots, centered, with soft lines, the way its practice doodles were made, so a drawing anywhere on the pad, any size, looks the same to it), "a doodle" (shows a real doodle it never trained on) and the guess bars. Box two, "neurons light up": one square per neuron, stage 1 (96 neurons, small bits), stage 2 (192), stage 3 the last (256, the whole drawing); gold = fires more than usual for this drawing, blue = less; "firing most now" chips. Box three, a neuron\'s card: always both ends, the 16 sample doodles that make it fire most and the 16 that make it fire least, out of 5,000 doodles it never trained on; "what kinds of things make it fire" bars (gold right = more than usual for that kind, blue left = less) and how many kinds it answers strongly to; where in the drawing it fires; a "switch it off" button and "your name for it". For 64 of the last stage\'s neurons a bigger A I named each end and was tested: from the name alone it had to pick 4 of that end\'s doodles out of 16; a tick means it got 3 or 4. Box four, "switch neurons off": a switched-off neuron\'s output is set to zero, and the guess bars show the new guess with dashed bars for the guess with every neuron on. ' +
     'Be honest about what was measured: MOST neurons have one main job you can name, not all; some are fuzzy or answer to shapes shared by several kinds of thing (for example pointy tops: cat ears and castle towers). Bigger is not cleaner: eyes of three sizes (23, 83 and 311 thousand connections) were tested and their neurons came out about equally clean, so never say bigger eyes have cleaner neurons. Looking at a card only suggests a job; switching a neuron off tests what it does. Only name doodles, neurons or numbers that the status shows. ' +
-    'Asked why it guessed something: the guess bars show how sure it is about each of its 24 kinds, and it always picks one of them; it sees only the 28 by 28 dot picture; many neurons light up and the last stage votes; to find out which neurons mattered, switch off the busiest ones (box four) and watch whether the guess changes. ' +
+    'Asked what a neuron does: describe BOTH ends from its card (what makes it fire most, and what makes it fire least, with the names a bigger A I gave and their test results if shown), its class bars, and how it fires for this drawing. ' +
+    'Asked why it guessed something: start with the fact that it only knows 24 kinds of things and always has to pick one of them; the guess bars show how sure it is about each; it sees only the 28 by 28 dot picture; many neurons light up and the last stage votes; to find out which neurons mattered, switch off the busiest ones (box four) and watch whether the guess changes. ' +
+    'Box five, "watch it grow": a slider over 20 moments of training (the last is the eye at the end of training); the guess bars, the grid (last stage only while going back) and the cards follow it; a card then shows "how it grew", its top 4 doodles at several moments. What Phase 0 measured: the eye is right 85 times in 100 by step 3,359, but its neurons\' jobs settle late (at that point only about 40 to 47% of each neuron\'s final top 100 doodles are in place); neurons try jobs, settle late, and sometimes switch; a few grow offshoots. Growth stories: neuron 117, a roof that grows an umbrella offshoot; neuron 2, castle walls then fish; neuron 16, vehicles then arches and rainbows then houses. ' +
+    'Box six, "squeeze it": the same eye trained with only 8 neurons and 8 channels in its last stage, no wide bypass. Squeeze it, and each neuron has to cover more kinds of things: the class bars spread and "answers strongly to N kinds" goes up (about 4 against 3; box six shows the exact numbers once both eyes have looked through the sample), while its top doodles still look tidy and it is still right about 84 times in 100. Say coarser or broader, never muddled or confused. Example: squeezed neuron 7 fires for rainbows, umbrellas and castles (an arch on top). ' +
+    'Asked why it says "under 1%", or why it is never 100% sure: it was taught never to be completely sure (a training trick called label smoothing: every right answer counted as about 90% right, the rest shared by the other kinds), so its top guess stops near 97% and every other kind keeps a sliver; the row "the other N kinds together" adds those slivers up. For a child: its teachers told it never to be totally sure. ' +
     'Asked what switching a neuron off does: answer in general first (that tiny part of the eye goes quiet, its output becomes zero; the guess may change or stay, which shows whether it was helping), then point at the switch: the button on a card, or box four. ' +
     'You are honestly an A I yourself, a much bigger mind of a related kind, and may say so. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is twelve or older here; technical vocabulary is fine once they use it. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: pad, guesses, doodle, grid, card, switch. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target. Targets: pad, guesses, doodle, grid, card, switch, grow, squeeze. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'show the neuron grid', escalations: 'draw, open cards or switch neurons off', safeVerb: 'SHOW' });
 }
 const NEEDS_DRAWING = { needs: '#pad',
   why: 'Nothing is drawn yet. Draw something on the pad first; I am pointing at it.',
   kidWhy: 'Draw something first! I am pointing at the drawing pad.' };
 const SHOW = {
-  pad: '#pad', doodle: '#randBtn', grid: '#grid', switch: '#offCard',
+  pad: '#pad', doodle: '#randBtn', grid: '#grid', switch: '#offCard', grow: '#growCard', squeeze: '#squeezeCard',
   guesses: Object.assign({ sel: '#guesses .gbar' }, NEEDS_DRAWING),
   card: { sel: '#cardBody .poles', needs: '#grid', why: 'No neuron card is open yet. Tap any square in the neuron grid; I am pointing at it.',
     kidWhy: 'Tap a square in the grid first! I am pointing at it.' } };
@@ -23994,6 +24333,13 @@ window.addEventListener('message', async (e) => {
           if (!got) throw new Error(file + ': not found beside the app (drop the recording\'s .zip so the snapshots travel with it)');
           return got;
         });
+        value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      }
+      else if (m.method === 'eye.file') {   // the Tiny Eye's training recording and squeezed eye, fetched when its room asks
+        const name = String(m.args[0] || '');
+        if (!EYE_MORE_FILES.includes(name)) throw new Error('not one of the files of the Tiny Eye: ' + name);
+        const u8 = await tmGetBytes(name, { persistent: !/\.json$/i.test(name) });
+        if (!u8) throw new Error(name + ' was not found beside the app');
         value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
       }
       else if (m.method === 'arc.tokenizer') {
@@ -24685,6 +25031,8 @@ async function shellIngest(recs) {
    when the eye room first opens, like the big storyteller; dropped files are paired up here. It is
    its own kind of mind (kind 'eye'), not remembered in browser storage: it comes back by itself. */
 const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];
+// fetched later, when the room asks (eye.file): the training recording, and the squeezed eye
+const EYE_MORE_FILES = ['tiny-eye-growth.bin', 'tiny-eye-sq8.json', 'tiny-eye-sq8.bin'];
 const isEyeManifestText = text => text.slice(0, 200).includes('"tiny-eye-v1"');
 const eyeDrop = {};
 function addEye(manifestText, weights, sample, origin) {
@@ -24712,7 +25060,9 @@ function ensureEye(onProgress) {
       const got = {}, weight = { 'tiny-eye.json': 0.01, 'tiny-eye.bin': 0.08, 'tiny-eye-sample.bin': 0.91 };
       let done = 0;
       for (const f of EYE_FILES) {
-        got[f] = await tmGetBytes(f, { onProgress: p => onProgress && onProgress(done + p * weight[f]) });
+        // the manifest skips Cache Storage (ordinary HTTP caching only): a newer eye ships a newer manifest,
+        // and a remembered old one would hide its new parts; the big files are checked against it
+        got[f] = await tmGetBytes(f, { persistent: !/\.json$/i.test(f), onProgress: p => onProgress && onProgress(done + p * weight[f]) });
         if (!got[f]) throw new Error(f + ' was not found beside the app');
         done += weight[f];
       }

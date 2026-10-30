@@ -1,6 +1,7 @@
 """export.py: weights, training snapshots, a sample set and a parity fixture for the browser.
 
     python -I tools/eye/export.py eye80k [--out C:/Users/toont/tm-data/eye/export]
+    python -I tools/eye/export.py eye80k-sq8 --weights-only --device cpu --out C:/Users/toont/tm-data/eye/export-sq8
 
 Writes to <out>/:
   tiny-eye.json        manifest: config, classes, tensor names/shapes/offsets, preprocessing
@@ -44,6 +45,8 @@ def main():
     ap.add_argument('--out', default=None)
     ap.add_argument('--n', type=int, default=5000)
     ap.add_argument('--seed', type=int, default=0)
+    ap.add_argument('--weights-only', action='store_true', help='only tiny-eye.json and tiny-eye.bin (the squeezed eye shares the sample)')
+    ap.add_argument('--device', default='cuda')
     a = ap.parse_args()
     out = a.out or os.path.join(a.data, 'export')
     os.makedirs(os.path.join(out, 'checkpoints'), exist_ok=True)
@@ -52,12 +55,12 @@ def main():
     classes = [str(c) for c in d['classes']]
     cks = checkpoints(a.run, a.data)
 
-    model, step = load_model(cks[-1])
+    model, step = load_model(cks[-1], device=a.device)
     tensors, w = flat(model, '<f4')
     w.tofile(os.path.join(out, 'tiny-eye.bin'))
     snaps = []
-    for ck in cks:
-        m, st = load_model(ck)
+    for ck in ([] if a.weights_only else cks):
+        m, st = load_model(ck, device=a.device)
         flat(m, '<f2')[1].tofile(os.path.join(out, 'checkpoints', f'{st:06d}.bin'))
         acc = next(c['test_acc'] for c in meta['checkpoints'] if c['step'] == st)
         snaps.append(dict(step=st, epoch=round(st / meta['steps_per_epoch'], 3), file=f'checkpoints/{st:06d}.bin', held_out_acc=acc))
@@ -77,6 +80,9 @@ def main():
         attribution=ATTRIBUTION)
     with open(os.path.join(out, 'tiny-eye.json'), 'w') as f:
         json.dump(manifest, f, indent=1)
+    if a.weights_only:
+        print(f'{out}: tiny-eye.json, tiny-eye.bin ({w.size:,} weights, step {step})')
+        return
 
     x, y = d['x_test'], d['y_test'].astype(int)
     rng = np.random.default_rng(a.seed)

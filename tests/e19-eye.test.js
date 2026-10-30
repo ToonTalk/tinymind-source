@@ -5,11 +5,15 @@
 // must act exactly like a neuron whose outgoing weights are zero. The draw pad's path
 // (eyeDoodle) must reproduce the bitmaps the eye learned from, given the real Quick, Draw!
 // strokes of sample doodles (tests/fixtures/eye-strokes.json, tools/eye/strokes.mjs), drawn
-// anywhere and at any size on the pad. And the room's worker must answer drawings and sweeps.
+// anywhere and at any size on the pad. Phase 2: the training recording (eye/tiny-eye-growth.bin:
+// float16 snapshots, then each snapshot's last-stage summary over the sample set) must load as an
+// eye that matches PyTorch on the same rounded weights, and its summaries must be true of it; the
+// squeezed eye (eye80k-sq8) must match PyTorch too. And the room's worker must answer drawings,
+// sweeps, snapshots and the squeezed eye.
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { TinyEye, eyeDoodle, eyeRaster, eyeNormalizeStrokes, eyeSampleInput } from '../src/eye.js';
+import { TinyEye, eyeDoodle, eyeRaster, eyeNormalizeStrokes, eyeSampleInput, eyeHalfToFloat } from '../src/eye.js';
 import { ROOT } from './paths.js';
 
 const f32 = b64 => { const u = Buffer.from(b64, 'base64'); return new Float32Array(u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength)); };
@@ -121,6 +125,66 @@ export async function run(t) {
   t.check('pad path: an empty pad is an empty picture; a single tap is a dot in the middle',
     eyeDoodle([]).every(v => v === 0) && (() => { const d = eyeDoodle([[[0.5, 0.5]]]); return d[14 * 28 + 14] > 0 && d.filter(v => v > 0).length <= 9; })());
 
+  // ---- Phase 2: float16, the training recording, the squeezed eye
+  const halves = eyeHalfToFloat(new Uint8Array([0x00, 0x3c, 0x00, 0xc0, 0x01, 0x00, 0xff, 0x7b, 0x00, 0x80, 0x55, 0x35]));
+  t.check('float16: 1, -2, the smallest subnormal, the largest number, -0 and about 1/3 decode exactly',
+    halves[0] === 1 && halves[1] === -2 && halves[2] === 2 ** -24 && halves[3] === 65504 && Object.is(halves[4], -0) && Math.abs(halves[5] - 1 / 3) < 2e-4);
+  const g = man.growth;
+  const growth = await readFile(join(ROOT, 'eye', g.file));
+  const stepsUp = [...g.snapshots, g.final].every((st, i, a) => !i || st.step > a[i - 1].step);
+  t.check(`growth: ${g.snapshots.length} earlier snapshots (float16) plus summaries fill tiny-eye-growth.bin exactly; the last stop is the shipped eye (step ${g.final.step})`,
+    growth.length === g.bytes && g.snapshots.length === 19 && g.weights.bytesEach === 2 * man.params &&
+    g.bytes === g.snapshots.length * (g.weights.bytesEach + g.summary.bytesEach) && g.final.step === 9360 && stepsUp);
+  t.check('growth: jobs settle late (under half settled at step 3,359, all at the end) while the eye is already right 84 in 100',
+    (() => { const s3 = g.snapshots.find(st => st.step === 3359); return s3 && s3.settled < 0.5 && s3.sampleRight / 5000 > 0.83 && g.final.settled === 1; })());
+  t.check('growth: the featured stories are neurons 117, 2 and 16', g.stories.map(st => st.neuron).join() === '117,2,16');
+  const snapAt = step => { const k = g.snapshots.findIndex(st => st.step === step);
+    return { k, eye: new TinyEye(man, growth.subarray(k * g.weights.bytesEach, (k + 1) * g.weights.bytesEach), { float16: true }) }; };
+  const sp = par.snapshot, { eye: snapEye } = snapAt(sp.step), spl = f32(sp.logits), spn = f32(sp.last_stage);
+  let sl = 0, sn = 0;
+  sp.rows.forEach((row, k) => {
+    const r = snapEye.forward(eyeSampleInput(sample, row, x));
+    for (let i = 0; i < 24; i++) sl = Math.max(sl, Math.abs(r.logits[i] - spl[k * 24 + i]));
+    for (let i = 0; i < 256; i++) sn = Math.max(sn, Math.abs(r.neurons[2][i] - spn[k * 256 + i]));
+  });
+  t.checkClose(`growth parity: the step-${sp.step} snapshot from the float16 file vs PyTorch on the same rounded weights (logits)`, sl, 0, 1e-4);
+  t.checkClose(`growth parity: same snapshot, last-stage neurons`, sn, 0, 1e-4);
+  // a snapshot's summary must be true of that snapshot: its top 16 above, and its bottom 16 below, other doodles
+  const T = { f32: Float32Array, u16: Uint16Array, i8: Int8Array };
+  const summaryOf = k => { let at = g.summary.offset + k * g.summary.bytesEach; const o = {};
+    for (const [name, ty, len] of g.summary.layout) { o[name] = new T[ty](growth.buffer.slice(growth.byteOffset + at, growth.byteOffset + at + len * T[ty].BYTES_PER_ELEMENT)); at += len * T[ty].BYTES_PER_ELEMENT; }
+    return o; };
+  let summaryOk = true, why = '';
+  for (const [step, j] of [[433, 2], [1206, 117], [4727, 16]]) {
+    const { k, eye: se } = snapAt(step), sum = summaryOf(k);
+    const top = Array.from(sum.top.subarray(j * 16, j * 16 + 16)), bottom = Array.from(sum.bottom.subarray(j * 16, j * 16 + 16));
+    const others = Array.from({ length: 300 }, (_, i) => (i * 167 + 11) % 5000).filter(i => !top.includes(i) && !bottom.includes(i));
+    const val = i => se.forward(eyeSampleInput(sample, i, x)).neurons[2][j];
+    const tv = top.map(val), bv = bottom.map(val), ov = others.map(val);
+    const om = ov.reduce((a, b) => a + b, 0) / ov.length;
+    const d = sum.deciles.subarray(j * 9, j * 9 + 9);
+    const ok = Math.min(...tv) >= Math.max(...ov) && Math.max(...bv) <= Math.min(...ov) && tv.every((v, i) => !i || v <= tv[i - 1] + 1e-6) &&
+      Math.abs(om - sum.mean[j]) < 0.3 * sum.sd[j] && d.every((v, i) => !i || v >= d[i - 1]);
+    if (!ok) { summaryOk = false; why += ` step ${step} neuron ${j}`; }
+  }
+  t.check('growth: each summary is true of its snapshot (top 16 above and bottom 16 below other doodles, highest first; mean and deciles fit)' + why, summaryOk);
+  { const sum = summaryOf(snapAt(1206).k), z = Array.from(sum.classZ.subarray(117 * 24, 117 * 24 + 24));
+    t.check('growth: by step 1,206 neuron 117 answers most to houses (its class bars), as its story says', man.classes[argmax(z)] === 'house'); }
+
+  const sqMan = JSON.parse(await readFile(join(ROOT, 'eye', man.squeezed), 'utf8'));
+  const sqW = await readFile(join(ROOT, 'eye', sqMan.weights));
+  t.check('squeezed eye: tiny-eye-v1, last stage 8 channels and 8 neurons, same sample set, its 8 neurons named in Phase 0',
+    sqMan.format === 'tiny-eye-v1' && sqMan.config.widths.join() === '24,48,8' && sqMan.config.hidden.join() === '96,192,8' &&
+    sqW.length === 4 * sqMan.params && sqMan.sample.file === man.sample.file && Object.keys(sqMan.names.neurons).length === 8);
+  const sq = new TinyEye(sqMan, sqW), qp = par.squeezed, ql = f32(qp.logits), qs = qp.stages.map(f32);
+  let dq = 0;
+  qp.rows.forEach((row, k) => {
+    const r = sq.forward(eyeSampleInput(sample, row, x));
+    for (let i = 0; i < 24; i++) dq = Math.max(dq, Math.abs(r.logits[i] - ql[k * 24 + i]));
+    r.neurons.forEach((n, st) => { for (let i = 0; i < n.length; i++) dq = Math.max(dq, Math.abs(n[i] - qs[st][k * qp.hidden[st] + i])); });
+  });
+  t.checkClose('squeezed parity: logits and every neuron of every stage, one doodle per class, max |JS - PyTorch|', dq, 0, 1e-4);
+
   // ---- the room's worker, in-process
   const posted = [];
   globalThis.self = { postMessage: m => posted.push(m) };
@@ -142,5 +206,13 @@ export async function run(t) {
     ok = r.neurons[2].every((v, j) => v === swept.table[i * 544 + 96 + 192 + j]) && swept.guesses[i] === argmax(r.probs);
   }
   t.check('worker: a sweep returns every neuron of every stage and the guess for each doodle', !!ok);
+  await send({ type: 'growth', weights: growth.buffer.slice(growth.byteOffset, growth.byteOffset + g.snapshots.length * g.weights.bytesEach), bytesEach: g.weights.bytesEach }, p => p.type === 'growth-ready');
+  const k1206 = snapAt(1206).k, atSnap = await send({ type: 'see', id: 2, snap: k1206, x: probe }, p => p.type === 'seen');
+  const snapDirect = snapAt(1206).eye.forward(probe);
+  t.check('worker: a look at a training snapshot uses that snapshot', atSnap && atSnap.snap === k1206 && atSnap.probs.every((v, i) => Math.abs(v - snapDirect.probs[i]) < 1e-6));
+  await send({ type: 'load', key: 'sq8', manifest: sqMan, weights: sqW.buffer.slice(sqW.byteOffset, sqW.byteOffset + sqW.byteLength) }, p => p.type === 'loaded' && p.key === 'sq8');
+  const sqSeen = await send({ type: 'see', id: 3, key: 'sq8', x: probe }, p => p.type === 'seen');
+  t.check('worker: holds the squeezed eye beside the full one and answers for whichever is asked',
+    sqSeen && sqSeen.key === 'sq8' && sqSeen.neurons[2].length === 8 && sqSeen.probs.every((v, i) => Math.abs(v - sq.forward(probe).probs[i]) < 1e-6));
   delete globalThis.self;
 }

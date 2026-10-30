@@ -5,7 +5,7 @@
 //     neuron of every stage and a switch-off mask. The neurons are the MLP hidden channels
 //     (fc1 outputs, before the GELU); a drawing's value for a neuron is its mean over the
 //     grid, the number Phase 0 labeled. Switching a neuron off zeroes its GELU output,
-//     as train.py's mask does.
+//     as train.py's mask does. Training snapshots (float16) load the same way.
 //   - eyeDoodle: pad strokes -> the 28x28 picture the eye was trained on, made the way
 //     Quick, Draw!'s bitmaps were made from its simplified drawings: align to the top-left,
 //     scale the longer side to 255, simplify (Ramer-Douglas-Peucker, epsilon 2), then
@@ -67,15 +67,27 @@ function eyeLayerNorm(src, dst, n, c, w, b) {
   }
 }
 
+// IEEE half-precision bytes (little-endian) -> Float32Array: the training snapshots are stored this way
+export function eyeHalfToFloat(bytes) {
+  const u8 = ArrayBuffer.isView(bytes) ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength) : new Uint8Array(bytes);
+  const n = u8.length >> 1, out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const h = u8[2 * i] | (u8[2 * i + 1] << 8), sign = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, m = h & 1023;
+    out[i] = e === 0 ? sign * m * 2 ** -24 : e === 31 ? (m ? NaN : sign * Infinity) : sign * (1 + m / 1024) * 2 ** (e - 15);
+  }
+  return out;
+}
+
 export class TinyEye {
-  // manifest: tiny-eye.json (parsed); weights: ArrayBuffer / Uint8Array of tiny-eye.bin
-  constructor(manifest, weights) {
+  // manifest: tiny-eye.json (parsed); weights: ArrayBuffer / Uint8Array of tiny-eye.bin (float32), or of
+  // one training snapshot with opts.float16 (the same tensors in the same places, two bytes each)
+  constructor(manifest, weights, opts = {}) {
     if (!manifest || !manifest.config || !Array.isArray(manifest.tensors)) throw new Error('not a Tiny Eye manifest');
     const u8 = ArrayBuffer.isView(weights) ? new Uint8Array(weights.buffer, weights.byteOffset, weights.byteLength) : new Uint8Array(weights);
-    const f32 = new Float32Array(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
+    const f32 = opts.float16 ? eyeHalfToFloat(u8) : new Float32Array(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
     const T = {};
     for (const t of manifest.tensors) {
-      if (t.offset + t.length > f32.length) throw new Error('tiny-eye.bin is shorter than its manifest says (' + t.name + ')');
+      if (t.offset + t.length > f32.length) throw new Error('the weights are shorter than the manifest says (' + t.name + ')');
       T[t.name] = Float64Array.from(f32.subarray(t.offset, t.offset + t.length));   // doubles: no float32 conversions in the loops
     }
     const { widths, hidden, depths } = manifest.config;

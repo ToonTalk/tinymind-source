@@ -34,6 +34,7 @@
   #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; margin-top: .3rem; }
   #progress { height: 6px; background: #262c38; border-radius: 4px; overflow: hidden; margin: .3rem 0; display: none; }
   #progress div { height: 100%; width: 0; background: var(--gold); transition: width .15s; }
+  #which { display: inline-block; margin-left: .5rem; font-size: 12.5px; color: var(--gold); }
   .drawrow { display: flex; gap: .9rem; align-items: flex-start; flex-wrap: wrap; }
   #pad { width: min(100%, 300px); aspect-ratio: 1; background: #0d0f14; border: 1px solid var(--edge); border-radius: 10px;
          touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; display: block; }
@@ -45,8 +46,13 @@
   .gbar .gtrack { flex: 1; height: 14px; background: #262c38; border-radius: 4px; position: relative; overflow: hidden; }
   .gbar .gfill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--green); border-radius: 4px; }
   .gbar .gghost { position: absolute; left: 0; top: 0; bottom: 0; border: 1px dashed var(--dim); border-radius: 4px; }
-  .gbar .gpct { width: 4.6em; flex: none; text-align: right; font-size: 12.5px; color: var(--dim); }
+  .gbar .gpct { width: 5.2em; flex: none; text-align: right; font-size: 12.5px; color: var(--dim); }
   .gbar.top .gname { color: #fff; font-weight: 600; }
+  .gbar.rest .gname, .gbar.rest .gpct { color: var(--dim); font-size: 12.5px; }
+  .gbar.rest .gfill { background: #4b5566; }
+  details.why { font-size: 12.5px; color: var(--dim); margin-top: .2rem; }
+  details.why summary { cursor: pointer; }
+  details.why p { margin: .3rem 0 0; line-height: 1.45; }
   .stages button { background: #232937; }
   .stages button.on { background: #6b5320; color: #fff3d6; }
   #grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin: .5rem 0; max-width: 480px; }
@@ -56,11 +62,12 @@
   #grid .cell.off::after { content: ''; position: absolute; inset: 20%; border: 2px solid var(--red); border-radius: 50%;
                            background: linear-gradient(45deg, transparent 44%, var(--red) 44%, var(--red) 56%, transparent 56%); }
   #grid .cell.named::before { content: ''; position: absolute; right: 1px; top: 1px; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .7; }
-  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; align-items: center; }
   .nchip { background: #232937; color: var(--ink); font-size: 12px; padding: .15rem .5rem; margin: 0; border-radius: 999px; }
   .nchip.up { color: rgb(var(--more)); }
   .nchip.down { color: rgb(var(--less)); }
   .nchip.offc { color: var(--red); }
+  .nchip.story { color: var(--green); }
   .poles { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .3rem; }
   @media (max-width: 520px) { .poles { grid-template-columns: 1fr; } }
   .pole h3 { font-size: 13px; margin: 0 0 .3rem; font-weight: 600; }
@@ -70,6 +77,7 @@
   .pname { font-size: 13px; margin: .35rem 0 .1rem; }
   .pname q { color: #fff; }
   .ptest { font-size: 11.5px; color: var(--dim); }
+  .storyline { color: var(--green); font-size: 13px; margin: 0 0 .4rem; }
   .cbar { display: flex; align-items: center; gap: .35rem; font-size: 12.5px; margin: .12rem 0; }
   .cbar .cname { width: 8.5em; flex: none; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cbar .ctrack { flex: 1; height: 11px; position: relative; max-width: 260px; }
@@ -77,13 +85,20 @@
   .cbar .cfill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
   .where { display: flex; gap: .7rem; align-items: center; margin-top: .5rem; flex-wrap: wrap; }
   #whereCv { width: 96px; height: 96px; image-rendering: pixelated; border-radius: 6px; border: 1px solid var(--edge); background: #0d0f14; }
+  .strip { display: flex; gap: 4px; overflow-x: auto; margin-top: .3rem; padding-bottom: 2px; }
+  .strip .col { flex: none; text-align: center; cursor: pointer; border-radius: 6px; padding: 2px; }
+  .strip .col.on { outline: 2px solid var(--gold); }
+  .strip .col canvas { width: 40px; height: 166px; display: block; }
+  .strip .col span { display: block; font-size: 10.5px; color: var(--dim); line-height: 1.2; }
+  #growCurve { width: 100%; height: 76px; display: block; }
+  #growSlider { width: 100%; margin: .2rem 0; }
   .lesson { color: var(--gold); font-size: 12.5px; margin-top: .45rem; }
   [data-vg-explain] { cursor: help; text-decoration: underline dotted rgba(135, 145, 163, .6); text-underline-offset: 3px; }
   .foot { color: var(--dim); font-size: 12px; margin-top: .8rem; line-height: 1.5; }
 </style>
 </head>
 <body>
-<h1>👁 Tiny Mind — the Tiny Eye</h1>
+<h1>👁 Tiny Mind — the Tiny Eye <span id="which"></span></h1>
 <div class="sub">draw something, and a tiny mind that sees guesses what it is; then look at the neurons that decide</div>
 <div id="drop" class="tm-file-ctl">drop the Tiny Eye here: tiny-eye.json, tiny-eye.bin and tiny-eye-sample.bin</div>
 
@@ -101,6 +116,10 @@
       </div>
     </div>
     <div id="guesses" class="hint" style="margin-top:.5rem">draw something…</div>
+    <details class="why" id="whyNot100"><summary>why is it never 100% sure?</summary>
+      <p><span data-vg-explain="sure">It was taught never to be completely sure.</span> While it learned, every right answer counted as only about 90% right and the other 23 kinds shared the rest
+        (a training trick called label smoothing, which makes a mind less overconfident). So even when it is sure, its top guess stops at about 97%,
+        and every other kind keeps a sliver: under 1% each. That is why the small kinds never show 0%.</p></details>
     <div id="guessNote" class="hint"></div>
     <div id="knows" class="hint" style="margin-top:.4rem"></div>
   </div>
@@ -128,6 +147,29 @@
     <div id="offNote" class="hint" style="margin-top:.3rem"></div>
     <div class="lesson">Try: switch off two neurons so the eye can no longer tell a cloud from a sheep. Or draw something that isn't a dragon but makes it say dragon.</div>
   </div>
+
+  <div class="card" id="growCard">
+    <h2>5 · 🌱 watch it grow <span class="hint">— go back in its training; the guesses, neurons and cards follow</span></h2>
+    <canvas id="growCurve" width="560" height="76" aria-label="how right it was, and how settled its neurons' jobs were, through training"></canvas>
+    <input type="range" id="growSlider" min="0" max="1000" value="1000" step="1" disabled aria-label="training step">
+    <div>
+      <button id="growPrev" class="small alt" disabled>◀ earlier</button>
+      <button id="growNext" class="small alt" disabled>later ▶</button>
+      <button id="growPlay" class="small" disabled>▶ play it all</button>
+      <button id="growEnd" class="small alt" disabled>the end</button>
+    </div>
+    <div id="growInfo" class="hint" style="margin-top:.3rem">the end of training: the eye you are drawing with</div>
+    <div class="chips" id="stories"><span class="hint">growth stories:</span></div>
+    <div class="lesson" data-vg-explain="grow">Neurons try jobs, settle late, and sometimes switch; a few grow offshoots.</div>
+  </div>
+
+  <div class="card" id="squeezeCard">
+    <h2>6 · 🗜 squeeze it <span class="hint">— the same eye with only 8 neurons in its last stage</span></h2>
+    <button id="squeezeBtn" disabled>🗜 squeeze it</button>
+    <button id="sq7Btn" class="small alt" disabled>squeezed neuron 7: rainbows, umbrellas and castles</button>
+    <div id="squeezeNote" class="hint" style="margin-top:.3rem">It was trained the same way, but everything it sees has to pass through 8 numbers instead of 64, with 8 neurons instead of 256.</div>
+    <div class="lesson" data-vg-explain="squeeze">Squeeze it, and each neuron has to cover more kinds of things.</div>
+  </div>
 </div>
 <div id="status"></div>
 <div id="progress"><div></div></div>
@@ -145,13 +187,21 @@ let workerMode = 'background worker';
 window.__eyeDevSpawn = () => new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 // @tm-worker-boot-end
 
-// more engines for the one-time look through the sample set, when real workers are allowed
+// more engines for looking through the sample set, when real workers are allowed
 function spawnHelper() {
   if (workerMode !== 'background worker') return null;
   try {
     if (typeof __WORKER_SRC__ !== 'undefined') return new Worker(URL.createObjectURL(new Blob([__WORKER_SRC__], { type: 'text/javascript' })));
     return window.__eyeDevSpawn ? window.__eyeDevSpawn() : null;
   } catch (e) { return null; }
+}
+// the eye's other files (the training recording, the squeezed eye): from the shell inside Tiny Mind
+// (beside the app, or the artifact's asset store), else from beside this page
+async function eyeFile(name) {
+  if (window.__tmRPC) return await window.__tmRPC('eye.file', [name]);
+  const r = await fetch(new URL(name, window.location.href));
+  if (!r.ok) throw new Error(name + ' was not found beside this page');
+  return await r.arrayBuffer();
 }
 
 const EMOJI = { dragon: '🐉', teapot: '🫖', cloud: '☁️', moon: '🌙', castle: '🏰', cat: '🐱', dog: '🐶', fish: '🐟', bird: '🐦',
@@ -160,17 +210,22 @@ const EMOJI = { dragon: '🐉', teapot: '🫖', cloud: '☁️', moon: '🌙', c
 const MORE = '255, 210, 127', LESS = '120, 180, 255';   // gold: fires more than usual; blue: less
 const STAGE_ABOUT = ['looks at small bits: 14 by 14 places', 'looks at bigger parts: 7 by 7 places', 'the last stage: looks at the whole drawing, 4 by 4 places, and votes'];
 
+// one record per eye (key 'full': the Tiny Eye; 'sq8': the squeezed one), each with its own sweep
+const EYES = {};
+let cur = 'full';
+const E = () => EYES[cur];
 const S = {
-  ready: false, man: null, classes: [], hidden: [], total: 0, offsets: [], names: null,
-  sample: null, labels: null, count: 0, weights: null,
+  ready: false, classes: [], sample: null, labels: null, count: 0,
   strokes: [], penId: null, rect: null, sampleIdx: null,
   x: new Float32Array(784), blank: true, last: null,
-  stage: 2, sel: null, off: null,
-  table: null, guess: null, stats: null, swept: false,
+  stage: 2, sel: null, snap: null,            // snap: a training snapshot (index), or null for the end of training
 };
-const pct = p => window.__vgPct ? window.__vgPct(p, 0) : Math.round(100 * p) + '%';
+let G = null;                                  // the training recording, once loaded (tiny-eye-growth.bin)
+const fmtP = p => (window.__vgPrefs && window.__vgPrefs.kid && window.__vgPct) ? window.__vgPct(p, 0)
+  : p < 0.01 ? 'under 1%' : Math.round(100 * p) + '%';
 const label = c => (EMOJI[S.classes[c]] || '') + ' ' + S.classes[c];
 const nid = (s, j) => `stage ${s + 1} · neuron ${j}`;
+const stepText = n => n.toLocaleString();
 function status(msg, isErr) { $('status').textContent = msg; $('status').style.color = isErr ? 'var(--red)' : 'var(--dim)'; }
 function progress(frac) {
   const p = $('progress');
@@ -180,24 +235,27 @@ function progress(frac) {
 const emit = (n, p) => { try { if (window.vgEmit) window.vgEmit(n, p); } catch (e) {} };
 
 // ---------- loading ----------
+function eyeRecord(key, man, weights) {
+  const rec = { key, man, hidden: man.config.hidden, offsets: [], total: 0, weights,
+    names: man.names && man.names.neurons ? { stage: (man.names.stage || man.config.hidden.length) - 1, neurons: man.names.neurons } : null,
+    off: man.config.hidden.map(h => new Uint8Array(h)), table: null, guess: null, stats: null, ready: false };
+  for (const h of rec.hidden) { rec.offsets.push(rec.total); rec.total += h; }
+  return rec;
+}
+const bufOf = b => ArrayBuffer.isView(b) ? b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) : b;   // isView: bytes may come from another frame's realm
 function loadEye({ manifest, weights, sample }) {
   let man;
   try { man = typeof manifest === 'string' ? JSON.parse(manifest) : manifest; } catch (e) { man = null; }
   if (!man || man.format !== 'tiny-eye-v1') { status('that is not a Tiny Eye (tiny-eye.json)', true); return; }
-  // (isView, not instanceof: the bytes may come from another frame's realm)
   const u8 = ArrayBuffer.isView(sample) ? new Uint8Array(sample.buffer, sample.byteOffset, sample.byteLength) : new Uint8Array(sample);
   if (u8.length !== man.sample.count * 784) { status('the doodle file does not match this eye', true); return; }
-  S.man = man; S.classes = man.classes; S.hidden = man.config.hidden;
-  S.offsets = []; S.total = 0;
-  for (const h of S.hidden) { S.offsets.push(S.total); S.total += h; }
-  S.names = man.names && man.names.neurons ? { stage: (man.names.stage || S.hidden.length) - 1, neurons: man.names.neurons } : null;
-  S.sample = u8; S.count = man.sample.count;
+  S.classes = man.classes; S.sample = u8; S.count = man.sample.count;
   S.labels = new Uint8Array(S.count);
   let at = 0; man.sample.classCounts.forEach((n, c) => { S.labels.fill(c, at, at + n); at += n; });
-  S.weights = ArrayBuffer.isView(weights) ? weights.buffer.slice(weights.byteOffset, weights.byteOffset + weights.byteLength) : weights;
-  S.off = S.hidden.map(h => new Uint8Array(h));
-  S.table = null; S.stats = null; S.swept = false; S.sel = null; S.ready = false; cardKey = '';
-  worker.postMessage({ type: 'load', manifest: man, weights: S.weights });
+  for (const k of Object.keys(EYES)) delete EYES[k];
+  EYES.full = eyeRecord('full', man, bufOf(weights));
+  cur = 'full'; S.snap = null; S.sel = null; S.ready = false; G = null; cardKey = '';
+  worker.postMessage({ type: 'load', key: 'full', manifest: man, weights: EYES.full.weights });
   drop.style.display = 'none';
   status('waking the eye…');
 }
@@ -223,8 +281,8 @@ window.addEventListener('drop', async e => {
 // on its own (not inside Tiny Mind), the eye's files sit beside this page
 if (!window.__tmBridge && typeof fetch === 'function') {
   Promise.all(['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'].map(f => fetch(new URL(f, window.location.href)).then(r => r.ok ? r.arrayBuffer() : null)))
-    .then(([m, w, s]) => { if (m && w && s && !S.man) loadEye({ manifest: new TextDecoder().decode(m), weights: w, sample: s }); else if (!S.man) status('drop the Tiny Eye\'s three files here to begin'); })
-    .catch(() => { if (!S.man) status('drop the Tiny Eye\'s three files here to begin'); });
+    .then(([m, w, s]) => { if (m && w && s && !EYES.full) loadEye({ manifest: new TextDecoder().decode(m), weights: w, sample: s }); else if (!EYES.full) status('drop the Tiny Eye\'s three files here to begin'); })
+    .catch(() => { if (!EYES.full) status('drop the Tiny Eye\'s three files here to begin'); });
 }
 
 // ---------- the engine's answers ----------
@@ -232,18 +290,25 @@ worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'error') { status(m.message, true); inFlight = false; return; }
   if (m.type === 'loaded') {
-    S.ready = true;
-    $('knows').textContent = 'It knows ' + S.classes.length + ' kinds of things: ' + S.classes.map((c, i) => label(i)).join(', ') + '.';
-    renderStages(); renderGrid(); renderOff();
-    $('offBusy').disabled = false;
-    status(`the eye is awake (${Math.round(m.params / 1000)} thousand connections, right ${Math.round(100 * m.accuracy)} times in 100 on doodles it never saw) — draw something`);
-    startSweep();
+    const key = m.key || 'full', rec = EYES[key];   // (no key: the full eye)
+    if (!rec) return;
+    rec.ready = true;
+    if (key === 'full') {
+      S.ready = true;
+      $('knows').textContent = 'It knows ' + S.classes.length + ' kinds of things: ' + S.classes.map((c, i) => label(i)).join(', ') + '.';
+      $('offBusy').disabled = false;
+      renderStories(); renderGrow();
+      status(`the eye is awake (${Math.round(m.params / 1000)} thousand connections, right ${Math.round(100 * m.accuracy)} times in 100 on doodles it never saw) — draw something`);
+    }
+    renderAll();
+    startSweep(rec);
     requestSee();
     return;
   }
   if (m.type === 'seen') { onSeen(m); return; }
   if (m.type === 'sweep-progress' || m.type === 'swept') { onSweepMsg(m); return; }
 };
+function renderAll() { renderStages(); renderGrid(); renderCard(); renderOff(); renderGuesses(); renderSqueeze(); }
 
 // ---------- the draw pad ----------
 const pad = $('pad'), pctx = pad.getContext('2d');
@@ -257,9 +322,8 @@ function redrawPad() {
   const w = pad.width, ctx = pctx;
   ctx.fillStyle = '#0d0f14'; ctx.fillRect(0, 0, w, w);
   if (S.sampleIdx !== null && S.sample) {
-    const cv = doodleCanvas(S.sampleIdx);
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(cv, 0, 0, w, w);
+    ctx.drawImage(doodleCanvas(S.sampleIdx), 0, 0, w, w);
     return;
   }
   ctx.strokeStyle = '#e8ecff'; ctx.fillStyle = '#e8ecff';
@@ -311,7 +375,7 @@ function showSample(i) {
 let inFlight = false, dirty = false, seq = 0, penLifted = false;
 function requestSee(lifted) { dirty = true; if (lifted) penLifted = true; if (!inFlight) pump(); }
 function pump() {
-  if (!S.ready || !dirty) return;
+  if (!S.ready || !dirty || !E() || !E().ready) return;
   dirty = false;
   if (S.sampleIdx !== null) eyeSampleInput(S.sample, S.sampleIdx, S.x);
   else eyeDoodle(S.strokes, S.x);
@@ -319,13 +383,15 @@ function pump() {
   drawSeen();
   if (S.blank) { S.last = null; renderGuesses(); renderGrid(); renderCard(); return; }
   inFlight = true;
-  worker.postMessage({ type: 'see', id: ++seq, x: S.x, off: S.off, maps: true, lifted: penLifted });
+  worker.postMessage({ type: 'see', id: ++seq, key: cur, snap: cur === 'full' ? S.snap : null, x: S.x, off: E().off, maps: true, lifted: penLifted });
   penLifted = false;
 }
 function onSeen(m) {
   inFlight = false;
-  S.last = m;
-  renderGuesses(); renderGrid(); renderCard(); renderOff();
+  if ((m.key || 'full') === cur && (m.snap ?? null) === (cur === 'full' ? S.snap : null)) {   // an answer for another eye or moment is stale
+    S.last = m;
+    renderGuesses(); renderGrid(); renderCard(); renderOff();
+  } else dirty = true;
   if (dirty) pump();
 }
 function drawSeen() {
@@ -341,17 +407,21 @@ function drawSeen() {
 function topOf(p, n) { return Array.from(p, (v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, n); }
 function renderGuesses() {
   const box = $('guesses');
-  if (!S.last || S.blank) { box.className = 'hint'; box.textContent = S.ready ? 'draw something…' : ''; $('guessNote').textContent = ''; document.body.dataset.guess = ''; return; }
+  if (!S.last || S.blank) { box.className = 'hint'; box.textContent = S.ready ? 'draw something…' : ''; if (S.sampleIdx === null) $('guessNote').textContent = ''; document.body.dataset.guess = ''; return; }
   box.className = ''; box.innerHTML = '';
-  const p = S.last.probs, base = S.last.baseProbs;
-  topOf(p, 5).forEach(([v, c], rank) => {
-    const row = document.createElement('div'); row.className = 'gbar' + (rank ? '' : ' top');
-    const ghost = base ? `<span class="gghost" style="width:${(100 * base[c]).toFixed(1)}%" title="with every neuron on: ${pct(base[c])}"></span>` : '';
-    row.innerHTML = `<span class="gname"></span><span class="gtrack"><span class="gfill" style="width:${(100 * v).toFixed(1)}%"></span>${ghost}</span><span class="gpct">${pct(v)}</span>`;
-    row.querySelector('.gname').textContent = label(c);
+  const p = S.last.probs, base = S.last.baseProbs, shown = topOf(p, 5);
+  const bar = (cls, name, v, ghost) => {
+    const row = document.createElement('div'); row.className = 'gbar' + cls;
+    const g = ghost !== undefined ? `<span class="gghost" style="width:${(100 * ghost).toFixed(1)}%" title="with every neuron on: ${fmtP(ghost)}"></span>` : '';
+    row.innerHTML = `<span class="gname"></span><span class="gtrack"><span class="gfill" style="width:${(100 * v).toFixed(1)}%"></span>${g}</span><span class="gpct">${fmtP(v)}</span>`;
+    row.querySelector('.gname').textContent = name;
     box.appendChild(row);
-  });
-  const best = topOf(p, 1)[0][1];
+  };
+  shown.forEach(([v, c], rank) => bar(rank ? '' : ' top', label(c), v, base ? base[c] : undefined));
+  // the rest, together: a confident eye still spreads a few percent thinly over every other kind
+  const rest = 1 - shown.reduce((a, [v]) => a + v, 0);
+  bar(' rest', `the other ${S.classes.length - shown.length} kinds together`, Math.max(0, rest));
+  const best = shown[0][1];
   document.body.dataset.guess = S.classes[best];
   if (base) {
     const was = topOf(base, 1)[0][1];
@@ -363,18 +433,62 @@ function renderGuesses() {
   if (S.announce) {
     const changed = base ? topOf(base, 1)[0][1] !== best : false;
     if (S.announce === 'switch') emit('switchResult', { guess: S.classes[best], changed, off: offCount() });
-    else emit('guessed', { guess: S.classes[best], p: p[best], sample: S.sampleIdx !== null });
+    else emit('guessed', { guess: S.classes[best], p: p[best], sample: S.sampleIdx !== null, rest });
     S.announce = null;
   }
 }
 
+// ---------- what the cards and the grid read: a live sweep, or a snapshot's summary ----------
+function liveView(rec) {
+  let colKey = '', col = null;
+  const column = (s, j) => {
+    const k = rec.offsets[s] + j;
+    if (colKey !== rec.key + k) { colKey = rec.key + k; col = new Float32Array(S.count); for (let i = 0; i < S.count; i++) col[i] = rec.table[i * rec.total + k]; }
+    return col;
+  };
+  return {
+    has: () => !!rec.stats,
+    meanSd: (s, j) => { const k = rec.offsets[s] + j; return [rec.stats.mean[k], rec.stats.sd[k] || 1]; },
+    order: (s, j) => {
+      const v = column(s, j), o = Array.from({ length: S.count }, (_, i) => i).sort((a, b) => v[b] - v[a]);
+      return { top: o.slice(0, 16), bottom: o.slice(-16).reverse() };
+    },
+    classZ: (s, j) => { const k = rec.offsets[s] + j, sd = rec.stats.sd[k] || 1;
+      return S.classes.map((_, c) => (rec.stats.cmean[c * rec.total + k] - rec.stats.mean[k]) / sd); },
+    below: (s, j, v) => { const c = column(s, j); let n = 0; for (let i = 0; i < S.count; i++) n += c[i] < v; return n / S.count; },
+    exact: true,
+  };
+}
+function growthView(i) {
+  const g = G.sum[i], st = G.stage;
+  return {
+    has: s => s === st,
+    meanSd: (s, j) => [g.mean[j], g.sd[j] || 1],
+    order: (s, j) => ({ top: Array.from(g.top.subarray(j * 16, j * 16 + 16)), bottom: Array.from(g.bottom.subarray(j * 16, j * 16 + 16)) }),
+    classZ: (s, j) => Array.from(g.classZ.subarray(j * 24, j * 24 + 24), v => v / G.zScale),
+    below: (s, j, v) => {                        // between its deciles
+      const d = g.deciles.subarray(j * 9, j * 9 + 9);
+      if (v <= d[0]) return 0.05;
+      for (let k = 0; k < 8; k++) if (v <= d[k + 1]) return 0.1 * (k + 1) + 0.1 * (v - d[k]) / ((d[k + 1] - d[k]) || 1);
+      return 0.95;
+    },
+    exact: false,
+  };
+}
+const atEnd = () => cur !== 'full' || S.snap === null;
+const view = () => atEnd() ? liveView(E()) : growthView(S.snap);
+
 // ---------- 2 · the neuron grid ----------
 function renderStages() {
   const box = $('stages'); box.innerHTML = '';
-  S.hidden.forEach((h, s) => {
+  const rec = E(); if (!rec) return;
+  if (!atEnd()) S.stage = rec.hidden.length - 1;   // the recording follows the last stage, where the jobs are clearest
+  rec.hidden.forEach((h, s) => {
     const b = document.createElement('button'); b.className = 'small' + (s === S.stage ? ' on' : '');
-    b.textContent = `stage ${s + 1}${s === S.hidden.length - 1 ? ' (last)' : ''} · ${h}`;
-    b.title = STAGE_ABOUT[s] || ''; b.dataset.stage = s;
+    b.textContent = `stage ${s + 1}${s === rec.hidden.length - 1 ? ' (last)' : ''} · ${h}`;
+    b.title = atEnd() || s === rec.hidden.length - 1 ? (STAGE_ABOUT[s] || '') : 'the training recording follows the last stage; earlier stages show at the end of training';
+    b.disabled = !atEnd() && s !== rec.hidden.length - 1;
+    b.dataset.stage = s;
     b.onclick = () => { S.stage = s; renderStages(); renderGrid(); };
     box.appendChild(b);
   });
@@ -383,11 +497,15 @@ function renderStages() {
 }
 // how unusual a neuron's value is: standard deviations from its mean over the sample doodles
 function zOf(s, j, v) {
-  if (S.stats) { const k = S.offsets[s] + j; return (v - S.stats.mean[k]) / (S.stats.sd[k] || 1); }
+  const vw = view();
+  if (vw.has(s)) { const [m, sd] = vw.meanSd(s, j); return (v - m) / sd; }
   return v;   // until the sample has been looked through, raw values
 }
 function renderGrid() {
-  const box = $('grid'), s = S.stage, H = S.hidden[s] || 0;
+  const rec = E(), box = $('grid'); if (!rec) return;
+  const s = S.stage, H = rec.hidden[s] || 0;
+  box.style.gridTemplateColumns = `repeat(${Math.min(16, H)}, 1fr)`;
+  box.style.maxWidth = H <= 16 ? '320px' : '480px';
   if (box.children.length !== H) {
     box.innerHTML = '';
     for (let j = 0; j < H; j++) {
@@ -397,18 +515,19 @@ function renderGrid() {
     }
   }
   const vals = S.last && !S.blank ? S.last.neurons[s] : null;
-  const named = S.names && S.names.stage === s ? S.names.neurons : {};
+  const named = rec.names && rec.names.stage === s ? rec.names.neurons : {};
+  const hasStats = view().has(s);
   let scale = 3;
-  if (vals && !S.stats) { scale = 0; for (const v of vals) scale = Math.max(scale, Math.abs(v)); scale = scale || 1; }
+  if (vals && !hasStats) { scale = 0; for (const v of vals) scale = Math.max(scale, Math.abs(v)); scale = scale || 1; }
   const ranked = [];
   for (let j = 0; j < H; j++) {
     const c = box.children[j];
     const z = vals ? zOf(s, j, vals[j]) : 0, a = Math.min(1, Math.abs(z) / scale);
     c.style.background = !vals ? '#262c38' : `rgba(${z >= 0 ? MORE : LESS}, ${(0.12 + 0.88 * a).toFixed(3)})`;
     c.classList.toggle('sel', !!S.sel && S.sel.s === s && S.sel.j === j);
-    c.classList.toggle('off', !!(S.off && S.off[s][j]));
+    c.classList.toggle('off', !!rec.off[s][j]);
     c.classList.toggle('named', j in named);
-    c.title = nid(s, j) + (named[j] && named[j].most ? ` — fires most for “${named[j].most.name}”` : '') + (vals ? ` · now ${z >= 0 ? '+' : ''}${z.toFixed(1)}${S.stats ? ' (how unusual)' : ''}` : '');
+    c.title = nid(s, j) + (named[j] && named[j].most ? ` — at the end of training it fires most for “${named[j].most.name}”` : '') + (vals ? ` · now ${z >= 0 ? '+' : ''}${z.toFixed(1)}${hasStats ? ' (how unusual)' : ''}` : '');
     if (vals) ranked.push([z, j]);
   }
   const busy = $('busy'); busy.innerHTML = '';
@@ -417,47 +536,49 @@ function renderGrid() {
     const chip = ([z, j], cls) => { const b = document.createElement('button'); b.className = 'nchip ' + cls; b.textContent = (cls === 'up' ? '▲ ' : '▼ ') + 'neuron ' + j;
       b.title = nid(s, j); b.onclick = () => openCard(s, j); return b; };
     const t1 = document.createElement('span'); t1.className = 'hint'; t1.textContent = 'firing most now:'; busy.appendChild(t1);
-    ranked.slice(0, 5).forEach(r => busy.appendChild(chip(r, 'up')));
+    ranked.slice(0, Math.min(5, H)).forEach(r => busy.appendChild(chip(r, 'up')));
     const t2 = document.createElement('span'); t2.className = 'hint'; t2.textContent = ' least:'; busy.appendChild(t2);
-    ranked.slice(-3).reverse().forEach(r => busy.appendChild(chip(r, 'down')));
+    ranked.slice(-Math.min(3, H)).reverse().forEach(r => busy.appendChild(chip(r, 'down')));
   }
 }
 
-// ---------- the sample set, looked through once (for the neuron cards) ----------
+// ---------- the sample set, looked through once per eye (for the live neuron cards) ----------
 let sweep = null;
-function startSweep() {
+function startSweep(rec) {
   if (sweep) for (const w of sweep.crew) if (w !== worker) { try { w.terminate(); } catch (e) {} }
   const CH = 250, chunks = [];
   for (let s = 0; s < S.count; s += CH) chunks.push([s, Math.min(CH, S.count - s)]);
   const want = Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 2) - 2));
   const helpers = [];
   for (let i = 0; i < want; i++) { const h = spawnHelper(); if (h) helpers.push(h); else break; }
-  sweep = { chunks, next: 0, done: new Map(), finished: 0, crew: helpers.length ? helpers : [worker], t0: performance.now() };
-  S.table = new Float32Array(S.count * S.total); S.guess = new Uint8Array(S.count);
+  sweep = { rec, chunks, next: 0, done: new Map(), finished: 0, crew: helpers.length ? helpers : [worker], t0: performance.now() };
+  rec.table = new Float32Array(S.count * rec.total); rec.guess = new Uint8Array(S.count); rec.stats = null;
   const me = sweep;
   for (const w of sweep.crew) {
     if (w !== worker) {
       w.onmessage = ev => { if (sweep === me) onSweepMsg(ev.data, w); };
-      w.postMessage({ type: 'load', manifest: S.man, weights: S.weights });
+      w.postMessage({ type: 'load', key: rec.key, manifest: rec.man, weights: rec.weights });
     }
     giveChunk(w);
   }
-  status('the eye is looking through 5,000 doodles so the neuron cards can show what each neuron does…');
+  status(rec.key === 'full' ? 'the eye is looking through 5,000 doodles so the neuron cards can show what each neuron does…'
+    : 'the squeezed eye is looking through the same 5,000 doodles…');
   progress(0);
 }
 function giveChunk(w) {
   if (sweep.next >= sweep.chunks.length) return false;
   const [start, count] = sweep.chunks[sweep.next++];
   const doodles = S.sample.slice(start * 784, (start + count) * 784);
-  w.postMessage({ type: 'sweep', id: 'c' + start, start, count, doodles }, [doodles.buffer]);
+  w.postMessage({ type: 'sweep', key: sweep.rec.key, id: 'c' + start, start, count, doodles }, [doodles.buffer]);
   return true;
 }
 function onSweepMsg(m, from) {
-  if (!sweep || m.type === 'loaded') return;
+  if (!sweep || m.type === 'loaded' || (m.key && m.key !== sweep.rec.key)) return;
   if (m.type === 'error') { status(m.message, true); return; }
+  const rec = sweep.rec;
   if (m.type === 'sweep-progress') sweep.done.set(m.id, m.done);
   if (m.type === 'swept') {
-    S.table.set(m.table, m.start * S.total); S.guess.set(m.guesses, m.start);
+    rec.table.set(m.table, m.start * rec.total); rec.guess.set(m.guesses, m.start);
     sweep.done.set(m.id, m.count); sweep.finished++;
     giveChunk(from || worker);
   }
@@ -465,30 +586,40 @@ function onSweepMsg(m, from) {
   progress(got / S.count);
   if (sweep.finished === sweep.chunks.length) {
     for (const w of sweep.crew) if (w !== worker) { try { w.terminate(); } catch (e) {} }
-    finishSweep();
+    const secs = ((performance.now() - sweep.t0) / 1000).toFixed(0);
+    sweep = null;
+    finishSweep(rec, secs);
   }
 }
-function finishSweep() {
-  const N = S.count, K = S.total, mean = new Float64Array(K), sq = new Float64Array(K);
+function finishSweep(rec, secs) {
+  const N = S.count, K = rec.total, mean = new Float64Array(K), sq = new Float64Array(K);
   const cls = S.classes.length, cmean = new Float64Array(cls * K), ccount = new Float64Array(cls);
   for (let i = 0; i < N; i++) {
     const o = i * K, c = S.labels[i]; ccount[c]++;
-    for (let k = 0; k < K; k++) { const v = S.table[o + k]; mean[k] += v; sq[k] += v * v; cmean[c * K + k] += v; }
+    for (let k = 0; k < K; k++) { const v = rec.table[o + k]; mean[k] += v; sq[k] += v * v; cmean[c * K + k] += v; }
   }
   const sd = new Float64Array(K);
   for (let k = 0; k < K; k++) { mean[k] /= N; sd[k] = Math.sqrt(Math.max(0, sq[k] / N - mean[k] * mean[k])); }
   for (let c = 0; c < cls; c++) for (let k = 0; k < K; k++) cmean[c * K + k] /= ccount[c] || 1;
-  let right = 0; for (let i = 0; i < N; i++) right += S.guess[i] === S.labels[i];
-  S.stats = { mean, sd, cmean, right };
-  S.swept = true; document.body.dataset.swept = '1';
+  let right = 0; for (let i = 0; i < N; i++) right += rec.guess[i] === S.labels[i];
+  // breadth (Phase 0's measure): how many kinds each last-stage neuron answers strongly to, either way
+  // (a kind's average more than 1 sd above or below the neuron's own)
+  const L = rec.hidden.length - 1, kL = rec.offsets[L];
+  let strong = 0;
+  for (let j = 0; j < rec.hidden[L]; j++) for (let c = 0; c < cls; c++) strong += Math.abs((cmean[c * K + kL + j] - mean[kL + j]) / (sd[kL + j] || 1)) > 1;
+  rec.stats = { mean, sd, cmean, right, breadth: strong / rec.hidden[L] };
   progress(null);
-  const secs = ((performance.now() - sweep.t0) / 1000).toFixed(0);
-  status(`ready: the eye looked through all ${N.toLocaleString()} doodles in ${secs} s (it guessed ${right.toLocaleString()} of them right). Tap any neuron to see its job.`);
-  renderGrid(); renderCard();
-  emit('swept', { right, n: N });
+  if (rec.key === 'full') {
+    document.body.dataset.swept = '1';
+    $('squeezeBtn').disabled = false;
+    status(`ready: the eye looked through all ${N.toLocaleString()} doodles in ${secs} s (it guessed ${right.toLocaleString()} of them right). Tap any neuron to see its job.`);
+  } else status(`the squeezed eye is ready: it guessed ${right.toLocaleString()} of the ${N.toLocaleString()} doodles right.`);
+  renderGrid(); renderCard(); renderSqueeze();
+  emit('swept', { key: rec.key, right, n: N });
+  if (rec.key === 'sq8') emit('squeezed', { on: cur === 'sq8', breadthFull: EYES.full.stats && EYES.full.stats.breadth, breadthSq: rec.stats.breadth });
 }
 
-// ---------- 3 · a neuron's card (always both poles) ----------
+// ---------- 3 · a neuron's card (always both ends) ----------
 const doodleCache = new Map();
 function doodleCanvas(i) {
   if (doodleCache.has(i)) return doodleCache.get(i);
@@ -499,7 +630,7 @@ function doodleCanvas(i) {
     img.data[4 * k] = 13 + v * 219; img.data[4 * k + 1] = 15 + v * 221; img.data[4 * k + 2] = 20 + v * 235; img.data[4 * k + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  if (doodleCache.size > 400) doodleCache.clear();
+  if (doodleCache.size > 600) doodleCache.clear();
   doodleCache.set(i, cv);
   return cv;
 }
@@ -518,53 +649,54 @@ function poleCanvas(ids) {
   };
   return cv;
 }
+const storyOf = j => { const g = EYES.full && EYES.full.man.growth; return (g && g.stories.find(st => st.neuron === j)) || null; };
 function openCard(s, j) {
   S.sel = { s, j };
   if (s !== S.stage) { S.stage = s; renderStages(); }
   renderGrid(); renderCard();
   document.body.dataset.card = s + ':' + j;
-  emit('cardOpened', { stage: s + 1, neuron: j, waiting: !S.stats, named: !!(S.names && S.names.stage === s && S.names.neurons[j]) });
+  const rec = E();
+  emit('cardOpened', { stage: s + 1, neuron: j, waiting: !view().has(s), named: !!(rec.names && rec.names.stage === s && rec.names.neurons[j]), squeezed: cur === 'sq8' });
 }
 let savedNames = {};
 try { savedNames = JSON.parse(localStorage.getItem('tm-eye-names') || '{}') || {}; } catch (e) { savedNames = {}; }
 let cardKey = '';
 function renderCard() {
-  const body = $('cardBody');
-  if (!S.sel) return;
-  const { s, j } = S.sel, k = S.offsets[s] + j;
-  $('cardTitle').textContent = nid(s, j);
-  if (!S.stats) { cardKey = ''; body.className = 'hint'; body.textContent = 'one moment: the eye is still looking through the sample doodles to find what this neuron does…'; return; }
-  if (cardKey === s + ':' + j) { updateCardLive(); return; }
-  cardKey = s + ':' + j;
+  const body = $('cardBody'), rec = E();
+  if (!S.sel || !rec) return;
+  const { s, j } = S.sel;
+  if (j >= rec.hidden[s]) { S.sel = null; cardKey = ''; $('cardTitle').textContent = "a neuron's job"; body.className = 'hint'; body.textContent = 'tap a neuron in box 2…'; return; }
+  const vw = view(), when = atEnd() ? '' : ` · at step ${stepText(G.stops[S.snap].step)}`;
+  $('cardTitle').textContent = (cur === 'sq8' ? 'squeezed eye · ' : '') + nid(s, j) + when;
+  if (!vw.has(s)) { cardKey = ''; body.className = 'hint'; body.textContent = 'one moment: the eye is still looking through the sample doodles to find what this neuron does…'; return; }
+  const key = [cur, S.snap, s, j, !!G].join(':');
+  if (cardKey === key) { updateCardLive(); return; }
+  cardKey = key;
   body.className = '';
-  // the sample doodles, ordered by this neuron's value
-  const N = S.count, K = S.total, vals = new Float32Array(N);
-  for (let i = 0; i < N; i++) vals[i] = S.table[i * K + k];
-  const order = Array.from({ length: N }, (_, i) => i).sort((a, b) => vals[b] - vals[a]);
-  const most = order.slice(0, 16), least = order.slice(-16).reverse();
-  const named = S.names && S.names.stage === s ? S.names.neurons[j] : null;
+  const { top, bottom } = vw.order(s, j);
+  const named = rec.names && rec.names.stage === s ? rec.names.neurons[j] : null;
+  const story = cur === 'full' && s === rec.hidden.length - 1 ? storyOf(j) : null;
   const poleHtml = p => {
     if (!p) return '<div class="pname hint">No name for this end yet.</div>';
-    const ok = p.passed;
-    return `<div class="pname">A bigger AI named it <q></q></div>` +
-      `<div class="ptest">${ok ? '✓' : '✗'} tested: from the name alone it picked ${p.hits} of 4 hidden doodles from this end${ok ? '' : ' (a fuzzier job, or a hard one to put into words)'}</div>`;
+    return `<div class="pname">${atEnd() ? 'A bigger AI named it' : 'At the end of training, a bigger AI named this end'} <q></q></div>` +
+      `<div class="ptest">${p.passed ? '✓' : '✗'} tested: from the name alone it picked ${p.hits} of 4 hidden doodles from this end${p.passed ? '' : ' (a fuzzier job, or a hard one to put into words)'}</div>`;
   };
-  body.innerHTML =
+  body.innerHTML = (story ? `<div class="storyline">🌱 growth story: <b></b> <span></span></div>` : '') +
     `<div class="poles"><div class="pole most"><h3 data-vg-explain="ends">▲ fires most for</h3><div class="pc"></div>${poleHtml(named && named.most)}</div>` +
     `<div class="pole least"><h3 data-vg-explain="ends">▼ fires least for (the other end)</h3><div class="pc"></div>${poleHtml(named && named.least)}</div></div>` +
     `<div class="hint" style="margin-top:.6rem" data-vg-explain="bars">what kinds of things make it fire <span class="hint">(compared with all the sample doodles)</span></div><div id="cbars"></div>` +
+    (cur === 'full' && s === rec.hidden.length - 1 ? `<div class="hint" style="margin-top:.6rem" data-vg-explain="grow">how it grew: its top 4 doodles through training <span class="hint">(click a moment to go there)</span></div><div class="strip" id="strip"></div>` : '') +
     `<div class="where"><canvas id="whereCv" width="112" height="112"></canvas><div id="whereNote" class="hint" style="flex:1;min-width:12em"></div></div>` +
     `<div style="margin-top:.5rem"><button id="cardOff" class="small"></button> <label class="hint">your name for it: <input type="text" id="myName" maxlength="60" placeholder="what would you call it?"></label></div>`;
+  if (story) { body.querySelector('.storyline b').textContent = story.title + '.'; body.querySelector('.storyline span').textContent = story.text; }
   const pcs = body.querySelectorAll('.pc');
-  pcs[0].appendChild(poleCanvas(most)); pcs[1].appendChild(poleCanvas(least));
+  pcs[0].appendChild(poleCanvas(top)); pcs[1].appendChild(poleCanvas(bottom));
   const qs = body.querySelectorAll('.pname q');
   let qi = 0;
   if (named && named.most) qs[qi++].textContent = named.most.name;
   if (named && named.least) qs[qi++].textContent = named.least.name;
   // class bars: each kind's average, in standard deviations from the neuron's average
-  const cls = S.classes.length, z = [];
-  for (let c = 0; c < cls; c++) z.push([(S.stats.cmean[c * K + k] - S.stats.mean[k]) / (S.stats.sd[k] || 1), c]);
-  z.sort((a, b) => b[0] - a[0]);
+  const z = vw.classZ(s, j).map((v, c) => [v, c]).sort((a, b) => b[0] - a[0]);
   const shown = [...z.slice(0, 5), ...z.slice(-5)];
   const strong = z.filter(([v]) => v > 1).length, weak = z.filter(([v]) => v < -1).length;
   const cb = body.querySelector('#cbars');
@@ -577,46 +709,45 @@ function renderCard() {
     cb.appendChild(row);
   });
   const sum = document.createElement('div'); sum.className = 'hint'; sum.style.marginTop = '.25rem';
-  sum.textContent = `It answers strongly (more than 1 on this scale) to ${strong} kind${strong === 1 ? '' : 's'} of thing${strong === 1 ? '' : 's'}, and is quiet for ${weak}.`;
+  sum.textContent = `It answers strongly (more than 1 on this scale, either way) to ${strong + weak} kind${strong + weak === 1 ? '' : 's'} of thing${strong + weak === 1 ? '' : 's'}: ${strong} make it fire more, ${weak} make it quiet.`;
   cb.appendChild(sum);
-  S.cardVals = vals;
-  const inp = body.querySelector('#myName'), key = s + ':' + j;
-  inp.value = savedNames[key] || '';
-  inp.oninput = () => { const t = inp.value.trim().slice(0, 60); if (t) savedNames[key] = t; else delete savedNames[key];
+  renderStrip(j);
+  const inp = body.querySelector('#myName'), nkey = (cur === 'sq8' ? 'sq8:' : '') + s + ':' + j;
+  inp.value = savedNames[nkey] || '';
+  inp.oninput = () => { const t = inp.value.trim().slice(0, 60); if (t) savedNames[nkey] = t; else delete savedNames[nkey];
     try { localStorage.setItem('tm-eye-names', JSON.stringify(savedNames)); } catch (e) {} };
   updateCardLive();
 }
 // the card's live part: how this neuron fires for your drawing, where, and its switch
 function updateCardLive() {
-  const body = $('cardBody'), { s, j } = S.sel, vals = S.cardVals, N = S.count;
+  const body = $('cardBody'), { s, j } = S.sel, vw = view();
   const note = body.querySelector('#whereNote'), wc = body.querySelector('#whereCv');
   if (!note) return;
   if (S.last && !S.blank) {
-    const v = S.last.neurons[s][j];
-    let below = 0; for (let i = 0; i < N; i++) below += vals[i] < v;
-    const r = below / N;
-    note.textContent = `For your drawing it is higher than ${Math.round(100 * r)} of 100 sample doodles` +
+    const r = vw.below(s, j, S.last.neurons[s][j]);
+    note.textContent = `For your drawing it is higher than ${vw.exact ? '' : 'about '}${Math.round(100 * r)} of 100 sample doodles` +
       (r > 0.9 ? ': it is firing a lot.' : r < 0.1 ? ': it is very quiet, the "fires least" end.' : '.') +
       ` Left: where in your drawing (gold = fires more, blue = less).`;
-    drawWhere(wc, s, j);
-  } else { note.textContent = 'Draw something to see how this neuron fires for it, and where.'; drawWhere(wc, s, j); }
-  const btn = body.querySelector('#cardOff');
-  const isOff = !!S.off[s][j];
+  } else note.textContent = 'Draw something to see how this neuron fires for it, and where.';
+  drawWhere(wc, s, j);
+  const btn = body.querySelector('#cardOff'), isOff = !!E().off[s][j];
   btn.textContent = isOff ? '🔌 switch it back on' : '🔌 switch it off';
-  btn.onclick = () => setOff(s, j, !S.off[s][j]);
+  btn.onclick = () => setOff(s, j, !E().off[s][j]);
+  const strip = body.querySelector('#strip');
+  if (strip) strip.querySelectorAll('.col').forEach(c => c.classList.toggle('on', +c.dataset.stop === (S.snap === null ? -1 : S.snap)));
 }
 function drawWhere(cv, s, j) {
   const ctx = cv.getContext('2d'), W = cv.width;
   ctx.fillStyle = '#0d0f14'; ctx.fillRect(0, 0, W, W);
   if (!S.last || S.blank || !S.last.maps) return;
-  const img = ctx.createImageData(W, W), map = S.last.maps[s], H = S.hidden[s];
-  const G = Math.round(Math.sqrt(map.length / H)), k = S.offsets[s] + j;
-  const mu = S.stats ? S.stats.mean[k] : 0, sd = S.stats ? (S.stats.sd[k] || 1) : 1;
-  const at = (gy, gx) => map[(Math.min(G - 1, Math.max(0, gy)) * G + Math.min(G - 1, Math.max(0, gx))) * H + j];
+  const img = ctx.createImageData(W, W), map = S.last.maps[s], H = E().hidden[s];
+  const Gs = Math.round(Math.sqrt(map.length / H));
+  const [mu, sd] = view().has(s) ? view().meanSd(s, j) : [0, 1];
+  const at = (gy, gx) => map[(Math.min(Gs - 1, Math.max(0, gy)) * Gs + Math.min(Gs - 1, Math.max(0, gx))) * H + j];
   for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
     const ink = S.x[Math.floor(y * 28 / W) * 28 + Math.floor(x * 28 / W)];
     // the neuron's grid, smoothly stretched over the 28 x 28 picture
-    const fy = (y + 0.5) * G / W - 0.5, fx = (x + 0.5) * G / W - 0.5, y0 = Math.floor(fy), x0 = Math.floor(fx), ty = fy - y0, tx = fx - x0;
+    const fy = (y + 0.5) * Gs / W - 0.5, fx = (x + 0.5) * Gs / W - 0.5, y0 = Math.floor(fy), x0 = Math.floor(fx), ty = fy - y0, tx = fx - x0;
     const val = (at(y0, x0) * (1 - tx) + at(y0, x0 + 1) * tx) * (1 - ty) + (at(y0 + 1, x0) * (1 - tx) + at(y0 + 1, x0 + 1) * tx) * ty;
     const z = (val - mu) / sd, a = 0.6 * Math.min(1, Math.abs(z) / 3);
     const o = 4 * (y * W + x), base = 13 + ink * 220;
@@ -625,39 +756,207 @@ function drawWhere(cv, s, j) {
   }
   ctx.putImageData(img, 0, 0);
 }
+// how a last-stage neuron grew: its top 4 at a few moments of training (needs the recording)
+function renderStrip(j) {
+  const box = $('strip'); if (!box) return;
+  box.innerHTML = '';
+  if (!G) {
+    const b = document.createElement('button'); b.className = 'small'; b.textContent = '🌱 get the training recording (3.8 MB, once) to see how it grew';
+    b.onclick = () => loadGrowth().then(() => renderCard());
+    box.appendChild(b); return;
+  }
+  const end = liveView(EYES.full);
+  const moments = G.strip.map(i => ({ i, label: stepText(G.stops[i].step), right: G.stops[i].sampleRight, top: growthView(i).order(2, j).top }));
+  if (EYES.full.stats) moments.push({ i: -1, label: 'end', right: EYES.full.stats.right, top: end.order(2, j).top });
+  for (const m of moments) {
+    const col = document.createElement('div'); col.className = 'col'; col.dataset.stop = m.i;
+    const cv = document.createElement('canvas'); cv.width = 40; cv.height = 166;
+    const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = true;
+    m.top.slice(0, 4).forEach((d, n) => ctx.drawImage(doodleCanvas(d), 0, n * 42, 40, 40));
+    col.appendChild(cv);
+    const t = document.createElement('span'); t.textContent = m.label === 'end' ? 'the end' : 'step ' + m.label; col.appendChild(t);
+    const r = document.createElement('span'); r.textContent = Math.round(100 * m.right / S.count) + '% right'; col.appendChild(r);
+    col.title = 'go to this moment of training';
+    col.onclick = () => setSnap(m.i < 0 ? null : m.i);
+    box.appendChild(col);
+  }
+}
 
 // ---------- 4 · switch neurons off ----------
-const offCount = () => S.off ? S.off.reduce((n, a) => n + a.reduce((x, v) => x + v, 0), 0) : 0;
+const offCount = () => E() ? E().off.reduce((n, a) => n + a.reduce((x, v) => x + v, 0), 0) : 0;
 function setOff(s, j, on) {
-  S.off[s][j] = on ? 1 : 0; S.announce = 'switch';
+  E().off[s][j] = on ? 1 : 0; S.announce = 'switch';
   renderOff(); renderGrid(); renderCard();
   requestSee();
   emit('switched', { stage: s + 1, neuron: j, off: !!on, count: offCount() });
 }
 function renderOff() {
   const box = $('offList'); box.innerHTML = '';
-  const n = offCount();
+  const n = offCount(), rec = E();
   document.body.dataset.off = String(n);
   $('offNone').disabled = !n;
-  if (!S.off || !n) { box.innerHTML = '<span class="hint">none switched off — use the button on a neuron\'s card, or the one below</span>'; $('offNote').textContent = ''; return; }
-  S.off.forEach((a, s) => a.forEach((v, j) => {
+  if (!rec || !n) { box.innerHTML = '<span class="hint">none switched off — use the button on a neuron\'s card, or the one below</span>'; $('offNote').textContent = ''; return; }
+  rec.off.forEach((a, s) => a.forEach((v, j) => {
     if (!v) return;
-    const b = document.createElement('button'); b.className = 'nchip offc'; b.textContent = '⊘ ' + (s === S.hidden.length - 1 ? '' : `stage ${s + 1} · `) + 'neuron ' + j;
+    const b = document.createElement('button'); b.className = 'nchip offc'; b.textContent = '⊘ ' + (s === rec.hidden.length - 1 ? '' : `stage ${s + 1} · `) + 'neuron ' + j;
     b.title = 'switched off — click to switch it back on'; b.onclick = () => setOff(s, j, false);
     box.appendChild(b);
   }));
   $('offNote').textContent = S.last && S.last.baseProbs ? $('guessNote').textContent : '';
 }
-$('offNone').onclick = () => { for (const a of S.off) a.fill(0); S.announce = 'switch'; renderOff(); renderGrid(); renderCard(); requestSee(); emit('switched', { count: 0 }); };
+$('offNone').onclick = () => { for (const a of E().off) a.fill(0); S.announce = 'switch'; renderOff(); renderGrid(); renderCard(); requestSee(); emit('switched', { count: 0 }); };
 $('offBusy').onclick = () => {
   if (!S.last || S.blank) { status('draw something first: these are the neurons busiest for your drawing'); return; }
-  const s = S.stage, vals = S.last.neurons[s];
-  const ranked = Array.from(vals, (v, j) => [zOf(s, j, v), j]).filter(([, j]) => !S.off[s][j]).sort((a, b) => b[0] - a[0]).slice(0, 5);
-  for (const [, j] of ranked) S.off[s][j] = 1;
+  const s = S.stage, vals = S.last.neurons[s], off = E().off[s];
+  const ranked = Array.from(vals, (v, j) => [zOf(s, j, v), j]).filter(([, j]) => !off[j]).sort((a, b) => b[0] - a[0]).slice(0, 5);
+  for (const [, j] of ranked) off[j] = 1;
   S.announce = 'switch';
   renderOff(); renderGrid(); renderCard(); requestSee();
   emit('switched', { stage: s + 1, count: offCount(), busiest: true });
 };
+
+// ---------- 5 · watch it grow (the training recording) ----------
+// Stops sit half evenly and half by the square root of the training step: the early snapshots are
+// crowded (they were saved on a log scale) yet still clickable, and the second half of training,
+// where the jobs settle, keeps a fifth of the slider instead of its last few pixels.
+const growStops = () => {
+  const g = EYES.full && EYES.full.man.growth; if (!g) return [];
+  const all = [...g.snapshots, g.final], last = g.final.step, n = all.length - 1;
+  return all.map((s, i) => ({ ...s, pos: 0.5 * (i / n) + 0.5 * Math.sqrt(s.step / last), index: i < n ? i : null }));
+};
+let loadingGrowth = null;
+function loadGrowth() {
+  if (G) return Promise.resolve(G);
+  if (loadingGrowth) return loadingGrowth;
+  const g = EYES.full.man.growth;
+  status('getting the training recording (3.8 MB, once)…');
+  loadingGrowth = eyeFile(g.file).then(buf => {
+    if (buf.byteLength !== g.bytes) throw new Error('the training recording does not match this eye');
+    const sum = [], L = g.summary, T = { f32: Float32Array, u16: Uint16Array, i8: Int8Array };
+    for (let i = 0; i < g.snapshots.length; i++) {
+      let at = L.offset + i * L.bytesEach; const rec = {};
+      for (const [name, t, len] of L.layout) { rec[name] = new T[t](buf, at, len); at += len * T[t].BYTES_PER_ELEMENT; }
+      sum.push(rec);
+    }
+    G = { sum, stage: L.stage, zScale: L.classZScale, stops: g.snapshots,
+      strip: [155, 433, 1206, 2387, 3359, 4727, 6652].map(st => g.snapshots.findIndex(s => s.step === st)).filter(i => i >= 0) };
+    worker.postMessage({ type: 'growth', weights: buf.slice(0, g.snapshots.length * g.weights.bytesEach), bytesEach: g.weights.bytesEach });
+    status('the training recording is here: scrub back to watch the eye grow');
+    return G;
+  }).catch(e => { status('could not get the training recording: ' + ((e && e.message) || e), true); loadingGrowth = null; throw e; });
+  return loadingGrowth;
+}
+async function setSnap(i) {
+  if (cur !== 'full') return;
+  if (i !== null && !G) { try { await loadGrowth(); } catch (e) { return; } }
+  S.snap = i; cardKey = '';
+  if (S.sel && S.sel.s !== EYES.full.hidden.length - 1 && i !== null) S.sel = null;
+  document.body.dataset.snap = i === null ? 'end' : String(G.stops[i].step);
+  renderGrow(); renderStages(); renderGrid(); renderCard();
+  S.last = null; requestSee();
+  const st = growStops()[i === null ? growStops().length - 1 : i];
+  emit('scrubbed', { step: st.step, end: i === null, right: st.sampleRight / S.count, settled: st.settled });
+}
+function renderGrow() {
+  const stops = growStops(); if (!stops.length) return;
+  const k = S.snap === null ? stops.length - 1 : S.snap, st = stops[k];
+  $('growSlider').value = Math.round(1000 * st.pos);
+  $('growInfo').textContent = cur !== 'full' ? 'the squeezed eye comes without a training recording: un-squeeze to scrub'
+    : S.snap === null ? `the end of training (step ${stepText(st.step)}, ${st.epoch} times through the doodles): the eye you are drawing with, right on ${Math.round(100 * st.sampleRight / S.count)} of 100 sample doodles`
+    : `step ${stepText(st.step)} of ${stepText(stops[stops.length - 1].step)} (${st.epoch < 1 ? 'not yet once' : st.epoch.toFixed(1) + ' times'} through the doodles): right on ${Math.round(100 * st.sampleRight / S.count)} of 100 sample doodles; ` +
+      `its neurons' jobs are ${Math.round(100 * st.settled)}% settled (that much of each neuron's final top 100 doodles is already in its top 100)`;
+  for (const id of ['growSlider', 'growPrev', 'growNext', 'growPlay', 'growEnd']) $(id).disabled = cur !== 'full' || !S.ready;
+  drawGrowCurve(stops, k);
+}
+function drawGrowCurve(stops, k) {
+  const cv = $('growCurve'), ctx = cv.getContext('2d'), W = cv.width, H = cv.height, pad = 6;
+  ctx.fillStyle = '#1b1f28'; ctx.fillRect(0, 0, W, H);
+  const X = p => pad + p * (W - 2 * pad), Y = v => H - 14 - v * (H - 24);
+  ctx.strokeStyle = '#2b3140'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad, Y(0)); ctx.lineTo(W - pad, Y(0)); ctx.moveTo(pad, Y(1)); ctx.lineTo(W - pad, Y(1)); ctx.stroke();
+  const line = (vals, color) => {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    stops.forEach((s, i) => { const x = X(s.pos), y = Y(vals[i]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+    ctx.stroke();
+    stops.forEach((s, i) => { ctx.beginPath(); ctx.arc(X(s.pos), Y(vals[i]), 2.5, 0, 6.2832); ctx.fill(); });
+  };
+  line(stops.map(s => s.sampleRight / S.count), '#8fd3a7');
+  line(stops.map(s => s.settled), '#ffd27f');
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(stops[k].pos), 2); ctx.lineTo(X(stops[k].pos), H - 12); ctx.stroke();
+  ctx.font = '11px system-ui, sans-serif'; ctx.fillStyle = '#8fd3a7'; ctx.fillText('right answers', pad + 2, 11);
+  ctx.fillStyle = '#ffd27f'; ctx.fillText('jobs settled', pad + 92, 11);
+  ctx.fillStyle = '#8791a3'; ctx.fillText('start', pad, H - 2); ctx.fillText('half way', X(stops.find(s => s.step >= stops[stops.length - 1].step / 2).pos) - 18, H - 2);
+  ctx.fillText('end', W - pad - 18, H - 2);
+}
+const nearestStop = v => { const stops = growStops(); let best = 0; stops.forEach((s, i) => { if (Math.abs(s.pos - v) < Math.abs(stops[best].pos - v)) best = i; }); return best; };
+let playTimer = null;
+const stopPlay = () => { if (playTimer) { clearInterval(playTimer); playTimer = null; $('growPlay').textContent = '▶ play it all'; } };
+const goStop = k => { const stops = growStops(); k = Math.max(0, Math.min(stops.length - 1, k)); return setSnap(k === stops.length - 1 ? null : k); };
+$('growSlider').oninput = () => { stopPlay(); goStop(nearestStop($('growSlider').value / 1000)); };
+$('growPrev').onclick = () => { stopPlay(); goStop((S.snap === null ? growStops().length - 1 : S.snap) - 1); };
+$('growNext').onclick = () => { stopPlay(); goStop((S.snap === null ? growStops().length - 1 : S.snap) + 1); };
+$('growEnd').onclick = () => { stopPlay(); setSnap(null); };
+$('growPlay').onclick = async () => {
+  if (playTimer) { stopPlay(); return; }
+  try { await loadGrowth(); } catch (e) { return; }
+  await goStop(0);
+  $('growPlay').textContent = '■ stop';
+  playTimer = setInterval(() => { const n = growStops().length; if (S.snap === null || S.snap >= n - 2) { stopPlay(); setSnap(null); } else goStop(S.snap + 1); }, 900);
+};
+function renderStories() {
+  const box = $('stories'); box.querySelectorAll('button').forEach(b => b.remove());
+  const g = EYES.full && EYES.full.man.growth; if (!g) return;
+  for (const st of g.stories) {
+    const b = document.createElement('button'); b.className = 'nchip story'; b.textContent = `neuron ${st.neuron}: ${st.title}`;
+    b.title = st.text;
+    b.onclick = async () => {
+      if (cur !== 'full') await setEye('full');
+      try { await loadGrowth(); } catch (e) { return; }
+      S.stage = 2; openCard(2, st.neuron);
+      emit('storyOpened', { neuron: st.neuron, title: st.title });
+    };
+    box.appendChild(b);
+  }
+}
+
+// ---------- 6 · squeeze it ----------
+async function setEye(key) {
+  stopPlay();
+  if (key === 'sq8' && !EYES.sq8) {
+    $('squeezeBtn').disabled = true;
+    try {
+      status('getting the squeezed eye…');
+      const name = EYES.full.man.squeezed || 'tiny-eye-sq8.json';
+      const man = JSON.parse(new TextDecoder().decode(await eyeFile(name)));
+      const weights = await eyeFile(man.weights);
+      EYES.sq8 = eyeRecord('sq8', man, weights);
+      worker.postMessage({ type: 'load', key: 'sq8', manifest: man, weights });
+    } catch (e) { status('could not get the squeezed eye: ' + ((e && e.message) || e), true); $('squeezeBtn').disabled = false; return; }
+  }
+  cur = key; cardKey = '';
+  if (S.sel && S.sel.j >= E().hidden[S.sel.s]) S.sel = null;
+  if (key === 'sq8' && S.stage !== 2) S.stage = 2;
+  document.body.dataset.eye = key === 'sq8' ? 'squeezed' : 'full';
+  S.last = null;
+  renderAll(); renderGrow();
+  requestSee();
+  if (key === 'full') emit('squeezed', { on: false });
+  else if (EYES.sq8.stats) emit('squeezed', { on: true, breadthFull: EYES.full.stats && EYES.full.stats.breadth, breadthSq: EYES.sq8.stats.breadth });
+}
+function renderSqueeze() {
+  const on = cur === 'sq8', sq = EYES.sq8, full = EYES.full;
+  $('which').textContent = on ? '🗜 squeezed: 8 neurons in its last stage' : '';
+  $('squeezeBtn').textContent = on ? '↩ back to the full eye' : '🗜 squeeze it';
+  $('squeezeBtn').disabled = !(full && full.stats) || (sq && !sq.ready);
+  $('sq7Btn').disabled = !(full && full.stats);
+  const note = $('squeezeNote');
+  if (sq && sq.stats && full && full.stats) {
+    note.textContent = `The full eye's ${full.hidden[2]} last-stage neurons each answer strongly (either way) to ${full.stats.breadth.toFixed(1)} kinds of things, on average. ` +
+      `The squeezed eye's ${sq.hidden[2]} answer to ${sq.stats.breadth.toFixed(1)}: each one has to cover more kinds of things. Their top doodles still look tidy; the class bars show the spread. ` +
+      `It is still right on ${Math.round(100 * sq.stats.right / S.count)} of 100 sample doodles (the full eye: ${Math.round(100 * full.stats.right / S.count)}).`;
+  } else if (on) note.textContent = 'one moment: the squeezed eye is looking through the sample doodles…';
+}
+$('squeezeBtn').onclick = () => setEye(cur === 'sq8' ? 'full' : 'sq8');
+$('sq7Btn').onclick = async () => { if (cur !== 'sq8') await setEye('sq8'); S.stage = 2; openCard(2, 7); };
 
 // kid mode turns the percentages into "7 in 10" odds: redraw the bars when it is switched
 window.addEventListener('message', e => { if (e.data && e.data.tm === 'pref' && e.data.key === 'tm-guide-kid') renderGuesses(); });

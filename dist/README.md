@@ -9,8 +9,9 @@ Three self-contained HTML files, no dependencies, no build tools needed to run t
 - `tiny-mind-hunt.html` — the treasure hunt: probe a question, get falsifiable clues,
   prove or bust them with ablations
 - `tiny-mind-eye.html` — the Tiny Eye, a mind that sees drawings: draw, watch its guess and
-  its neurons, open a neuron's card (both ends), switch neurons off. Needs `tiny-eye.json`,
-  `tiny-eye.bin` and `tiny-eye-sample.bin` beside it (or dropped on it). Doodles: Quick, Draw!
+  its neurons, open a neuron's card (both ends), switch neurons off, watch it grow, squeeze it.
+  Needs `tiny-eye.json`, `tiny-eye.bin` and `tiny-eye-sample.bin` beside it (or dropped on it),
+  and `tiny-eye-growth.bin` and `tiny-eye-sq8.json`/`.bin` for growing and squeezing. Doodles: Quick, Draw!
   (Google, Inc., CC BY 4.0)
 
 Rebuild any time with `node tools/build-release.js` (bundles are syntax-checked at

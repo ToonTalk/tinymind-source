@@ -104,6 +104,9 @@ export async function run(t) {
   t.check("mega: the eye arrives through the shell's file route (as the minds do) and every room's bridge can take it",
     mega.includes("const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];") && mega.includes("tm: 'load-eye'") &&
     (mega.match(/m\.tm === 'load-eye'/g) || []).length === 5);
+  t.check("mega: the eye's recording and squeezed eye come later, by request, through the same route; its manifest skips the permanent cache",
+    mega.includes("const EYE_MORE_FILES = ['tiny-eye-growth.bin', 'tiny-eye-sq8.json', 'tiny-eye-sq8.bin'];") && mega.includes("m.method === 'eye.file'") &&
+    mega.includes('if (!EYE_MORE_FILES.includes(name))') && mega.includes("persistent: !/\\.json$/i.test(f)"));
   {
     const open = mega.indexOf('<template id="tpl-eye">'), end = mega.indexOf('</template>', open);
     const scripts = [...mega.slice(open, end).matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1].length);

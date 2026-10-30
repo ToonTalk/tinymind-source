@@ -266,6 +266,13 @@ window.addEventListener('message', async (e) => {
         });
         value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
       }
+      else if (m.method === 'eye.file') {   // the Tiny Eye's training recording and squeezed eye, fetched when its room asks
+        const name = String(m.args[0] || '');
+        if (!EYE_MORE_FILES.includes(name)) throw new Error('not one of the files of the Tiny Eye: ' + name);
+        const u8 = await tmGetBytes(name, { persistent: !/\.json$/i.test(name) });
+        if (!u8) throw new Error(name + ' was not found beside the app');
+        value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      }
       else if (m.method === 'arc.tokenizer') {
         const tok = tokFor(+m.args[0] || 512);
         if (!tok) throw new Error('no vocab-' + m.args[0] + ' tokenizer in the bay — drop tok512.bin');
@@ -955,6 +962,8 @@ async function shellIngest(recs) {
    when the eye room first opens, like the big storyteller; dropped files are paired up here. It is
    its own kind of mind (kind 'eye'), not remembered in browser storage: it comes back by itself. */
 const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];
+// fetched later, when the room asks (eye.file): the training recording, and the squeezed eye
+const EYE_MORE_FILES = ['tiny-eye-growth.bin', 'tiny-eye-sq8.json', 'tiny-eye-sq8.bin'];
 const isEyeManifestText = text => text.slice(0, 200).includes('"tiny-eye-v1"');
 const eyeDrop = {};
 function addEye(manifestText, weights, sample, origin) {
@@ -982,7 +991,9 @@ function ensureEye(onProgress) {
       const got = {}, weight = { 'tiny-eye.json': 0.01, 'tiny-eye.bin': 0.08, 'tiny-eye-sample.bin': 0.91 };
       let done = 0;
       for (const f of EYE_FILES) {
-        got[f] = await tmGetBytes(f, { onProgress: p => onProgress && onProgress(done + p * weight[f]) });
+        // the manifest skips Cache Storage (ordinary HTTP caching only): a newer eye ships a newer manifest,
+        // and a remembered old one would hide its new parts; the big files are checked against it
+        got[f] = await tmGetBytes(f, { persistent: !/\.json$/i.test(f), onProgress: p => onProgress && onProgress(done + p * weight[f]) });
         if (!got[f]) throw new Error(f + ' was not found beside the app');
         done += weight[f];
       }
