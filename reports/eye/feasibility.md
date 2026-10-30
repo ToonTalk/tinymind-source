@@ -18,7 +18,7 @@ My recommendation is still **go, with the room's copy adjusted**. The squeeze re
 What changes for the room:
 
 - **Clean, but not as clean as the essay's big models.** A vision model calls about 87% of poles "one main job". About 61% survive a strict test. Pure one-class poles pass about 90% of the time. Poles that hold a shape idea spread across classes ("two tall points": cat ears and castle towers) pass less often: some are clean but hard to name in 8 words, and some really are mixed.
-- **No "bigger is cleaner" in this range.** The pass rate is flat across 23k, 83k and 311k parameters (59%, 62%, 61%). The essay's smallest ConvNeXt (92k) sits in this range, and the essay calls its neurons coarse. The room shouldn't claim that bigger eyes are cleaner; these eyes don't show it.
+- **No "bigger is cleaner" in this range.** The pass rate is flat across 23k, 83k and 311k parameters (59%, 62%, 61%). The essay's smallest ConvNeXt (92k) sits in this range, and the essay calls its neurons coarse. The room shouldn't claim that bigger eyes are cleaner; these eyes don't show it. Two bigger eyes trained later (1.2M and 3.5M parameters) are no cleaner either, though they are 3 points more accurate than eye80k (see Bigger eyes).
 - **Growth looks like narrowing and job swaps more than offshoots.** Neurons settle late. At 85% accuracy (about a third of the way through training) a neuron's final top-100 drawings are only 40% in place. The scrubber will show jobs forming, narrowing, and sometimes switching. The essay's "an early job keeps growing offshoots" shows clearly in only a few neurons.
 - **Squeezing makes neurons coarser, not muddled.** With no wide bypass (sq8), each of the 8 neurons strongly answers to more kinds of thing: 4.4 classes, against 3.25 for eye80k's neurons. A random 8 of eye80k's neurons reaches that 0.1% of the time. For example, one sq8 neuron covers rainbows, umbrellas and castles ("an arch on top"). Still, each neuron's top 16 stay one nameable idea, so labels pass as often as before. With the wide bypass kept (sqmlp8), the 8 neurons just become crisp class detectors. The room's pressure lesson should show breadth, not muddle.
 
@@ -245,6 +245,61 @@ eye20k and eye300k are nearly the same (39% and 40% in place at step 3,359). The
 
 In the 23k eye the same kinds of stories show. Neuron 107 goes from plain circles (moons) at step 219 to stacked circles (snowmen). Neuron 2 goes from flat cars with a bump to a single arch (rainbows).
 
+## Bigger eyes
+
+*Added later on 2026-10-30, once the Experts room's trainings had finished.* The question: do neurons get cleaner above 311k parameters?
+
+Two more eyes, same recipe as the others: 20 epochs, batch 512, AdamW at 3e-3, label smoothing 0.1, 20 log-spaced snapshots, 4× hidden channels, and the 15% memory cap.
+
+| Run | Widths per stage | Parameters | Last-stage neurons | Held-out accuracy | Training time (shared GPU) |
+|---|---|---:|---:|---:|---:|
+| eye1m | 96, 192, 256 | 1,203,192 | 1,024 | 91.4% | 65 min |
+| eye3m | 160, 320, 448 | 3,476,216 | 1,792 | 91.4% | 106 min |
+
+**Cleanliness does not rise.** These are the free checks from above, on all neurons at the final snapshot:
+
+| Run | Purity, stage 1 | Stage 2 | Stage 3 (the last) | Last-stage poles ≥75% pure | ≥50% pure | Effective classes in the top 16 / 100 / 500 ("fires most") | Classes a neuron strongly answers to |
+|---|---:|---:|---:|---:|---:|---|---:|
+| eye20k | 0.37 | 0.42 | 0.593 | 35% | 61% | 3.2 / 5.0 / 7.7 | 3.11 |
+| eye80k | 0.33 | 0.44 | 0.583 | 32% | 61% | 3.1 / 4.6 / 7.1 | 3.25 |
+| eye300k | 0.35 | 0.44 | 0.595 | 33% | 62% | 2.9 / 4.5 / 7.1 | 3.23 |
+| eye1m | 0.35 | 0.45 | 0.585 | 32% | 62% | 2.9 / 4.4 / 7.0 | 3.46 |
+| eye3m | 0.34 | 0.48 | 0.574 | 30% | 59% | 3.1 / 4.7 / 7.4 | 3.26 |
+
+- **The bar, set before looking:** "clearly cleaner" meant a last-stage mean purity of at least 0.65 (the band tops out at 0.60), or at least 40% of last-stage poles 75% pure (the band tops out at 35%).
+- **Results:** eye1m is inside the band (0.585 and 32%). eye3m is at its bottom edge (0.574 and 30%).
+- **Breadth is flat too:** about 3 effective classes in a pole's top 16, and about 3.3 kinds of thing each neuron strongly answers to, at every size.
+- **150 times the parameters, from 23k to 3.5M, and the last-stage neurons stay just as clean.** A bigger eye spends its size on more neurons of the same kind, not on sharper ones.
+- **One small exception:** eye3m's middle stage (7×7) is a little purer (0.48 and 20% of poles ≥75% pure, against 0.42–0.45 and 10–16%). That stage's neurons see parts, and a mean over the grid suits them poorly (see Caveats). The difference is small, and the room's lessons are about the last stage.
+- **So no labeling was done.** The plan was to run the gpt-6-luna distractor test on 64 neurons per new size only if purity rose clearly. It didn't, so no calls were made; the call count stays at 696. At the three smaller sizes the pass rate followed purity closely: pure poles pass about 90% of the time, spread poles 35–42%. With the same purity, the pass rate would likely land near 60% again.
+
+**What the extra size buys is accuracy, and it levels off by 1.2M.**
+- **Overall:** 88.3% → 90.3% → 91.4% → 91.4% (eye80k, eye300k, eye1m, eye3m).
+- **The gains are on the hardest kinds** (eye80k → eye1m): frog 64% → 76%, bird 70% → 80%, cat 79% → 85%, dragon 75% → 80%, dog 73% → 78%.
+- **The usual mix-ups barely move:** ambulance/police car, dragon/bird and cat/dog are still the top three at every size.
+
+**What a bigger eye would cost in the room.** Times are for one look, the forward pass with every stage's neurons, as the room's worker does it. They come from [src/eye.js](../../src/eye.js) on one thread of this desktop's Xeon W-2223 under Node 24, as the median of three passes over 100 sample doodles. Float16 weights kept float32's top guess on 250 of 250 sample doodles at every size.
+
+| Eye | Float16 weights (gzipped) | One look | Card sweep over the 5,000-doodle sample (6 helpers) | Sweep table | Growth recording (19 snapshots + summaries) |
+|---|---:|---:|---:|---:|---:|
+| eye80k (shipped) | 0.17 MB (0.15) | 5.5 ms | about 10 s (measured) | 11 MB | 3.8 MB (shipped) |
+| eye300k | 0.62 MB (0.57) | 16 ms | about 30 s | 22 MB | 13 MB |
+| eye1m | 2.4 MB (2.2) | 49 ms | about 1.5 min | 44 MB | 48 MB |
+| eye3m | 7.0 MB (6.4) | 145 ms | about 4.5 min | 74 MB | 137 MB |
+
+The sweep times for the bigger eyes are scaled from eye80k's measured 10 s by the time per look. Phones are slower.
+
+**Is a bigger eye worth offering?**
+- **Not as the default, and not to teach "bigger is cleaner".** These eyes are not cleaner.
+- **eye3m is never worth it.** It is no more accurate than eye1m, at three times the cost.
+- **eye1m could be an optional "bigger eye" button,** if the room wants this lesson: "a bigger eye guesses better (look at frogs), but its neurons aren't any cleaner; it just has more of them."
+  - It would cost a 2.4 MB download on request, and about 50 ms per look, which still feels live while drawing.
+  - Its card sweep would take about a minute and a half, and there would be 1,024 last-stage neurons to browse.
+  - Leave out its growth recording (48 MB).
+- **The room's default stays eye80k.** Whether to add the button is Ken's call.
+
+The two new eyes' weights (float32, with manifests that [src/eye.js](../../src/eye.js) reads) are in `C:\Users\toont\tm-data\eye\export-eye1m\` and `export-eye3m\`.
+
 ## What this means for the room
 
 - **Build it, with eye80k.** 88% accurate, 331 KB of float32 weights (or 165 KB as float16), 256 last-stage neurons.
@@ -281,14 +336,17 @@ $PY -I tools/eye/train.py --name eye80k --widths 24,48,64
 $PY -I tools/eye/train.py --name eye300k --widths 48,96,128
 $PY -I tools/eye/train.py --name eye80k-sq8 --widths 24,48,8 --hidden 96,192,8
 $PY -I tools/eye/train.py --name eye80k-sqmlp8 --widths 24,48,64 --hidden 96,192,8
-$PY -I tools/eye/probe.py eye20k eye80k eye300k eye80k-sq8 eye80k-sqmlp8
+$PY -I tools/eye/train.py --name eye1m --widths 96,192,256       # Bigger eyes
+$PY -I tools/eye/train.py --name eye3m --widths 160,320,448
+$PY -I tools/eye/probe.py eye20k eye80k eye300k eye80k-sq8 eye80k-sqmlp8 eye1m eye3m
 $PY -I tools/eye/label.py neurons eye80k          # likewise each run
 $PY -I tools/eye/label.py neurons eye80k --retest 32
 $PY -I tools/eye/label.py growth eye80k --neurons 104,79,117,2,16,5,115,25 --ckpts 7,10,13,16,19
 $PY -I tools/eye/figures.py growth eye80k --strips 104,117,2,16,79 --ckpts 7,10,13,16,19
 $PY -I tools/eye/figures.py cards eye80k 0,6,14,68,85,93,118,131,201,238,246,247
 $PY -I tools/eye/summarize.py eye20k eye80k eye300k eye80k-sq8 eye80k-sqmlp8
-$PY -I tools/eye/breadth.py eye20k eye80k eye300k eye80k-sq8 eye80k-sqmlp8
+$PY -I tools/eye/breadth.py eye20k eye80k eye300k eye80k-sq8 eye80k-sqmlp8 eye1m eye3m
+$PY -I tools/eye/export.py eye1m --weights-only --device cpu --out C:/Users/toont/tm-data/eye/export-eye1m   # likewise eye3m
 $PY -I tools/eye/figures.py cards eye80k-sq8 5,7
 $PY -I tools/eye/export.py eye80k
 ```

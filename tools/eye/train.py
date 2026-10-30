@@ -116,6 +116,7 @@ def augment(x, gen):
 @torch.no_grad()
 def evaluate(model, x, y, bs=2048):
     model.eval()
+    bs = max(128, bs * 96 // max(96, model.config['hidden'][0]))  # wide eyes: keep inside the memory cap
     correct = 0
     for i in range(0, len(x), bs):
         logits = model(x[i:i + bs].unsqueeze(1).float() / 255)

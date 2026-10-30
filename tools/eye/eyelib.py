@@ -43,6 +43,8 @@ def checkpoints(name, data=DATA):
 
 
 def load_model(path, device='cuda'):
+    if str(device).startswith('cuda'):
+        torch.cuda.set_per_process_memory_fraction(0.15)  # the GPU is shared, as in train.py
     ck = torch.load(path, map_location=device, weights_only=True)
     m = TinyEye(**ck['config']).to(device)
     m.load_state_dict(ck['state'])
@@ -53,7 +55,9 @@ def load_model(path, device='cuda'):
 @torch.no_grad()
 def readouts(model, x, bs=2048, device='cuda', reduce='mean'):
     """Per-drawing neuron values for every block: list of (n_drawings, hidden) arrays,
-    plus logits. reduce='mean' averages each neuron over the grid; 'max' takes the peak."""
+    plus logits. reduce='mean' averages each neuron over the grid; 'max' takes the peak.
+    Wide eyes get smaller batches so the first stage's taps stay well inside the memory cap."""
+    bs = max(128, bs * 96 // max(96, model.config['hidden'][0]))
     outs, logits = None, []
     for i in range(0, len(x), bs):
         xb = torch.from_numpy(x[i:i + bs]).to(device).unsqueeze(1).float() / 255
