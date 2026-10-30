@@ -1,0 +1,1237 @@
+{
+ "format": "tiny-eye-v1",
+ "name": "Tiny Eye",
+ "run": "eye80k",
+ "params": 82704,
+ "config": {
+  "widths": [
+   24,
+   48,
+   64
+  ],
+  "hidden": [
+   96,
+   192,
+   256
+  ],
+  "depths": [
+   1,
+   1,
+   1
+  ],
+  "n_classes": 24
+ },
+ "classes": [
+  "dragon",
+  "teapot",
+  "cloud",
+  "moon",
+  "castle",
+  "cat",
+  "dog",
+  "fish",
+  "bird",
+  "rabbit",
+  "frog",
+  "owl",
+  "sheep",
+  "tree",
+  "flower",
+  "house",
+  "sun",
+  "star",
+  "apple",
+  "rainbow",
+  "snowman",
+  "umbrella",
+  "ambulance",
+  "police car"
+ ],
+ "held_out_acc": 0.882875,
+ "dtype": "float32 little-endian",
+ "tensors": [
+  {
+   "name": "stem.0.weight",
+   "shape": [
+    24,
+    1,
+    2,
+    2
+   ],
+   "offset": 0,
+   "length": 96
+  },
+  {
+   "name": "stem.0.bias",
+   "shape": [
+    24
+   ],
+   "offset": 96,
+   "length": 24
+  },
+  {
+   "name": "stem.1.ln.weight",
+   "shape": [
+    24
+   ],
+   "offset": 120,
+   "length": 24
+  },
+  {
+   "name": "stem.1.ln.bias",
+   "shape": [
+    24
+   ],
+   "offset": 144,
+   "length": 24
+  },
+  {
+   "name": "downs.0.0.ln.weight",
+   "shape": [
+    24
+   ],
+   "offset": 168,
+   "length": 24
+  },
+  {
+   "name": "downs.0.0.ln.bias",
+   "shape": [
+    24
+   ],
+   "offset": 192,
+   "length": 24
+  },
+  {
+   "name": "downs.0.1.weight",
+   "shape": [
+    48,
+    24,
+    2,
+    2
+   ],
+   "offset": 216,
+   "length": 4608
+  },
+  {
+   "name": "downs.0.1.bias",
+   "shape": [
+    48
+   ],
+   "offset": 4824,
+   "length": 48
+  },
+  {
+   "name": "downs.1.0.ln.weight",
+   "shape": [
+    48
+   ],
+   "offset": 4872,
+   "length": 48
+  },
+  {
+   "name": "downs.1.0.ln.bias",
+   "shape": [
+    48
+   ],
+   "offset": 4920,
+   "length": 48
+  },
+  {
+   "name": "downs.1.1.weight",
+   "shape": [
+    64,
+    48,
+    2,
+    2
+   ],
+   "offset": 4968,
+   "length": 12288
+  },
+  {
+   "name": "downs.1.1.bias",
+   "shape": [
+    64
+   ],
+   "offset": 17256,
+   "length": 64
+  },
+  {
+   "name": "stages.0.0.gamma",
+   "shape": [
+    24
+   ],
+   "offset": 17320,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.dw.weight",
+   "shape": [
+    24,
+    1,
+    7,
+    7
+   ],
+   "offset": 17344,
+   "length": 1176
+  },
+  {
+   "name": "stages.0.0.dw.bias",
+   "shape": [
+    24
+   ],
+   "offset": 18520,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.ln.weight",
+   "shape": [
+    24
+   ],
+   "offset": 18544,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.ln.bias",
+   "shape": [
+    24
+   ],
+   "offset": 18568,
+   "length": 24
+  },
+  {
+   "name": "stages.0.0.fc1.weight",
+   "shape": [
+    96,
+    24
+   ],
+   "offset": 18592,
+   "length": 2304
+  },
+  {
+   "name": "stages.0.0.fc1.bias",
+   "shape": [
+    96
+   ],
+   "offset": 20896,
+   "length": 96
+  },
+  {
+   "name": "stages.0.0.fc2.weight",
+   "shape": [
+    24,
+    96
+   ],
+   "offset": 20992,
+   "length": 2304
+  },
+  {
+   "name": "stages.0.0.fc2.bias",
+   "shape": [
+    24
+   ],
+   "offset": 23296,
+   "length": 24
+  },
+  {
+   "name": "stages.1.0.gamma",
+   "shape": [
+    48
+   ],
+   "offset": 23320,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.dw.weight",
+   "shape": [
+    48,
+    1,
+    7,
+    7
+   ],
+   "offset": 23368,
+   "length": 2352
+  },
+  {
+   "name": "stages.1.0.dw.bias",
+   "shape": [
+    48
+   ],
+   "offset": 25720,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.ln.weight",
+   "shape": [
+    48
+   ],
+   "offset": 25768,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.ln.bias",
+   "shape": [
+    48
+   ],
+   "offset": 25816,
+   "length": 48
+  },
+  {
+   "name": "stages.1.0.fc1.weight",
+   "shape": [
+    192,
+    48
+   ],
+   "offset": 25864,
+   "length": 9216
+  },
+  {
+   "name": "stages.1.0.fc1.bias",
+   "shape": [
+    192
+   ],
+   "offset": 35080,
+   "length": 192
+  },
+  {
+   "name": "stages.1.0.fc2.weight",
+   "shape": [
+    48,
+    192
+   ],
+   "offset": 35272,
+   "length": 9216
+  },
+  {
+   "name": "stages.1.0.fc2.bias",
+   "shape": [
+    48
+   ],
+   "offset": 44488,
+   "length": 48
+  },
+  {
+   "name": "stages.2.0.gamma",
+   "shape": [
+    64
+   ],
+   "offset": 44536,
+   "length": 64
+  },
+  {
+   "name": "stages.2.0.dw.weight",
+   "shape": [
+    64,
+    1,
+    7,
+    7
+   ],
+   "offset": 44600,
+   "length": 3136
+  },
+  {
+   "name": "stages.2.0.dw.bias",
+   "shape": [
+    64
+   ],
+   "offset": 47736,
+   "length": 64
+  },
+  {
+   "name": "stages.2.0.ln.weight",
+   "shape": [
+    64
+   ],
+   "offset": 47800,
+   "length": 64
+  },
+  {
+   "name": "stages.2.0.ln.bias",
+   "shape": [
+    64
+   ],
+   "offset": 47864,
+   "length": 64
+  },
+  {
+   "name": "stages.2.0.fc1.weight",
+   "shape": [
+    256,
+    64
+   ],
+   "offset": 47928,
+   "length": 16384
+  },
+  {
+   "name": "stages.2.0.fc1.bias",
+   "shape": [
+    256
+   ],
+   "offset": 64312,
+   "length": 256
+  },
+  {
+   "name": "stages.2.0.fc2.weight",
+   "shape": [
+    64,
+    256
+   ],
+   "offset": 64568,
+   "length": 16384
+  },
+  {
+   "name": "stages.2.0.fc2.bias",
+   "shape": [
+    64
+   ],
+   "offset": 80952,
+   "length": 64
+  },
+  {
+   "name": "head_ln.weight",
+   "shape": [
+    64
+   ],
+   "offset": 81016,
+   "length": 64
+  },
+  {
+   "name": "head_ln.bias",
+   "shape": [
+    64
+   ],
+   "offset": 81080,
+   "length": 64
+  },
+  {
+   "name": "head.weight",
+   "shape": [
+    24,
+    64
+   ],
+   "offset": 81144,
+   "length": 1536
+  },
+  {
+   "name": "head.bias",
+   "shape": [
+    24
+   ],
+   "offset": 82680,
+   "length": 24
+  }
+ ],
+ "architecture": "stem: conv 2x2 stride 2 (1->w0) + LayerNorm over channels; stage i>0 starts with LayerNorm + conv 2x2 stride 2 (padding 1 when the grid is odd: 14->7->4); each block: depthwise 7x7 conv (padding 3) -> LayerNorm -> fc1 -> GELU (erf) -> fc2 -> times gamma -> add to the block input; head: mean over the grid -> LayerNorm -> linear. LayerNorm eps 1e-5. Conv weights are [out, in/groups, kh, kw]; Linear weights are [out, in].",
+ "neurons": "fc1 outputs (before GELU) of each block; a drawing's value for a neuron is its mean over the grid.",
+ "input": "28x28 grayscale, row-major, ink = 1.0 and paper = 0.0 (bitmap / 255). In the Quick, Draw! bitmaps the drawing is scaled so its longer side spans 26 pixels (a 1-pixel margin), centered on the shorter side, with soft anti-aliased strokes about 2 pixels wide (about 27% of pixels have ink).",
+ "attribution": "Quick, Draw! drawings: made available by Google, Inc. under the Creative Commons Attribution 4.0 International license (https://github.com/googlecreativelab/quickdraw-dataset).",
+ "weights": "tiny-eye.bin",
+ "sample": {
+  "file": "tiny-eye-sample.bin",
+  "count": 5000,
+  "size": 28,
+  "dtype": "uint8, ink = 255",
+  "sortedByClass": true,
+  "classCounts": [
+   209,
+   209,
+   209,
+   209,
+   209,
+   209,
+   209,
+   209,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208,
+   208
+  ],
+  "note": "held-out doodles the eye never trained on, about 208 a category"
+ },
+ "names": {
+  "stage": 3,
+  "model": "gpt-6-luna",
+  "how": "Phase 0 (reports/eye/feasibility.md): a vision model named each pole from its top 16 held-out doodles, then from the name alone tried to pick 4 of that pole's doodles out of 16; \"passed\" = 3 or 4 right",
+  "neurons": {
+   "0": {
+    "most": {
+     "name": "A wide rounded top above a thin stem",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Cats with pointy ears and whiskers",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "1": {
+    "most": {
+     "name": "short curved lines that arch upward",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "round shapes with parts sticking out",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "3": {
+    "most": {
+     "name": "Curved arch shapes, often with a line underneath",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Cartoon animal faces with big ears and eyes",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "5": {
+    "most": {
+     "name": "Triangle roofs over box-shaped bottoms",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Mostly round shapes with little details inside",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "6": {
+    "most": {
+     "name": "Simple houses with pointed roofs",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Tiny, scattered marks with lots of empty space",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "7": {
+    "most": {
+     "name": "flowers on long stems",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "castles with blocky walls and pointy towers",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "8": {
+    "most": {
+     "name": "Five-pointed stars drawn with crossing lines",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Tiny, simple shapes with lots of empty space",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "14": {
+    "most": {
+     "name": "Busy, irregular drawings with many dark parts",
+     "hits": 0,
+     "passed": false
+    },
+    "least": {
+     "name": "Crossed loops, like bow ties or sideways eights",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "18": {
+    "most": {
+     "name": "Crescent-shaped curves open to one side",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Horizontal tops with short lines hanging down",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "20": {
+    "most": {
+     "name": "Animals with tall ears or head tufts",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Wide, low drawings with mostly horizontal lines",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "29": {
+    "most": {
+     "name": "Stacked round shapes, like little snowmen",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Thin, scattered lines with lots of empty space",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "35": {
+    "most": {
+     "name": "Large shapes with uneven, bumpy tops",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Small, simple doodles with lots of blank space",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "39": {
+    "most": {
+     "name": "Wide, fluffy tops on thin trunks or legs",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Small, compact shapes with lots of dark detail",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "52": {
+    "most": {
+     "name": "Upright shapes with spiky or leafy edges",
+     "hits": 0,
+     "passed": false
+    },
+    "least": {
+     "name": "Long, boxy shapes, mostly vehicles",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "59": {
+    "most": {
+     "name": "Wide rounded shapes with small bumps on top",
+     "hits": 1,
+     "passed": false
+    },
+    "least": {
+     "name": "Tall thin shapes, often with a flower-like top",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "60": {
+    "most": {
+     "name": "Pointy tops with long stems or narrow bottoms",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Wide, sideways shapes with little bits on top",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "62": {
+    "most": {
+     "name": "Tall shapes with upright points or lines",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Wide, flat shapes stretched sideways",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "68": {
+    "most": {
+     "name": "Curved, open shapes like crescents and arches",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Small, busy shapes stretched out sideways",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "85": {
+    "most": {
+     "name": "Things with two tall points sticking up",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Trees with leafy tops and trunks",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "93": {
+    "most": {
+     "name": "Stacked round shapes like little snowmen",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Thin, open lines and curves",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "94": {
+    "most": {
+     "name": "Round tops on thin stems",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Wide, low shapes with small parts sticking out",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "98": {
+    "most": {
+     "name": "wide bodies with little legs or wheels underneath",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "thin, simple lines and outlines",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "99": {
+    "most": {
+     "name": "Simple houses with peaked roofs",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Small rounded shapes with loose curved lines",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "103": {
+    "most": {
+     "name": "Tall, upright shapes with pointed or branching tops",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Low, sideways shapes with loops and short lines",
+     "hits": 0,
+     "passed": false
+    }
+   },
+   "111": {
+    "most": {
+     "name": "Five-pointed stars drawn with sharp lines",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Rounded, bumpy shapes with little marks inside",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "112": {
+    "most": {
+     "name": "Houses with pointed roofs",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Loose lines without a closed shape",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "114": {
+    "most": {
+     "name": "Curved crescent shapes, mostly moons",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Big leafy tops on thin trunks",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "118": {
+    "most": {
+     "name": "Wide shapes with many lines sticking out",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Tall shapes with wide tops and narrow stems",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "121": {
+    "most": {
+     "name": "Thick, dark, bumpy shapes and curved lines",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Round shapes with rays or stacked circles",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "123": {
+    "most": {
+     "name": "Trees with leafy tops and tall trunks",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Short, squat drawings with wide bottoms",
+     "hits": 0,
+     "passed": false
+    }
+   },
+   "124": {
+    "most": {
+     "name": "Boxy cars and trucks with wheels",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Thin, small doodles without wheels",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "125": {
+    "most": {
+     "name": "A round top on a thin upright stem",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Dark, messy shapes that stretch sideways",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "131": {
+    "most": {
+     "name": "Castle walls with square battlements",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Upright figures with round, stacked bodies",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "132": {
+    "most": {
+     "name": "Sky shapes with points or sun rays",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Small, dark, busy-looking doodles",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "144": {
+    "most": {
+     "name": "Flowers with round tops and thin stems",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Simple curved loops and arch-shaped lines",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "148": {
+    "most": {
+     "name": "Cat faces",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Simple outlines without cat faces",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "151": {
+    "most": {
+     "name": "Shapes with jagged tops and straight sides",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Round blobs stacked one above another",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "155": {
+    "most": {
+     "name": "Rabbits with long upright ears",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Trees with leafy tops and trunks",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "159": {
+    "most": {
+     "name": "Tall arches and rainbow-like curved lines",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Small rounded shapes with little details",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "161": {
+    "most": {
+     "name": "Thick curved arch lines",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Pointy shapes and little animals",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "163": {
+    "most": {
+     "name": "Flowers on stems",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Upright shapes with round or peaked tops",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "164": {
+    "most": {
+     "name": "Flowers on tall, thin stems",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Side-view cars with wheels",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "169": {
+    "most": {
+     "name": "Star-like shapes with sharp points and crossing lines",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Rounded or boxy shapes without crossing diagonal lines",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "171": {
+    "most": {
+     "name": "rainbows or stacked curved lines",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "animal faces with ears and eyes",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "174": {
+    "most": {
+     "name": "Castles with tall towers and blocky walls",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Rounded doodles made mostly of curved lines",
+     "hits": 0,
+     "passed": false
+    }
+   },
+   "179": {
+    "most": {
+     "name": "Wide shapes with flat bottoms and bumpy tops",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Cats with pointy ears and whiskers",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "185": {
+    "most": {
+     "name": "Complete doodles with closed outlines",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Loose, open lines and curves",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "186": {
+    "most": {
+     "name": "Trees with leafy tops and thin trunks",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Things drawn long and low across the page",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "188": {
+    "most": {
+     "name": "Simple houses with pointed roofs",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Cartoon animal faces with floppy ears",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "195": {
+    "most": {
+     "name": "Wide drawings with long parts sticking sideways",
+     "hits": 1,
+     "passed": false
+    },
+    "least": {
+     "name": "Rounded shapes stacked upright, often with ears",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "198": {
+    "most": {
+     "name": "Pointy shapes with rays or spikes",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Rounded shapes with faces or arches",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "200": {
+    "most": {
+     "name": "Flowers with round tops and thin stems",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Rounded, sideways shapes without thin stems",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "201": {
+    "most": {
+     "name": "Round bodies with little parts sticking out",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Umbrellas with pointed tops and handles",
+     "hits": 4,
+     "passed": true
+    }
+   },
+   "212": {
+    "most": {
+     "name": "Side-view cars and trucks with wheels",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Round tops on thin stems or legs",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "217": {
+    "most": {
+     "name": "Star shapes with sharp points",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Rounded shapes with no sharp points",
+     "hits": 1,
+     "passed": false
+    }
+   },
+   "227": {
+    "most": {
+     "name": "Stars and other drawings with sharp points",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Stacks of round, oval shapes",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "236": {
+    "most": {
+     "name": "Busy doodles with lots of dark inner details",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Mostly simple stars with pointed tips",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "238": {
+    "most": {
+     "name": "Bold, dark doodles with lots of strokes",
+     "hits": 2,
+     "passed": false
+    },
+    "least": {
+     "name": "Thin, simple doodles with lots of empty space",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "243": {
+    "most": {
+     "name": "Blocky shapes with jagged, tower-like tops",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Rounded shapes made mostly of curved lines",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "245": {
+    "most": {
+     "name": "Tall upright shapes, often with legs",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Small horizontal curves, waves, and arches",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "246": {
+    "most": {
+     "name": "Mostly round, closed outlines",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Small, sideways shapes with bumps or points",
+     "hits": 0,
+     "passed": false
+    }
+   },
+   "247": {
+    "most": {
+     "name": "Five-pointed stars",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Stacked round shapes like snowmen",
+     "hits": 3,
+     "passed": true
+    }
+   },
+   "253": {
+    "most": {
+     "name": "Round tops with thin stems or slanted strokes",
+     "hits": 4,
+     "passed": true
+    },
+    "least": {
+     "name": "Small animals with clear faces and eyes",
+     "hits": 2,
+     "passed": false
+    }
+   },
+   "255": {
+    "most": {
+     "name": "Shapes sticking up from a flat base",
+     "hits": 3,
+     "passed": true
+    },
+    "least": {
+     "name": "Fish-shaped loops with pointed tails",
+     "hits": 2,
+     "passed": false
+    }
+   }
+  }
+ }
+}

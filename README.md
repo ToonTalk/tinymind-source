@@ -24,6 +24,8 @@ node tools/make-arc.js probeA    # lr probe for the from-scratch arc
 node tools/make-arc.js A         # from-scratch arc -> arc/newborn/ (overnight; resumable
                                  #   with --resume; manifest valid at every prefix)
 node tools/make-arc-zips.js      # zog-arc.zip, newborn-arc.zip, tiny-mind-starter.zip -> dist/
+node tools/eye/ship.mjs          # the Tiny Eye from its Phase 0 export -> eye/ (reports/eye/feasibility.md;
+                                 #   training and labeling: tools/eye/*.py, Python + PyTorch)
 ```
 
 ## Layout
@@ -43,8 +45,17 @@ node tools/make-arc-zips.js      # zog-arc.zip, newborn-arc.zip, tiny-mind-start
 - `thought/` — the Thought bubble: the J-Lens Explorer's instrument on Tiny Mind's engine
   (src/thought.js + batch.js): thinking ahead / layer by layer / DIFF readouts over the story
   vocabulary (`thought/vocab.json`), the heat glow, and swap & rewrite. Big and Giant Storytellers.
+- `eye/` — the Tiny Eye, a mind that sees drawings (plans/tiny-eye.md): a tiny ConvNeXt-style
+  doodle network (src/eye.js, 83 thousand weights, 24 Quick, Draw! categories). Draw pad made the
+  way Quick, Draw!'s bitmaps were, guess bars, every stage's neurons lighting up, neuron cards with
+  both ends computed live over 5,000 held-out doodles (`eye/tiny-eye-sample.bin`), switch-off.
 - `hunt/` — Session C app: the treasure hunt. Probe a question, get falsifiable
   clues from the built-in or LLM detective, prove or bust them with head/neuron/team
   ablations. Voice + little-kid mode toggles.
 - `models/` — downloaded checkpoints/tokenizers + TinyStories-valid (not in git).
 - `vendor/llama2.c` — reference implementation (MIT), cloned at Phase 0 time.
+
+## Attribution
+
+The Tiny Eye learned from, and shows, drawings from Quick, Draw! (https://github.com/googlecreativelab/quickdraw-dataset):
+made available by Google, Inc. under the Creative Commons Attribution 4.0 International license.

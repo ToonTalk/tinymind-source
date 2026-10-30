@@ -113,6 +113,7 @@ export async function ingestBatch(recs, h) {
     if (tc > 0) { h.addTok(r.name, r.u8, tc); took++; continue; }
     const v = checkpointVocab(r.u8);
     if (v > 0) { h.addModel(r.name, r.u8, v); took++; continue; }
+    if (h.other && h.other(r.name, r.u8)) { took++; continue; }   // e.g. the Tiny Eye's weights and doodles (the shell pairs them)
     skipped.push(r.name);
   }
   return { arcs: packs.arcs.map(a => a.manifest.arc), took, jsons, skipped };

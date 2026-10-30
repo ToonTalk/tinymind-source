@@ -47,6 +47,12 @@
         else if (n > 0) setTimeout(() => tryArc(n - 1), 150);
       };
       tryArc(100);
+    } else if (m.tm === 'load-eye') {   // the Tiny Eye: its manifest, weights and sample doodles
+      const tryEye = (n) => {
+        if (window.__tmLoadEye) window.__tmLoadEye({ name: m.name, manifest: m.manifest, weights: m.weights, sample: m.sample });
+        else if (n > 0) setTimeout(() => tryEye(n - 1), 150);
+      };
+      tryEye(100);
     } else if (m.tm === 'unload') {   // another room took the big mind: let this one go (memory)
       if (window.__tmUnload) window.__tmUnload();
     } else if (m.tm === 'select-arc') {

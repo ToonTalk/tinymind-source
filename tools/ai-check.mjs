@@ -1,6 +1,7 @@
 // ai-check.mjs — test Tiny Mind's language-model features against a real model (OpenAI).
 //   node tools/ai-check.mjs                 all three parts
-//   node tools/ai-check.mjs ghost detective guide   any of them  (--compare: guides on gpt-5.4-mini, the old default, too)
+//   node tools/ai-check.mjs ghost detective guide   any of them  (--compare: guides on gpt-5.4-mini, the old default, too;
+//                                                    --room=eye: only the rooms whose name contains "eye")
 // Needs OPENAI_API_KEY in the environment. The key is read here and sent only to
 // api.openai.com: it is never written to a file, printed, or put into a web page (the
 // guide part drives the real pages in headless Chrome, captures the prompts the guides
@@ -32,6 +33,7 @@ const imp = p => import(pathToFileURL(join(ROOT, p)).href);
 const { PROVIDERS, callLLM } = await imp('src/llm.js');
 const parts = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const want = p => !parts.length || parts.includes(p);
+const ROOM = ((process.argv.find(a => a.startsWith('--room=')) || '').slice(7)).toLowerCase();   // only these guide rooms
 const SITE = process.env.TM_SITE || 'C:/Users/toont/Documents/GitHub/tinymind';
 const APP_MODEL = PROVIDERS.openai.defaultModel;    // what the ghostwriter and detective use
 const GUIDE_MODELS = process.argv.includes('--compare') ? [APP_MODEL, 'gpt-5.4-mini'] : [APP_MODEL];   // the guides' default (tm-prelude), and the old one to compare
@@ -208,7 +210,7 @@ const ROOMS = [
   { room: 'front door', app: null,
     setup: `await __ai.until(() => document.querySelector('[data-act=think]'));`,
     qs: [
-      { q: 'What can I do here?', expect: 'Briefly names the five activities: teach/raise a mind, watch one grow up, look inside one, see what one is thinking (and swap a thought), hunt for a hidden fact. May point at a card.' },
+      { q: 'What can I do here?', expect: 'Briefly names the six activities: teach/raise a mind, watch one grow up, look inside one, see what one is thinking (and swap a thought), a mind that sees your drawings (the Tiny Eye), hunt for a hidden fact. May point at a card.' },
       { q: 'Where can I see what a mind is thinking and change one of its thoughts?', expect: 'The "See what a mind is thinking" card (the Thought bubble); ideally ends with DO: SHOW think or offers TAB thought.' },
       { q: 'I want to make my own mind', kid: true, expect: 'Teach a tiny mind: invent a character, give it stories, watch it learn. Simple words for a young child. Points at the teach card or offers the Nursery.' },
     ] },
@@ -246,6 +248,26 @@ const ROOMS = [
       { q: 'How do I make the mind write moat?', expect: 'Use swap what it\'s thinking: take out hole, put in castle, from the last piece ("a") of the beach story, layers as set, low strength (0.4), press swap and rewrite; the Giant Storyteller does this most clearly; this smaller Big Storyteller may need more strength or may not.' },
       { q: 'My swap did not change anything. Why?', expect: 'Possible reasons: strength too low, too few layers, the take-out word was not really on its mind at that piece, a small mind with fainter thoughts; suggest a bigger strength, more layers, another pair of words, or the Giant Storyteller. Must not claim a swap was run if the status shows none.' },
       { q: 'What does the glow mean?', kid: true, expect: 'For a young child: clicking a word makes the story glow where the mind was thinking about that word, sometimes before it wrote it. Nothing is glowing yet unless the status says so.' },
+    ] },
+  { room: 'Tiny Eye (a house drawn, a neuron card open)', app: 'eye',
+    setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=see]').click();
+      const w = await __ai.until(() => { const w = __ai.frame('eye'); return w && w.document.body.dataset.swept === '1' && w; }, 120000);
+      const d = w.document, pad = d.getElementById('pad'), r = pad.getBoundingClientRect();
+      // draw a house with the pad's own pointer handlers: walls, a roof, a door
+      const at = (type, x, y) => pad.dispatchEvent(new w.PointerEvent(type, { clientX: r.left + x * r.width, clientY: r.top + y * r.height, pointerId: 1, button: 0, bubbles: true }));
+      for (const s of [[[0.25, 0.45], [0.25, 0.85], [0.75, 0.85], [0.75, 0.45], [0.25, 0.45]], [[0.18, 0.48], [0.5, 0.15], [0.82, 0.48]], [[0.45, 0.85], [0.45, 0.65], [0.56, 0.65], [0.56, 0.85]]]) {
+        at('pointerdown', ...s[0]); for (const p of s.slice(1)) at('pointermove', ...p); at('pointerup', ...s[s.length - 1]);
+        await new Promise(r => setTimeout(r, 150));
+      }
+      await __ai.until(() => d.querySelector('#guesses .gbar.top'), 20000);
+      await new Promise(r => setTimeout(r, 500));
+      d.querySelector('#busy .nchip.up').click();
+      await __ai.until(() => d.querySelector('#cardBody .poles'), 20000);`,
+    qs: [
+      { q: 'What does this neuron do?', expect: 'Talks about the open card in the status: what its "fires most" and "fires least" doodles and class bars show (both ends), the bigger AI\'s name and whether it passed the test if the status shows one; may say most neurons have one main job you can name (not all) and that switching it off would test it. Must not invent doodles or numbers not in the status.' },
+      { q: 'Why did it guess that?', expect: 'Refers to the guess bars in the status; it only knows 24 kinds of things and always picks one; it sees the drawing shrunk to 28 by 28 dots; neurons light up and vote; to find which neurons matter, switch some off and watch the guess. Grounded in the status.' },
+      { q: 'Do bigger eyes have cleaner neurons?', expect: 'No: that was tested (three sizes of eye, about equally clean), so bigger is not cleaner; most neurons have one main job you can name at every size. Must not claim bigger eyes are cleaner.' },
+      { q: 'What happens if I switch off a neuron?', kid: true, expect: 'For a young child: that part of the eye goes quiet (its output becomes zero) and the guess might change, which shows whether it was helping; try the switch-off button on the card or in box four.' },
     ] },
   { room: 'Hunt', app: 'hunt',
     setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=hunt]').click();
@@ -307,6 +329,7 @@ async function guidePart() {
     await new Promise(r => setTimeout(r, 3000));
     await c.evaluate(HELPERS);
     for (const R of ROOMS) {
+      if (ROOM && !R.room.toLowerCase().includes(ROOM)) continue;
       try { await c.evaluate(`(async () => { ${R.setup} return true; })()`, 240000); }
       catch (e) { say(`\n**${R.room}**: could not set the room up (${e.message.slice(0, 120)}) — skipped.`); continue; }
       say(`\n### ${R.room}\n`);

@@ -1,4 +1,4 @@
-// build-release.js — package each app (microscope, nursery, hunt) into ONE self-
+// build-release.js — package each app (microscope, nursery, hunt, thought, eye) into ONE self-
 // contained HTML file in dist/, and compose all three into the MEGA edition
 // (dist/tiny-mind-mega.html): the shell from shell/index.html hosting the apps
 // byte-intact in iframes, per the artifact session's architecture (merged back
@@ -13,13 +13,19 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const APPS = ['microscope', 'nursery', 'hunt', 'thought'];
+const APPS = ['microscope', 'nursery', 'hunt', 'thought', 'eye'];
 const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
 const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js', 'ingest.js', 'embed-data.js'];
 const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js', 'jlens.js', 'batch.js'], hunt: [],
-  thought: ['steer.js', 'jlens.js', 'batch.js', 'thought.js'] };
+  thought: ['steer.js', 'jlens.js', 'batch.js', 'thought.js'], eye: ['eye.js'] };
+// the story-mind core every worker gets, unless a room needs none of it (the Tiny Eye is not a story mind)
+const WORKER_CORE = { eye: [] };
 // page-only extras for one app (the others' pages stay byte-identical)
-const PAGE_APP_EXTRA = { nursery: ['ghostwriter.js'], microscope: ['neuron-atlas.js'], hunt: [], thought: [] };
+const PAGE_APP_EXTRA = { nursery: ['ghostwriter.js'], microscope: ['neuron-atlas.js'], hunt: [], thought: [], eye: ['eye.js'] };
+// the Tiny Eye's files: too big to inline (the sample doodles are 3.9 MB), so they ship beside the
+// pages and the shell fetches them the way it fetches the story minds (tools/eye/ship.mjs makes them)
+const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];
+const INLINE_SCRIPT_MAX = 800 * 1024;   // one inline script in a room's page, at most (the eye's must stay well under)
 
 // the boot that replaces the dev marker block: real blob Worker, or the same-thread
 // shim when the sandbox refuses blob URLs (makeInlineWorker comes from app-shims)
@@ -100,6 +106,14 @@ const sameFolderResourceFiles = sameFolderResources.resources.map(r => r.file);
 // the Microscope's neuron atlas (tools/build-neuron-atlas.js) is ~2 MB: far too big to
 // embed in the pages, so it ships beside them as a same-folder pack (resources.json)
 const neuronAtlas = await readFile(join(ROOT, 'microscope', 'tiny-mind-neuron-atlas.json'), 'utf8');
+// the Tiny Eye: manifest, weights and sample doodles must agree with each other
+const eyeFiles = {};
+for (const f of EYE_FILES) eyeFiles[f] = await readFile(join(ROOT, 'eye', f));
+const eyeManifest = JSON.parse(eyeFiles['tiny-eye.json'].toString('utf8'));
+if (eyeManifest.format !== 'tiny-eye-v1' || eyeManifest.weights !== 'tiny-eye.bin' || eyeManifest.sample.file !== 'tiny-eye-sample.bin' ||
+    eyeFiles['tiny-eye.bin'].length !== 4 * eyeManifest.params || eyeFiles['tiny-eye-sample.bin'].length !== 784 * eyeManifest.sample.count) {
+  throw new Error('eye: tiny-eye.json, tiny-eye.bin and tiny-eye-sample.bin do not match (run tools/eye/ship.mjs)');
+}
 if (!neuronAtlas.slice(0, 200).includes('"tiny-mind-neuron-atlas-v1"')) {
   throw new Error('microscope: tiny-mind-neuron-atlas.json is not a tiny-mind-neuron-atlas-v1 file');
 }
@@ -108,7 +122,7 @@ for (const app of APPS) {
   const html = await readFile(join(ROOT, app, 'index.html'), 'utf8');
   const workerAliases = [];
   const workerCode = stripModule(await readFile(join(ROOT, app, 'worker.js'), 'utf8'), workerAliases);
-  const workerBundle = await bundleOf([...CORE, ...WORKER_EXTRA[app]]);
+  const workerBundle = await bundleOf([...(WORKER_CORE[app] || CORE), ...WORKER_EXTRA[app]]);
   const workerSrc = `'use strict';\n${workerBundle}\n${workerAliases.join('\n')}\n// ---- ${app}/worker.js ----\n${workerCode}`;
 
   const scriptMatch = html.match(/<script type="module">([\s\S]*?)<\/script>/);
@@ -130,6 +144,7 @@ for (const app of APPS) {
     pageBundle + appExtra + '\n' + pageAliases.join('\n') + '\n' + pageCode;
 
   await checkScript(app, 'page', bundled);
+  if (app === 'eye' && bundled.length > INLINE_SCRIPT_MAX) throw new Error(`eye: the page script is ${(bundled.length / 1024).toFixed(0)} KB, over ${INLINE_SCRIPT_MAX / 1024} KB`);
   await checkScript(app, 'worker', workerSrc);
 
   // function-form replacements throughout: the inserted code contains `$&`/`$'`
@@ -180,7 +195,9 @@ await writeFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), shell);
 await writeFile(join(ROOT, 'dist', 'tiny-mind-resources.json'),
   JSON.stringify(sameFolderResources, null, 2) + '\n');
 await writeFile(join(ROOT, 'dist', 'tiny-mind-neuron-atlas.json'), neuronAtlas);
+for (const f of EYE_FILES) await writeFile(join(ROOT, 'dist', f), eyeFiles[f]);
 console.log(`dist/tiny-mind-mega.html  (${(shell.length / 1024).toFixed(0)} KB) — shell script parses OK`);
 console.log(`dist/tiny-mind-resources.json  (${sameFolderResourceFiles.length} same-folder runtime packs)`);
 console.log(`dist/tiny-mind-neuron-atlas.json  (${(neuronAtlas.length / 1024).toFixed(0)} KB)`);
+console.log(`dist/${EYE_FILES.join(', ')}  (the Tiny Eye, ${(EYE_FILES.reduce((n, f) => n + eyeFiles[f].length, 0) / 1e6).toFixed(1)} MB)`);
 console.log('done');

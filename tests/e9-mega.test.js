@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { deflateRawSync } from 'node:zlib';
-import { unzip, tokenizerEntryCount, checkpointVocab, looksLikeZip } from '../src/ingest.js';
+import { unzip, tokenizerEntryCount, checkpointVocab, looksLikeZip, ingestBatch } from '../src/ingest.js';
 import { makeZip, crc32 } from '../tools/zip.js';
 import { model260K, model15M, tok512 } from './paths.js';
 
@@ -19,13 +19,13 @@ export async function run(t) {
   const mega = await readFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'utf8');
   const resourceManifest = JSON.parse(await readFile(join(ROOT, 'dist', 'tiny-mind-resources.json'), 'utf8'));
 
-  t.check('mega: all four app templates present',
-    ['tpl-nursery', 'tpl-microscope', 'tpl-hunt', 'tpl-thought'].every(id => mega.includes(`<template id="${id}">`)));
+  t.check('mega: all five app templates present',
+    ['tpl-nursery', 'tpl-microscope', 'tpl-hunt', 'tpl-thought', 'tpl-eye'].every(id => mega.includes(`<template id="${id}">`)));
   t.check('mega: no unresolved build placeholders', !/@@[A-Z_]+@@/.test(mega));
   t.check('mega: every app carries the frame bridge',
     (mega.match(/tiny-mind frame bridge/g) || []).length >= 3);
   t.check('mega: every app carries an inlined worker',
-    (mega.match(/__WORKER_SRC__ = "/g) || []).length === 4);
+    (mega.match(/__WORKER_SRC__ = "/g) || []).length === 5);
   t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
     mega.includes("tmGetJson('arc/arcs.json')") && mega.includes('manifest.more || []'));
   t.check('mega: the Nursery ghostwriter can reach the LLM (aliased import survives the build)',
@@ -52,9 +52,9 @@ export async function run(t) {
     mega.includes('await tmRestoreReady;'));
   t.check('mega: loose four-character checkpoints are also discovered beside the page',
     mega.includes("'stories260K-binding.bin', 'stories260K-binding-max.bin'"));
-  t.check('mega: guided layer present in all five docs (vg-core ×5, prelude ×4, shell adapter)',
-    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 5 &&
-    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 4 &&
+  t.check('mega: guided layer present in all six docs (vg-core ×6, prelude ×5, shell adapter)',
+    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 6 &&
+    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 5 &&
     mega.includes('tm-shell-adapter.js'));
   t.check('mega: probe-fact branch shipped inside the nursery worker blob',
     mega.includes('probe-fact-done'));
@@ -97,12 +97,38 @@ export async function run(t) {
     mega.includes('KNOWN_BINDING_CHARACTERS') &&
     mega.includes('applyModelQuestContext(ck)'));
 
+  // --- the Tiny Eye: its own kind of mind, its files beside the page, its page script small
+  t.check("mega: the Tiny Eye is its own kind of mind (fitsRoom checks the kind both ways; it never fills a story mind's slot)",
+    mega.includes("const fitsRoom = (app, m) => app === 'eye' ? isEye(m) : isEye(m) ? false") &&
+    mega.includes('const isStoryBig = m => !isEye(m) && m.vocab !== 512;') && mega.includes("see:   { app: 'eye', title: '👁 A mind that sees your drawings'"));
+  t.check("mega: the eye arrives through the shell's file route (as the minds do) and every room's bridge can take it",
+    mega.includes("const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];") && mega.includes("tm: 'load-eye'") &&
+    (mega.match(/m\.tm === 'load-eye'/g) || []).length === 5);
+  {
+    const open = mega.indexOf('<template id="tpl-eye">'), end = mega.indexOf('</template>', open);
+    const scripts = [...mega.slice(open, end).matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1].length);
+    t.check(`mega: no inline script in the eye room is over 800 KB (largest ${(Math.max(...scripts) / 1024).toFixed(0)} KB)`, scripts.length > 3 && Math.max(...scripts) < 800 * 1024);
+    t.check('mega: the eye room credits Quick, Draw! (CC BY 4.0)', mega.slice(open, end).includes('Doodles from <b>Quick, Draw!</b> by Google, made available under the Creative Commons Attribution 4.0 International license'));
+  }
+  {
+    const [mj, wb, sb] = (await Promise.all(['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'].map(f => readFile(join(ROOT, 'dist', f))))).map(b => new Uint8Array(b));
+    t.check('eye files: copied beside the release pages, and neither tokenizers nor story checkpoints to the sniffers',
+      JSON.parse(new TextDecoder().decode(mj)).format === 'tiny-eye-v1' &&
+      tokenizerEntryCount(wb) === -1 && checkpointVocab(wb) === -1 && tokenizerEntryCount(sb) === -1 && checkpointVocab(sb) === -1);
+    const got = { json: [], other: [] };
+    await ingestBatch([{ name: 'tiny-eye.json', u8: mj }, { name: 'tiny-eye.bin', u8: wb }, { name: 'tiny-eye-sample.bin', u8: sb }], {
+      takeArc() {}, addTok() { got.tok = true; }, addModel() { got.model = true; }, unzipError() {},
+      json: (name) => got.json.push(name), other: (name) => { got.other.push(name); return true; } });
+    t.check('ingest: dropped eye files reach the shell (manifest as json, both .bin files through other) and none is taken for a story mind',
+      got.json.join() === 'tiny-eye.json' && got.other.join() === 'tiny-eye.bin,tiny-eye-sample.bin' && !got.tok && !got.model);
+  }
+
   // post-insertion integrity: extract each worker string FROM THE FINAL FILE and
   // syntax-check it. Guards the .replace()-dollar-pattern class of corruption ($& in
   // worker code expanding during template insertion), which pre-insertion checks miss.
   {
     let at = 0, okCount = 0;
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 5; k++) {
       const key = 'const __WORKER_SRC__ = "';
       const i = mega.indexOf(key, at);
       if (i < 0) break;
@@ -122,7 +148,7 @@ export async function run(t) {
         okCount++;
       } catch { /* corrupt — okCount stays short */ }
     }
-    t.check('mega: all 3 worker strings extracted from the FINAL file parse and compile', okCount === 3);
+    t.check('mega: all 5 worker strings extracted from the FINAL file parse and compile', okCount === 5);
   }
 
   // --- parse-based sniffers on real files

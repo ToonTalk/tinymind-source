@@ -112,8 +112,8 @@ const spoke = (w, s) => logTexts(w).some(t => t.includes(s));
 async function main() {
   console.log('-- build fingerprint assertions --');
   const count = (s) => { let n = 0, i = -1; while ((i = BUILT.indexOf(s, i + 1)) !== -1) n++; return n; };
-  check('five vg-core v2 copies', count('version:2,fragments') === 5);
-  check('five </body> tags', count('</body>') === 5);
+  check('six vg-core v2 copies', count('version:2,fragments') === 6);
+  check('six </body> tags', count('</body>') === 6);
   check('probe-fact handler in worker blob', count("m.type === 'probe-fact'") >= 1);
   check('selectTab broadcast spliced', BUILT.includes("tm: 'vg-tab'"));
   check('pref rebroadcast spliced', BUILT.includes('// vg: pref sync'));
@@ -122,7 +122,7 @@ async function main() {
   check('toggle labels unclipped (kid, nowrap)', BUILT.includes('id="vgKid"> kid<') && !BUILT.includes('id="vgKid"> little-kid<'));
   check('provider table shipped (app-key reuse)', BUILT.split('__vgProviders').length - 1 >= 3);
   check('no drop-the-starter-pack quest left in the shell tour', !BUILT.includes('skipIf: poolHasModel') && !BUILT.includes('catchTheBrain'));
-  check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 5);
+  check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 6);
   check('shellStorage gained list (404-noise fix)', BUILT.includes('async list(prefix)'));
   check('never-offer-visible rule in all four prompts', BUILT.split('talk about what it shows instead').length - 1 >= 4);
   check('bay persistence shipped', BUILT.includes("const tmRestoreReady = tmRestorePool(); // vg wave 4") &&
@@ -147,16 +147,16 @@ async function main() {
   check('one ask path shared by every guide', BUILT.split('window.__vgAsk = async function').length - 1 >= 3 && BUILT.split('__vgAsk(sys, usr').length - 1 >= 3);
   check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("localStorage.getItem('tm-key-' + p)"));
   check('shell page carries its own LLM helpers', BUILT.includes('if (!window.__vgProviders) window.__vgProviders') && BUILT.includes('if (!window.__vgRememberedKey) window.__vgRememberedKey'));
-  check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 5 && BUILT.split("a.on('showBlocked'").length - 1 === 5);
+  check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 6 && BUILT.split("a.on('showBlocked'").length - 1 === 6);
   check('hosted arcs discover more than one manifest', BUILT.includes("tmGetJson('arc/arcs.json')") && BUILT.includes('manifest.more || []'));
   check('bay names what it remembered', BUILT.includes("recs.map(r => r.name).join(', ')"));
   check('bay arc line no longer prints raw keys', BUILT.includes('m.label || arcKidLabel(m)'));
-  check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 5);
+  check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 6);
   check('TAB is a gated verb', BUILT.includes('TAB: { gated: true,') && BUILT.includes('ratifyText(p, t)'));
   check('ablation narration varies after the first', BUILT.includes('ablationAgain:') && BUILT.includes('const AGAIN_KID'));
   check('time machine can write a story from the moment', BUILT.includes('id="scrubStory"') && BUILT.includes("type: 'sample-now', prompt: prefix"));
   check('app readouts route through the kid-odds formatter',
-    BUILT.split('window.__vgPct(').length - 1 >= 7 && BUILT.split('window.__vgPct = function').length - 1 === 4);
+    BUILT.split('window.__vgPct(').length - 1 >= 7 && BUILT.split('window.__vgPct = function').length - 1 === 5);
   check('hunt pct() honours kid mode', BUILT.includes("if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)\n    return window.__vgOdds.phrase(p, true, { compact: true });   // kid mode"));
   check('prefill no longer depends on the loaded message', BUILT.includes("new MutationObserver(() => maybePrefillStory()).observe(mi"));
   check('core exposes click-to-ask (explain + explainable)', BUILT.includes('explain:vgExplainTopic, explainable:vgExplainable') && BUILT.includes('function vgExplainable('));
@@ -724,6 +724,85 @@ async function main() {
   }
 
   /* ================= SHELL (full built page) ================= */
+  console.log('-- eye frame --');
+  {
+    const errors = [];
+    const dom = makeDom(extractTemplate('eye'), errors, w => mkStorage(w));
+    const w = dom.window;
+    const booted = await until(() => w.__guide, 6000);
+    check('eye guide boots', booted);
+    if (booted) {
+      const G = w.__guide; G.setWordMs(0);
+      check('eye tour: welcome, draw, grid, card, switch', G.steps.map(s => s.name).join(',') === 'welcome,draw,grid,card,switch', G.steps.map(s => s.name).join(','));
+      const doc = w.document, wk = w.__vgW.workers[0];
+      check('eye worker shimmed', !!wk);
+      const man = JSON.parse(readFileSync('eye/tiny-eye.json', 'utf8'));
+      const ab = f => { const b = readFileSync('eye/' + f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
+      w.__tmLoadEye({ name: 'tiny-eye.bin', manifest: JSON.stringify(man), weights: ab(man.weights), sample: ab(man.sample.file) });
+      check('the eye goes to its worker', wk.sent.some(m => m.type === 'load' && m.manifest.format === 'tiny-eye-v1'));
+      wk.fakeReceive({ type: 'loaded', classes: man.classes, widths: man.config.widths, hidden: man.config.hidden, sizes: [14, 7, 4], params: man.params, accuracy: man.held_out_acc });
+      check('the grid shows the last stage, one square per neuron', doc.querySelectorAll('#grid .cell').length === 256);
+      check('64 named neurons are marked', doc.querySelectorAll('#grid .cell.named').length === 64);
+      check('the room says what the eye knows', /24 kinds of things/.test(doc.getElementById('knows').textContent));
+      // the sweep: answer every chunk the helpers (or the worker) were given
+      const answered = new Set();
+      for (let round = 0; round < 40; round++) {
+        let more = false;
+        for (const f of w.__vgW.workers) for (const m of f.sent) {
+          if (m.type !== 'sweep' || answered.has(m.id)) continue;
+          answered.add(m.id); more = true;
+          const table = new Float32Array(m.count * 544).map((_, i) => Math.sin(i * 0.37 + m.start));
+          f.fakeReceive({ type: 'swept', id: m.id, start: m.start, count: m.count, table, guesses: new Uint8Array(m.count) });
+        }
+        if (!more) break;
+      }
+      check('the 5,000-doodle sweep is shared out in chunks and finishes', answered.size === 20 && doc.body.dataset.swept === '1', 'chunks ' + answered.size);
+      // draw through the pad's own pointer handlers
+      const pad = doc.getElementById('pad');
+      pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 300, height: 300, right: 300, bottom: 300 });
+      const ev = (type, x, y) => { const e = new w.MouseEvent(type, { clientX: x, clientY: y, button: 0, bubbles: true }); Object.defineProperty(e, 'pointerId', { value: 7 }); pad.dispatchEvent(e); };
+      // the page keeps one look in flight: answer each until it has nothing newer to send
+      const probs = new Float32Array(24); probs[0] = 0.71; probs[4] = 0.12; probs[1] = 0.17;
+      const neurons = man.config.hidden.map(h => new Float32Array(h).map((_, j) => Math.cos(j)));
+      const settle = async (p, base) => {
+        let done = 0, last = null;
+        for (let i = 0; i < 20; i++) {
+          await sleep(30);
+          const sees = wk.sent.filter(m => m.type === 'see');
+          if (sees.length === done) break;
+          done = sees.length; last = sees[sees.length - 1];
+          wk.fakeReceive({ type: 'seen', id: last.id, probs: p, neurons, maps: null, baseProbs: base });
+        }
+        return last;
+      };
+      wk.sent.length = 0;
+      ev('pointerdown', 60, 200); ev('pointermove', 150, 120); ev('pointermove', 240, 200); ev('pointerup', 240, 200);
+      ev('pointerdown', 80, 200); ev('pointermove', 220, 200); ev('pointerup', 220, 200);
+      const see = await settle(probs, null);
+      const { eyeDoodle } = await import('../src/eye.js');
+      const mine = eyeDoodle([[[0.2, 0.6667], [0.5, 0.4], [0.8, 0.6667]], [[0.2667, 0.6667], [0.7333, 0.6667]]]);
+      let d = 1; if (see) { d = 0; for (let k = 0; k < 784; k++) d = Math.max(d, Math.abs(see.x[k] - mine[k])); }
+      check('the pad sends the eye exactly what eyeDoodle makes of the strokes (the tested path)', !!see && d < 0.02, 'max diff ' + d);
+      check('guess bars: dragon first', /dragon/.test((doc.querySelector('#guesses .gbar.top') || {}).textContent || ''));
+      await until(() => spoke(w, 'There is its guess'), 3000);
+      check('the guide speaks when a stroke ends with a guess', spoke(w, 'There is its guess'));
+      doc.querySelectorAll('#grid .cell')[85].click();
+      check('a card opens with both ends, 16 doodles each, and the class bars',
+        doc.querySelectorAll('#cardBody .pole canvas').length === 2 && doc.querySelectorAll('#cbars .cbar').length === 10 && /neuron 85/.test(doc.getElementById('cardTitle').textContent));
+      check("a named neuron's card shows the bigger AI's tested name", /A bigger AI named it/.test(doc.getElementById('cardBody').textContent) && /tested/.test(doc.getElementById('cardBody').textContent));
+      wk.sent.length = 0;
+      doc.getElementById('cardOff').click();
+      const after = new Float32Array(24); after[4] = 0.6; after[0] = 0.4;
+      const offSee = await settle(after, probs);
+      check('switching it off sends the mask with the next look', !!offSee && offSee.off[2][85] === 1 && doc.querySelectorAll('#grid .cell.off').length === 1);
+      check('with it off the guess bars show the new guess and the old one dashed',
+        /castle/.test((doc.querySelector('#guesses .gbar.top') || {}).textContent || '') && doc.querySelectorAll('#guesses .gghost').length > 0 && /now says castle/.test(doc.getElementById('guessNote').textContent));
+      await until(() => spoke(w, 'The guess changed'), 3000);
+      check('the guide says the switch-off changed the guess', spoke(w, 'The guess changed'));
+      check('no unexpected eye page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+    }
+  }
+
   console.log('-- shell --');
   {
     const errors = [];
@@ -741,15 +820,15 @@ async function main() {
       w.localStorage.removeItem('tm-key-openai');
       const names = G.steps.map(s => s.name);
       check('front-door tour has one stop per card (the spotlight follows the words)',
-        names.join(',') === 'welcome,teach,grow,look,think,hunt,pickOne', names.join(','));
+        names.join(',') === 'welcome,teach,grow,look,think,see,hunt,pickOne', names.join(','));
       check('each card stop spotlights its own card',
-        ['raise', 'grow', 'look', 'think', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
+        ['raise', 'grow', 'look', 'think', 'see', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
       const doc = w.document;
       check('simple view is the default: the front door shows, the tabs wait',
         doc.body.classList.contains('simple') && w.__tmShell.activeTab === 'home' &&
         !doc.getElementById('home').classList.contains('hide') && doc.getElementById('bay').classList.contains('hide'));
-      check('the front door offers the five activities',
-        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,think,hunt');
+      check('the front door offers the six activities',
+        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,think,see,hunt');
       check('no starter-pack quest left on the front door', !spoke(w, 'Starter pack:') && !spoke(w, 'catch the brain'));
       G.start();
       await until(() => G.state === 'done', 12000);

@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tiny Mind — the Tiny Eye</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cpath%20d%3D%27M4%2016%20Q16%205%2028%2016%20Q16%2027%204%2016%20Z%27%20fill%3D%27none%27%20stroke%3D%27%239ecbff%27%20stroke-width%3D%272%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%2716%27%20r%3D%274.5%27%20fill%3D%27%23ffd27f%27/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
+    --green: #8fd3a7; --blue: #9ecbff; --gold: #ffd27f; --pink: #ff9ec2; --red: #ff9c9c;
+    --more: 255, 210, 127; --less: 120, 180, 255;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink);
+         margin: 0; padding: 1rem 1.2rem; font-size: 15px; }
+  h1 { font-size: 20px; margin: 0; color: var(--gold); }
+  .sub { color: var(--dim); margin: .15rem 0 1rem; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+          padding: .8rem 1rem; margin-bottom: .9rem; min-width: 0; }
+  .card h2 { font-size: 14px; margin: 0 0 .5rem; color: var(--blue); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; align-items: start; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+  button { background: #2d5a3d; color: #eaffea; border: 0; border-radius: 6px;
+           padding: .4rem .8rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button.alt { background: #2b4a6f; }
+  button.small { padding: .15rem .5rem; font-size: 12px; }
+  button:disabled { opacity: .35; cursor: default; }
+  input[type=text] { background: #12151c; color: var(--ink); border: 1px solid var(--edge);
+           border-radius: 5px; padding: .2rem .35rem; font: inherit; width: 14em; max-width: 100%; }
+  .hint { color: var(--dim); font-size: 12.5px; }
+  #drop { border: 2px dashed #3a4152; border-radius: 8px; padding: .6rem; text-align: center; color: var(--dim); font-size: 13px; margin-bottom: .8rem; }
+  #drop.over { border-color: var(--green); color: var(--green); }
+  #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; margin-top: .3rem; }
+  #progress { height: 6px; background: #262c38; border-radius: 4px; overflow: hidden; margin: .3rem 0; display: none; }
+  #progress div { height: 100%; width: 0; background: var(--gold); transition: width .15s; }
+  .drawrow { display: flex; gap: .9rem; align-items: flex-start; flex-wrap: wrap; }
+  #pad { width: min(100%, 300px); aspect-ratio: 1; background: #0d0f14; border: 1px solid var(--edge); border-radius: 10px;
+         touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; display: block; }
+  .side { display: flex; flex-direction: column; gap: .3rem; align-items: flex-start; }
+  #seen { width: 84px; height: 84px; image-rendering: pixelated; background: #0d0f14; border: 1px solid var(--edge); border-radius: 6px; }
+  @media (max-width: 560px) { .side { flex-direction: row; flex-wrap: wrap; align-items: center; } .side > .hint { width: 100%; } #seen { width: 56px; height: 56px; } }
+  .gbar { display: flex; align-items: center; gap: .45rem; margin: .22rem 0; font-size: 14px; }
+  .gbar .gname { width: 8.2em; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gbar .gtrack { flex: 1; height: 14px; background: #262c38; border-radius: 4px; position: relative; overflow: hidden; }
+  .gbar .gfill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--green); border-radius: 4px; }
+  .gbar .gghost { position: absolute; left: 0; top: 0; bottom: 0; border: 1px dashed var(--dim); border-radius: 4px; }
+  .gbar .gpct { width: 4.6em; flex: none; text-align: right; font-size: 12.5px; color: var(--dim); }
+  .gbar.top .gname { color: #fff; font-weight: 600; }
+  .stages button { background: #232937; }
+  .stages button.on { background: #6b5320; color: #fff3d6; }
+  #grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin: .5rem 0; max-width: 480px; }
+  #grid .cell { aspect-ratio: 1; border-radius: 3px; background: #262c38; cursor: pointer; position: relative; }
+  #grid .cell:hover { outline: 1px solid var(--dim); }
+  #grid .cell.sel { outline: 2px solid #fff; }
+  #grid .cell.off::after { content: ''; position: absolute; inset: 20%; border: 2px solid var(--red); border-radius: 50%;
+                           background: linear-gradient(45deg, transparent 44%, var(--red) 44%, var(--red) 56%, transparent 56%); }
+  #grid .cell.named::before { content: ''; position: absolute; right: 1px; top: 1px; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .7; }
+  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; }
+  .nchip { background: #232937; color: var(--ink); font-size: 12px; padding: .15rem .5rem; margin: 0; border-radius: 999px; }
+  .nchip.up { color: rgb(var(--more)); }
+  .nchip.down { color: rgb(var(--less)); }
+  .nchip.offc { color: var(--red); }
+  .poles { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .3rem; }
+  @media (max-width: 520px) { .poles { grid-template-columns: 1fr; } }
+  .pole h3 { font-size: 13px; margin: 0 0 .3rem; font-weight: 600; }
+  .pole.most h3 { color: rgb(var(--more)); }
+  .pole.least h3 { color: rgb(var(--less)); }
+  .pole canvas { width: 100%; max-width: 240px; aspect-ratio: 1; image-rendering: auto; border-radius: 6px; cursor: pointer; display: block; }
+  .pname { font-size: 13px; margin: .35rem 0 .1rem; }
+  .pname q { color: #fff; }
+  .ptest { font-size: 11.5px; color: var(--dim); }
+  .cbar { display: flex; align-items: center; gap: .35rem; font-size: 12.5px; margin: .12rem 0; }
+  .cbar .cname { width: 8.5em; flex: none; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cbar .ctrack { flex: 1; height: 11px; position: relative; max-width: 260px; }
+  .cbar .ctrack::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--dim); }
+  .cbar .cfill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .where { display: flex; gap: .7rem; align-items: center; margin-top: .5rem; flex-wrap: wrap; }
+  #whereCv { width: 96px; height: 96px; image-rendering: pixelated; border-radius: 6px; border: 1px solid var(--edge); background: #0d0f14; }
+  .lesson { color: var(--gold); font-size: 12.5px; margin-top: .45rem; }
+  [data-vg-explain] { cursor: help; text-decoration: underline dotted rgba(135, 145, 163, .6); text-underline-offset: 3px; }
+  .foot { color: var(--dim); font-size: 12px; margin-top: .8rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>👁 Tiny Mind — the Tiny Eye</h1>
+<div class="sub">draw something, and a tiny mind that sees guesses what it is; then look at the neurons that decide</div>
+<div id="drop" class="tm-file-ctl">drop the Tiny Eye here: tiny-eye.json, tiny-eye.bin and tiny-eye-sample.bin</div>
+
+<div class="grid">
+  <div class="card" id="drawCard">
+    <h2>1 · draw <span class="hint">— with a finger or the mouse; it guesses as you go</span></h2>
+    <div class="drawrow">
+      <canvas id="pad" aria-label="drawing pad"></canvas>
+      <div class="side">
+        <span class="hint" data-vg-explain="sees">what the eye sees</span>
+        <canvas id="seen" width="28" height="28" title="your drawing the way the eye sees it: 28 by 28 dots, made the way its practice doodles were"></canvas>
+        <button id="clearBtn">clear</button>
+        <button id="undoBtn" class="alt">↩ undo</button>
+        <button id="randBtn" class="alt" title="a doodle from Quick, Draw! that the eye never trained on">🎲 a doodle</button>
+      </div>
+    </div>
+    <div id="guesses" class="hint" style="margin-top:.5rem">draw something…</div>
+    <div id="guessNote" class="hint"></div>
+    <div id="knows" class="hint" style="margin-top:.4rem"></div>
+  </div>
+
+  <div class="card" id="gridCard">
+    <h2>2 · neurons light up <span class="hint">— tap one to see its job</span></h2>
+    <div class="stages" id="stages"></div>
+    <div id="grid"></div>
+    <div class="hint" data-vg-explain="neuron"><span style="color:rgb(var(--more))">■ gold</span>: fires more than usual for your drawing ·
+      <span style="color:rgb(var(--less))">■ blue</span>: less than usual · brighter = more so</div>
+    <div id="busy" class="chips"></div>
+    <div class="lesson">Most neurons have one main job you can name. Look at both ends: what makes one fire most, and what makes it fire least.</div>
+  </div>
+
+  <div class="card" id="card">
+    <h2>3 · <span id="cardTitle">a neuron's job</span></h2>
+    <div id="cardBody" class="hint">tap a neuron in box 2…</div>
+  </div>
+
+  <div class="card" id="offCard">
+    <h2>4 · 🔌 switch neurons off <span class="hint">— and watch the guess change</span></h2>
+    <div id="offList" class="chips"><span class="hint">none switched off</span></div>
+    <button id="offBusy" disabled>switch off the 5 busiest</button>
+    <button id="offNone" class="alt" disabled>switch them all back on</button>
+    <div id="offNote" class="hint" style="margin-top:.3rem"></div>
+    <div class="lesson">Try: switch off two neurons so the eye can no longer tell a cloud from a sheep. Or draw something that isn't a dragon but makes it say dragon.</div>
+  </div>
+</div>
+<div id="status"></div>
+<div id="progress"><div></div></div>
+<p class="foot">The eye has 82 thousand connections. It learned 24 kinds of things from 240,000 doodles; the 5,000 doodles here are ones it never trained on.
+  Doodles from <b>Quick, Draw!</b> by Google, made available under the Creative Commons Attribution 4.0 International license.</p>
+
+<script type="module">
+import { makeInlineWorker } from '../src/app-shims.js';
+import { eyeDoodle, eyeSampleInput } from '../src/eye.js';
+const $ = id => document.getElementById(id);
+// @tm-worker-boot — build-release swaps this block for the blob boot with the
+// inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
+let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+let workerMode = 'background worker';
+window.__eyeDevSpawn = () => new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+// @tm-worker-boot-end
+
+// more engines for the one-time look through the sample set, when real workers are allowed
+function spawnHelper() {
+  if (workerMode !== 'background worker') return null;
+  try {
+    if (typeof __WORKER_SRC__ !== 'undefined') return new Worker(URL.createObjectURL(new Blob([__WORKER_SRC__], { type: 'text/javascript' })));
+    return window.__eyeDevSpawn ? window.__eyeDevSpawn() : null;
+  } catch (e) { return null; }
+}
+
+const EMOJI = { dragon: '🐉', teapot: '🫖', cloud: '☁️', moon: '🌙', castle: '🏰', cat: '🐱', dog: '🐶', fish: '🐟', bird: '🐦',
+  rabbit: '🐰', frog: '🐸', owl: '🦉', sheep: '🐑', tree: '🌳', flower: '🌸', house: '🏠', sun: '☀️', star: '⭐', apple: '🍎',
+  rainbow: '🌈', snowman: '⛄', umbrella: '☂️', ambulance: '🚑', 'police car': '🚓' };
+const MORE = '255, 210, 127', LESS = '120, 180, 255';   // gold: fires more than usual; blue: less
+const STAGE_ABOUT = ['looks at small bits: 14 by 14 places', 'looks at bigger parts: 7 by 7 places', 'the last stage: looks at the whole drawing, 4 by 4 places, and votes'];
+
+const S = {
+  ready: false, man: null, classes: [], hidden: [], total: 0, offsets: [], names: null,
+  sample: null, labels: null, count: 0, weights: null,
+  strokes: [], penId: null, rect: null, sampleIdx: null,
+  x: new Float32Array(784), blank: true, last: null,
+  stage: 2, sel: null, off: null,
+  table: null, guess: null, stats: null, swept: false,
+};
+const pct = p => window.__vgPct ? window.__vgPct(p, 0) : Math.round(100 * p) + '%';
+const label = c => (EMOJI[S.classes[c]] || '') + ' ' + S.classes[c];
+const nid = (s, j) => `stage ${s + 1} · neuron ${j}`;
+function status(msg, isErr) { $('status').textContent = msg; $('status').style.color = isErr ? 'var(--red)' : 'var(--dim)'; }
+function progress(frac) {
+  const p = $('progress');
+  if (frac === null) { p.style.display = 'none'; return; }
+  p.style.display = 'block'; p.firstElementChild.style.width = Math.round(100 * frac) + '%';
+}
+const emit = (n, p) => { try { if (window.vgEmit) window.vgEmit(n, p); } catch (e) {} };
+
+// ---------- loading ----------
+function loadEye({ manifest, weights, sample }) {
+  let man;
+  try { man = typeof manifest === 'string' ? JSON.parse(manifest) : manifest; } catch (e) { man = null; }
+  if (!man || man.format !== 'tiny-eye-v1') { status('that is not a Tiny Eye (tiny-eye.json)', true); return; }
+  // (isView, not instanceof: the bytes may come from another frame's realm)
+  const u8 = ArrayBuffer.isView(sample) ? new Uint8Array(sample.buffer, sample.byteOffset, sample.byteLength) : new Uint8Array(sample);
+  if (u8.length !== man.sample.count * 784) { status('the doodle file does not match this eye', true); return; }
+  S.man = man; S.classes = man.classes; S.hidden = man.config.hidden;
+  S.offsets = []; S.total = 0;
+  for (const h of S.hidden) { S.offsets.push(S.total); S.total += h; }
+  S.names = man.names && man.names.neurons ? { stage: (man.names.stage || S.hidden.length) - 1, neurons: man.names.neurons } : null;
+  S.sample = u8; S.count = man.sample.count;
+  S.labels = new Uint8Array(S.count);
+  let at = 0; man.sample.classCounts.forEach((n, c) => { S.labels.fill(c, at, at + n); at += n; });
+  S.weights = ArrayBuffer.isView(weights) ? weights.buffer.slice(weights.byteOffset, weights.byteOffset + weights.byteLength) : weights;
+  S.off = S.hidden.map(h => new Uint8Array(h));
+  S.table = null; S.stats = null; S.swept = false; S.sel = null; S.ready = false; cardKey = '';
+  worker.postMessage({ type: 'load', manifest: man, weights: S.weights });
+  drop.style.display = 'none';
+  status('waking the eye…');
+}
+window.__tmLoadEye = (m) => loadEye(m);
+
+const pendingDrop = {};
+const drop = $('drop');
+const hasFiles = e => !!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files'));   // not dragged text
+window.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); drop.classList.add('over'); });
+window.addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('over'); });
+window.addEventListener('drop', async e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); drop.classList.remove('over');
+  for (const f of [...e.dataTransfer.files]) {
+    const buf = await f.arrayBuffer();
+    if (/\.json$/i.test(f.name)) pendingDrop.manifest = new TextDecoder().decode(buf);
+    else if (/sample/i.test(f.name)) pendingDrop.sample = buf;
+    else pendingDrop.weights = buf;
+  }
+  if (pendingDrop.manifest && pendingDrop.weights && pendingDrop.sample) loadEye(pendingDrop);
+  else status('drop all three: tiny-eye.json, tiny-eye.bin and tiny-eye-sample.bin');
+});
+// on its own (not inside Tiny Mind), the eye's files sit beside this page
+if (!window.__tmBridge && typeof fetch === 'function') {
+  Promise.all(['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'].map(f => fetch(new URL(f, window.location.href)).then(r => r.ok ? r.arrayBuffer() : null)))
+    .then(([m, w, s]) => { if (m && w && s && !S.man) loadEye({ manifest: new TextDecoder().decode(m), weights: w, sample: s }); else if (!S.man) status('drop the Tiny Eye\'s three files here to begin'); })
+    .catch(() => { if (!S.man) status('drop the Tiny Eye\'s three files here to begin'); });
+}
+
+// ---------- the engine's answers ----------
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'error') { status(m.message, true); inFlight = false; return; }
+  if (m.type === 'loaded') {
+    S.ready = true;
+    $('knows').textContent = 'It knows ' + S.classes.length + ' kinds of things: ' + S.classes.map((c, i) => label(i)).join(', ') + '.';
+    renderStages(); renderGrid(); renderOff();
+    $('offBusy').disabled = false;
+    status(`the eye is awake (${Math.round(m.params / 1000)} thousand connections, right ${Math.round(100 * m.accuracy)} times in 100 on doodles it never saw) — draw something`);
+    startSweep();
+    requestSee();
+    return;
+  }
+  if (m.type === 'seen') { onSeen(m); return; }
+  if (m.type === 'sweep-progress' || m.type === 'swept') { onSweepMsg(m); return; }
+};
+
+// ---------- the draw pad ----------
+const pad = $('pad'), pctx = pad.getContext('2d');
+function fitPad() {
+  const r = pad.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(50, Math.round(r.width * dpr));
+  if (pad.width !== w || pad.height !== w) { pad.width = w; pad.height = w; }
+  redrawPad();
+}
+function redrawPad() {
+  const w = pad.width, ctx = pctx;
+  ctx.fillStyle = '#0d0f14'; ctx.fillRect(0, 0, w, w);
+  if (S.sampleIdx !== null && S.sample) {
+    const cv = doodleCanvas(S.sampleIdx);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(cv, 0, 0, w, w);
+    return;
+  }
+  ctx.strokeStyle = '#e8ecff'; ctx.fillStyle = '#e8ecff';
+  ctx.lineWidth = Math.max(3, w * 0.03); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const s of S.strokes) {
+    if (s.length === 1) { ctx.beginPath(); ctx.arc(s[0][0] * w, s[0][1] * w, ctx.lineWidth / 2, 0, 6.2832); ctx.fill(); continue; }
+    ctx.beginPath(); ctx.moveTo(s[0][0] * w, s[0][1] * w);
+    for (let i = 1; i < s.length; i++) ctx.lineTo(s[i][0] * w, s[i][1] * w);
+    ctx.stroke();
+  }
+}
+const padPoint = (e) => {
+  const r = S.rect;
+  return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
+};
+pad.addEventListener('pointerdown', e => {
+  if (e.button > 0 || S.penId !== null) return;
+  e.preventDefault();
+  S.penId = e.pointerId; S.rect = pad.getBoundingClientRect();
+  try { pad.setPointerCapture(e.pointerId); } catch (err) {}
+  if (S.sampleIdx !== null) { S.sampleIdx = null; S.strokes = []; }   // a new drawing replaces the sample doodle
+  S.strokes.push([padPoint(e)]);
+  redrawPad(); requestSee();
+});
+pad.addEventListener('pointermove', e => {
+  if (e.pointerId !== S.penId) return;
+  e.preventDefault();
+  const cur = S.strokes[S.strokes.length - 1];
+  const evs = (e.getCoalescedEvents && e.getCoalescedEvents()) || [];
+  for (const ev of (evs.length ? evs : [e])) cur.push(padPoint(ev));
+  redrawPad(); requestSee();
+});
+const penUp = e => { if (e.pointerId !== S.penId) return; S.penId = null; S.announce = 'draw'; requestSee(true); };
+pad.addEventListener('pointerup', penUp);
+pad.addEventListener('pointercancel', penUp);
+pad.addEventListener('lostpointercapture', penUp);
+if (window.ResizeObserver) new ResizeObserver(() => fitPad()).observe(pad);
+fitPad();
+$('clearBtn').onclick = () => { S.strokes = []; S.sampleIdx = null; redrawPad(); requestSee(); };
+$('undoBtn').onclick = () => { if (S.sampleIdx !== null) S.sampleIdx = null; else S.strokes.pop(); redrawPad(); requestSee(); };
+$('randBtn').onclick = () => { if (!S.sample) return; showSample(Math.floor(Math.random() * S.count)); };
+function showSample(i) {
+  S.sampleIdx = i; S.strokes = []; S.announce = 'sample';
+  redrawPad(); requestSee(true);
+  $('guessNote').textContent = `a Quick, Draw! doodle of ${label(S.labels[i]).trim()} the eye never trained on`;
+}
+
+// ---------- looking (one request in flight; the newest drawing wins) ----------
+let inFlight = false, dirty = false, seq = 0, penLifted = false;
+function requestSee(lifted) { dirty = true; if (lifted) penLifted = true; if (!inFlight) pump(); }
+function pump() {
+  if (!S.ready || !dirty) return;
+  dirty = false;
+  if (S.sampleIdx !== null) eyeSampleInput(S.sample, S.sampleIdx, S.x);
+  else eyeDoodle(S.strokes, S.x);
+  S.blank = !S.x.some(v => v > 0);
+  drawSeen();
+  if (S.blank) { S.last = null; renderGuesses(); renderGrid(); renderCard(); return; }
+  inFlight = true;
+  worker.postMessage({ type: 'see', id: ++seq, x: S.x, off: S.off, maps: true, lifted: penLifted });
+  penLifted = false;
+}
+function onSeen(m) {
+  inFlight = false;
+  S.last = m;
+  renderGuesses(); renderGrid(); renderCard(); renderOff();
+  if (dirty) pump();
+}
+function drawSeen() {
+  const cv = $('seen'), ctx = cv.getContext('2d'), img = ctx.createImageData(28, 28);
+  for (let k = 0; k < 784; k++) {
+    const v = S.x[k];
+    img.data[4 * k] = 13 + v * 219; img.data[4 * k + 1] = 15 + v * 221; img.data[4 * k + 2] = 20 + v * 235; img.data[4 * k + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ---------- 1 · the guess ----------
+function topOf(p, n) { return Array.from(p, (v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, n); }
+function renderGuesses() {
+  const box = $('guesses');
+  if (!S.last || S.blank) { box.className = 'hint'; box.textContent = S.ready ? 'draw something…' : ''; $('guessNote').textContent = ''; document.body.dataset.guess = ''; return; }
+  box.className = ''; box.innerHTML = '';
+  const p = S.last.probs, base = S.last.baseProbs;
+  topOf(p, 5).forEach(([v, c], rank) => {
+    const row = document.createElement('div'); row.className = 'gbar' + (rank ? '' : ' top');
+    const ghost = base ? `<span class="gghost" style="width:${(100 * base[c]).toFixed(1)}%" title="with every neuron on: ${pct(base[c])}"></span>` : '';
+    row.innerHTML = `<span class="gname"></span><span class="gtrack"><span class="gfill" style="width:${(100 * v).toFixed(1)}%"></span>${ghost}</span><span class="gpct">${pct(v)}</span>`;
+    row.querySelector('.gname').textContent = label(c);
+    box.appendChild(row);
+  });
+  const best = topOf(p, 1)[0][1];
+  document.body.dataset.guess = S.classes[best];
+  if (base) {
+    const was = topOf(base, 1)[0][1];
+    $('guessNote').textContent = was === best
+      ? `with ${offCount()} switched off it still says ${S.classes[best]} (dashed = every neuron on)`
+      : `with ${offCount()} switched off it now says ${S.classes[best]}; with every neuron on it said ${S.classes[was]} (dashed bars)`;
+  } else if (S.sampleIdx === null) $('guessNote').textContent = '';
+  // the guide hears about a guess when a stroke ends, a doodle is shown, or neurons are switched (not on every live update)
+  if (S.announce) {
+    const changed = base ? topOf(base, 1)[0][1] !== best : false;
+    if (S.announce === 'switch') emit('switchResult', { guess: S.classes[best], changed, off: offCount() });
+    else emit('guessed', { guess: S.classes[best], p: p[best], sample: S.sampleIdx !== null });
+    S.announce = null;
+  }
+}
+
+// ---------- 2 · the neuron grid ----------
+function renderStages() {
+  const box = $('stages'); box.innerHTML = '';
+  S.hidden.forEach((h, s) => {
+    const b = document.createElement('button'); b.className = 'small' + (s === S.stage ? ' on' : '');
+    b.textContent = `stage ${s + 1}${s === S.hidden.length - 1 ? ' (last)' : ''} · ${h}`;
+    b.title = STAGE_ABOUT[s] || ''; b.dataset.stage = s;
+    b.onclick = () => { S.stage = s; renderStages(); renderGrid(); };
+    box.appendChild(b);
+  });
+  const about = document.createElement('div'); about.className = 'hint'; about.textContent = `Stage ${S.stage + 1} ${STAGE_ABOUT[S.stage] || ''}.`;
+  box.appendChild(about);
+}
+// how unusual a neuron's value is: standard deviations from its mean over the sample doodles
+function zOf(s, j, v) {
+  if (S.stats) { const k = S.offsets[s] + j; return (v - S.stats.mean[k]) / (S.stats.sd[k] || 1); }
+  return v;   // until the sample has been looked through, raw values
+}
+function renderGrid() {
+  const box = $('grid'), s = S.stage, H = S.hidden[s] || 0;
+  if (box.children.length !== H) {
+    box.innerHTML = '';
+    for (let j = 0; j < H; j++) {
+      const c = document.createElement('div'); c.className = 'cell'; c.dataset.j = j;
+      c.onclick = () => openCard(S.stage, j);
+      box.appendChild(c);
+    }
+  }
+  const vals = S.last && !S.blank ? S.last.neurons[s] : null;
+  const named = S.names && S.names.stage === s ? S.names.neurons : {};
+  let scale = 3;
+  if (vals && !S.stats) { scale = 0; for (const v of vals) scale = Math.max(scale, Math.abs(v)); scale = scale || 1; }
+  const ranked = [];
+  for (let j = 0; j < H; j++) {
+    const c = box.children[j];
+    const z = vals ? zOf(s, j, vals[j]) : 0, a = Math.min(1, Math.abs(z) / scale);
+    c.style.background = !vals ? '#262c38' : `rgba(${z >= 0 ? MORE : LESS}, ${(0.12 + 0.88 * a).toFixed(3)})`;
+    c.classList.toggle('sel', !!S.sel && S.sel.s === s && S.sel.j === j);
+    c.classList.toggle('off', !!(S.off && S.off[s][j]));
+    c.classList.toggle('named', j in named);
+    c.title = nid(s, j) + (named[j] && named[j].most ? ` — fires most for “${named[j].most.name}”` : '') + (vals ? ` · now ${z >= 0 ? '+' : ''}${z.toFixed(1)}${S.stats ? ' (how unusual)' : ''}` : '');
+    if (vals) ranked.push([z, j]);
+  }
+  const busy = $('busy'); busy.innerHTML = '';
+  if (vals) {
+    ranked.sort((a, b) => b[0] - a[0]);
+    const chip = ([z, j], cls) => { const b = document.createElement('button'); b.className = 'nchip ' + cls; b.textContent = (cls === 'up' ? '▲ ' : '▼ ') + 'neuron ' + j;
+      b.title = nid(s, j); b.onclick = () => openCard(s, j); return b; };
+    const t1 = document.createElement('span'); t1.className = 'hint'; t1.textContent = 'firing most now:'; busy.appendChild(t1);
+    ranked.slice(0, 5).forEach(r => busy.appendChild(chip(r, 'up')));
+    const t2 = document.createElement('span'); t2.className = 'hint'; t2.textContent = ' least:'; busy.appendChild(t2);
+    ranked.slice(-3).reverse().forEach(r => busy.appendChild(chip(r, 'down')));
+  }
+}
+
+// ---------- the sample set, looked through once (for the neuron cards) ----------
+let sweep = null;
+function startSweep() {
+  if (sweep) for (const w of sweep.crew) if (w !== worker) { try { w.terminate(); } catch (e) {} }
+  const CH = 250, chunks = [];
+  for (let s = 0; s < S.count; s += CH) chunks.push([s, Math.min(CH, S.count - s)]);
+  const want = Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 2) - 2));
+  const helpers = [];
+  for (let i = 0; i < want; i++) { const h = spawnHelper(); if (h) helpers.push(h); else break; }
+  sweep = { chunks, next: 0, done: new Map(), finished: 0, crew: helpers.length ? helpers : [worker], t0: performance.now() };
+  S.table = new Float32Array(S.count * S.total); S.guess = new Uint8Array(S.count);
+  const me = sweep;
+  for (const w of sweep.crew) {
+    if (w !== worker) {
+      w.onmessage = ev => { if (sweep === me) onSweepMsg(ev.data, w); };
+      w.postMessage({ type: 'load', manifest: S.man, weights: S.weights });
+    }
+    giveChunk(w);
+  }
+  status('the eye is looking through 5,000 doodles so the neuron cards can show what each neuron does…');
+  progress(0);
+}
+function giveChunk(w) {
+  if (sweep.next >= sweep.chunks.length) return false;
+  const [start, count] = sweep.chunks[sweep.next++];
+  const doodles = S.sample.slice(start * 784, (start + count) * 784);
+  w.postMessage({ type: 'sweep', id: 'c' + start, start, count, doodles }, [doodles.buffer]);
+  return true;
+}
+function onSweepMsg(m, from) {
+  if (!sweep || m.type === 'loaded') return;
+  if (m.type === 'error') { status(m.message, true); return; }
+  if (m.type === 'sweep-progress') sweep.done.set(m.id, m.done);
+  if (m.type === 'swept') {
+    S.table.set(m.table, m.start * S.total); S.guess.set(m.guesses, m.start);
+    sweep.done.set(m.id, m.count); sweep.finished++;
+    giveChunk(from || worker);
+  }
+  let got = 0; for (const v of sweep.done.values()) got += v;
+  progress(got / S.count);
+  if (sweep.finished === sweep.chunks.length) {
+    for (const w of sweep.crew) if (w !== worker) { try { w.terminate(); } catch (e) {} }
+    finishSweep();
+  }
+}
+function finishSweep() {
+  const N = S.count, K = S.total, mean = new Float64Array(K), sq = new Float64Array(K);
+  const cls = S.classes.length, cmean = new Float64Array(cls * K), ccount = new Float64Array(cls);
+  for (let i = 0; i < N; i++) {
+    const o = i * K, c = S.labels[i]; ccount[c]++;
+    for (let k = 0; k < K; k++) { const v = S.table[o + k]; mean[k] += v; sq[k] += v * v; cmean[c * K + k] += v; }
+  }
+  const sd = new Float64Array(K);
+  for (let k = 0; k < K; k++) { mean[k] /= N; sd[k] = Math.sqrt(Math.max(0, sq[k] / N - mean[k] * mean[k])); }
+  for (let c = 0; c < cls; c++) for (let k = 0; k < K; k++) cmean[c * K + k] /= ccount[c] || 1;
+  let right = 0; for (let i = 0; i < N; i++) right += S.guess[i] === S.labels[i];
+  S.stats = { mean, sd, cmean, right };
+  S.swept = true; document.body.dataset.swept = '1';
+  progress(null);
+  const secs = ((performance.now() - sweep.t0) / 1000).toFixed(0);
+  status(`ready: the eye looked through all ${N.toLocaleString()} doodles in ${secs} s (it guessed ${right.toLocaleString()} of them right). Tap any neuron to see its job.`);
+  renderGrid(); renderCard();
+  emit('swept', { right, n: N });
+}
+
+// ---------- 3 · a neuron's card (always both poles) ----------
+const doodleCache = new Map();
+function doodleCanvas(i) {
+  if (doodleCache.has(i)) return doodleCache.get(i);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 28;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(28, 28), o = i * 784;
+  for (let k = 0; k < 784; k++) {
+    const v = S.sample[o + k] / 255;
+    img.data[4 * k] = 13 + v * 219; img.data[4 * k + 1] = 15 + v * 221; img.data[4 * k + 2] = 20 + v * 235; img.data[4 * k + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  if (doodleCache.size > 400) doodleCache.clear();
+  doodleCache.set(i, cv);
+  return cv;
+}
+function poleCanvas(ids) {
+  const cell = 60, gap = 4, cv = document.createElement('canvas');
+  cv.width = cv.height = 4 * cell + 3 * gap;
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ids.forEach((i, n) => ctx.drawImage(doodleCanvas(i), (n % 4) * (cell + gap), Math.floor(n / 4) * (cell + gap), cell, cell));
+  cv.title = 'click a doodle to show it to the eye';
+  cv.onclick = ev => {
+    const r = cv.getBoundingClientRect(), f = cv.width / r.width;
+    const col = Math.floor((ev.clientX - r.left) * f / (cell + gap)), row = Math.floor((ev.clientY - r.top) * f / (cell + gap));
+    const i = ids[row * 4 + col];
+    if (i !== undefined) showSample(i);
+  };
+  return cv;
+}
+function openCard(s, j) {
+  S.sel = { s, j };
+  if (s !== S.stage) { S.stage = s; renderStages(); }
+  renderGrid(); renderCard();
+  document.body.dataset.card = s + ':' + j;
+  emit('cardOpened', { stage: s + 1, neuron: j, waiting: !S.stats, named: !!(S.names && S.names.stage === s && S.names.neurons[j]) });
+}
+let savedNames = {};
+try { savedNames = JSON.parse(localStorage.getItem('tm-eye-names') || '{}') || {}; } catch (e) { savedNames = {}; }
+let cardKey = '';
+function renderCard() {
+  const body = $('cardBody');
+  if (!S.sel) return;
+  const { s, j } = S.sel, k = S.offsets[s] + j;
+  $('cardTitle').textContent = nid(s, j);
+  if (!S.stats) { cardKey = ''; body.className = 'hint'; body.textContent = 'one moment: the eye is still looking through the sample doodles to find what this neuron does…'; return; }
+  if (cardKey === s + ':' + j) { updateCardLive(); return; }
+  cardKey = s + ':' + j;
+  body.className = '';
+  // the sample doodles, ordered by this neuron's value
+  const N = S.count, K = S.total, vals = new Float32Array(N);
+  for (let i = 0; i < N; i++) vals[i] = S.table[i * K + k];
+  const order = Array.from({ length: N }, (_, i) => i).sort((a, b) => vals[b] - vals[a]);
+  const most = order.slice(0, 16), least = order.slice(-16).reverse();
+  const named = S.names && S.names.stage === s ? S.names.neurons[j] : null;
+  const poleHtml = p => {
+    if (!p) return '<div class="pname hint">No name for this end yet.</div>';
+    const ok = p.passed;
+    return `<div class="pname">A bigger AI named it <q></q></div>` +
+      `<div class="ptest">${ok ? '✓' : '✗'} tested: from the name alone it picked ${p.hits} of 4 hidden doodles from this end${ok ? '' : ' (a fuzzier job, or a hard one to put into words)'}</div>`;
+  };
+  body.innerHTML =
+    `<div class="poles"><div class="pole most"><h3 data-vg-explain="ends">▲ fires most for</h3><div class="pc"></div>${poleHtml(named && named.most)}</div>` +
+    `<div class="pole least"><h3 data-vg-explain="ends">▼ fires least for (the other end)</h3><div class="pc"></div>${poleHtml(named && named.least)}</div></div>` +
+    `<div class="hint" style="margin-top:.6rem" data-vg-explain="bars">what kinds of things make it fire <span class="hint">(compared with all the sample doodles)</span></div><div id="cbars"></div>` +
+    `<div class="where"><canvas id="whereCv" width="112" height="112"></canvas><div id="whereNote" class="hint" style="flex:1;min-width:12em"></div></div>` +
+    `<div style="margin-top:.5rem"><button id="cardOff" class="small"></button> <label class="hint">your name for it: <input type="text" id="myName" maxlength="60" placeholder="what would you call it?"></label></div>`;
+  const pcs = body.querySelectorAll('.pc');
+  pcs[0].appendChild(poleCanvas(most)); pcs[1].appendChild(poleCanvas(least));
+  const qs = body.querySelectorAll('.pname q');
+  let qi = 0;
+  if (named && named.most) qs[qi++].textContent = named.most.name;
+  if (named && named.least) qs[qi++].textContent = named.least.name;
+  // class bars: each kind's average, in standard deviations from the neuron's average
+  const cls = S.classes.length, z = [];
+  for (let c = 0; c < cls; c++) z.push([(S.stats.cmean[c * K + k] - S.stats.mean[k]) / (S.stats.sd[k] || 1), c]);
+  z.sort((a, b) => b[0] - a[0]);
+  const shown = [...z.slice(0, 5), ...z.slice(-5)];
+  const strong = z.filter(([v]) => v > 1).length, weak = z.filter(([v]) => v < -1).length;
+  const cb = body.querySelector('#cbars');
+  shown.forEach(([v, c], n) => {
+    if (n === 5) { const sep = document.createElement('div'); sep.className = 'hint'; sep.style.margin = '.1rem 0'; sep.textContent = '⋯'; cb.appendChild(sep); }
+    const row = document.createElement('div'); row.className = 'cbar';
+    const w = Math.min(50, Math.abs(v) * 20);
+    row.innerHTML = `<span class="cname"></span><span class="ctrack"><span class="cfill" style="${v >= 0 ? 'left:50%' : 'right:50%'};width:${w}%;background:rgb(var(${v >= 0 ? '--more' : '--less'}))"></span></span><span class="hint">${v >= 0 ? '+' : ''}${v.toFixed(1)}</span>`;
+    row.querySelector('.cname').textContent = label(c);
+    cb.appendChild(row);
+  });
+  const sum = document.createElement('div'); sum.className = 'hint'; sum.style.marginTop = '.25rem';
+  sum.textContent = `It answers strongly (more than 1 on this scale) to ${strong} kind${strong === 1 ? '' : 's'} of thing${strong === 1 ? '' : 's'}, and is quiet for ${weak}.`;
+  cb.appendChild(sum);
+  S.cardVals = vals;
+  const inp = body.querySelector('#myName'), key = s + ':' + j;
+  inp.value = savedNames[key] || '';
+  inp.oninput = () => { const t = inp.value.trim().slice(0, 60); if (t) savedNames[key] = t; else delete savedNames[key];
+    try { localStorage.setItem('tm-eye-names', JSON.stringify(savedNames)); } catch (e) {} };
+  updateCardLive();
+}
+// the card's live part: how this neuron fires for your drawing, where, and its switch
+function updateCardLive() {
+  const body = $('cardBody'), { s, j } = S.sel, vals = S.cardVals, N = S.count;
+  const note = body.querySelector('#whereNote'), wc = body.querySelector('#whereCv');
+  if (!note) return;
+  if (S.last && !S.blank) {
+    const v = S.last.neurons[s][j];
+    let below = 0; for (let i = 0; i < N; i++) below += vals[i] < v;
+    const r = below / N;
+    note.textContent = `For your drawing it is higher than ${Math.round(100 * r)} of 100 sample doodles` +
+      (r > 0.9 ? ': it is firing a lot.' : r < 0.1 ? ': it is very quiet, the "fires least" end.' : '.') +
+      ` Left: where in your drawing (gold = fires more, blue = less).`;
+    drawWhere(wc, s, j);
+  } else { note.textContent = 'Draw something to see how this neuron fires for it, and where.'; drawWhere(wc, s, j); }
+  const btn = body.querySelector('#cardOff');
+  const isOff = !!S.off[s][j];
+  btn.textContent = isOff ? '🔌 switch it back on' : '🔌 switch it off';
+  btn.onclick = () => setOff(s, j, !S.off[s][j]);
+}
+function drawWhere(cv, s, j) {
+  const ctx = cv.getContext('2d'), W = cv.width;
+  ctx.fillStyle = '#0d0f14'; ctx.fillRect(0, 0, W, W);
+  if (!S.last || S.blank || !S.last.maps) return;
+  const img = ctx.createImageData(W, W), map = S.last.maps[s], H = S.hidden[s];
+  const G = Math.round(Math.sqrt(map.length / H)), k = S.offsets[s] + j;
+  const mu = S.stats ? S.stats.mean[k] : 0, sd = S.stats ? (S.stats.sd[k] || 1) : 1;
+  const at = (gy, gx) => map[(Math.min(G - 1, Math.max(0, gy)) * G + Math.min(G - 1, Math.max(0, gx))) * H + j];
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+    const ink = S.x[Math.floor(y * 28 / W) * 28 + Math.floor(x * 28 / W)];
+    // the neuron's grid, smoothly stretched over the 28 x 28 picture
+    const fy = (y + 0.5) * G / W - 0.5, fx = (x + 0.5) * G / W - 0.5, y0 = Math.floor(fy), x0 = Math.floor(fx), ty = fy - y0, tx = fx - x0;
+    const val = (at(y0, x0) * (1 - tx) + at(y0, x0 + 1) * tx) * (1 - ty) + (at(y0 + 1, x0) * (1 - tx) + at(y0 + 1, x0 + 1) * tx) * ty;
+    const z = (val - mu) / sd, a = 0.6 * Math.min(1, Math.abs(z) / 3);
+    const o = 4 * (y * W + x), base = 13 + ink * 220;
+    const tint = (z >= 0 ? MORE : LESS).split(',').map(Number);
+    img.data[o] = base * (1 - a) + tint[0] * a; img.data[o + 1] = base * (1 - a) + tint[1] * a; img.data[o + 2] = base * (1 - a) + tint[2] * a; img.data[o + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ---------- 4 · switch neurons off ----------
+const offCount = () => S.off ? S.off.reduce((n, a) => n + a.reduce((x, v) => x + v, 0), 0) : 0;
+function setOff(s, j, on) {
+  S.off[s][j] = on ? 1 : 0; S.announce = 'switch';
+  renderOff(); renderGrid(); renderCard();
+  requestSee();
+  emit('switched', { stage: s + 1, neuron: j, off: !!on, count: offCount() });
+}
+function renderOff() {
+  const box = $('offList'); box.innerHTML = '';
+  const n = offCount();
+  document.body.dataset.off = String(n);
+  $('offNone').disabled = !n;
+  if (!S.off || !n) { box.innerHTML = '<span class="hint">none switched off — use the button on a neuron\'s card, or the one below</span>'; $('offNote').textContent = ''; return; }
+  S.off.forEach((a, s) => a.forEach((v, j) => {
+    if (!v) return;
+    const b = document.createElement('button'); b.className = 'nchip offc'; b.textContent = '⊘ ' + (s === S.hidden.length - 1 ? '' : `stage ${s + 1} · `) + 'neuron ' + j;
+    b.title = 'switched off — click to switch it back on'; b.onclick = () => setOff(s, j, false);
+    box.appendChild(b);
+  }));
+  $('offNote').textContent = S.last && S.last.baseProbs ? $('guessNote').textContent : '';
+}
+$('offNone').onclick = () => { for (const a of S.off) a.fill(0); S.announce = 'switch'; renderOff(); renderGrid(); renderCard(); requestSee(); emit('switched', { count: 0 }); };
+$('offBusy').onclick = () => {
+  if (!S.last || S.blank) { status('draw something first: these are the neurons busiest for your drawing'); return; }
+  const s = S.stage, vals = S.last.neurons[s];
+  const ranked = Array.from(vals, (v, j) => [zOf(s, j, v), j]).filter(([, j]) => !S.off[s][j]).sort((a, b) => b[0] - a[0]).slice(0, 5);
+  for (const [, j] of ranked) S.off[s][j] = 1;
+  S.announce = 'switch';
+  renderOff(); renderGrid(); renderCard(); requestSee();
+  emit('switched', { stage: s + 1, count: offCount(), busiest: true });
+};
+
+// kid mode turns the percentages into "7 in 10" odds: redraw the bars when it is switched
+window.addEventListener('message', e => { if (e.data && e.data.tm === 'pref' && e.data.key === 'tm-guide-kid') renderGuesses(); });
+
+status('waiting for the eye…');
+</script>
+</body>
+</html>

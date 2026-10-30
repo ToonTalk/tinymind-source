@@ -496,6 +496,12 @@ window.__vgDeferBoot = async function(create){
         else if (n > 0) setTimeout(() => tryArc(n - 1), 150);
       };
       tryArc(100);
+    } else if (m.tm === 'load-eye') {   // the Tiny Eye: its manifest, weights and sample doodles
+      const tryEye = (n) => {
+        if (window.__tmLoadEye) window.__tmLoadEye({ name: m.name, manifest: m.manifest, weights: m.weights, sample: m.sample });
+        else if (n > 0) setTimeout(() => tryEye(n - 1), 150);
+      };
+      tryEye(100);
     } else if (m.tm === 'unload') {   // another room took the big mind: let this one go (memory)
       if (window.__tmUnload) window.__tmUnload();
     } else if (m.tm === 'select-arc') {
@@ -2759,6 +2765,7 @@ async function ingestBatch(recs, h) {
     if (tc > 0) { h.addTok(r.name, r.u8, tc); took++; continue; }
     const v = checkpointVocab(r.u8);
     if (v > 0) { h.addModel(r.name, r.u8, v); took++; continue; }
+    if (h.other && h.other(r.name, r.u8)) { took++; continue; }   // e.g. the Tiny Eye's weights and doodles (the shell pairs them)
     skipped.push(r.name);
   }
   return { arcs: packs.arcs.map(a => a.manifest.arc), took, jsons, skipped };

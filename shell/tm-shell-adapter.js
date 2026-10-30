@@ -136,7 +136,7 @@ function STEPS(){
   return [
   { name: 'welcome', spot: '#home h1', text: () => kid()
       ? 'Hi! This is the front door of Tiny Mind. Each big button is a different game with a real little computer mind.'
-      : 'This is the front door of Tiny Mind. Each card is one thing you can do with a real, very small language model. The minds load by themselves; nothing leaves your computer.' },
+      : 'This is the front door of Tiny Mind. Each card is one thing you can do with a real, very small mind: five with story-writing language models, one with an eye that sees drawings. The minds load by themselves; nothing leaves your computer.' },
   { name: 'teach', spot: '[data-act="raise"]', text: () => kid()
       ? 'Teach a tiny mind: make up a character, and watch the mind learn about it.'
       : 'Teach a tiny mind trains one live, on stories about a character you invent.' },
@@ -149,6 +149,9 @@ function STEPS(){
   { name: 'think', spot: '[data-act="think"]', text: () => kid()
       ? 'See what a mind is thinking lets you peek at its thoughts, and even swap one!'
       : 'See what a mind is thinking shows the words a mind is holding in mind as it reads or writes; then you swap one of its thoughts and watch the story change.' },
+  { name: 'see', spot: '[data-act="see"]', text: () => kid()
+      ? 'A mind that sees your drawings: draw something, and a tiny eye guesses what it is!'
+      : 'A mind that sees your drawings is a different kind of mind: a tiny eye guesses what you draw, and you look at its neurons, most of which have one main job you can name.' },
   { name: 'hunt', spot: '[data-act="hunt"]', text: () => kid()
       ? 'Hunt for a hidden fact is a treasure hunt inside a mind.'
       : 'Hunt for a hidden fact is a detective game: find where a mind keeps something, then prove it by switching parts off.' },
@@ -160,7 +163,7 @@ function STEPS(){
 
 function statusText(){
   const t = activeTab();
-  const where = t === 'home' ? 'the front door, with its five activity cards \u2014 this very page'
+  const where = t === 'home' ? 'the front door, with its six activity cards \u2014 this very page'
     : t === 'bay' ? 'the files page (the expert view\'s "files" tab) \u2014 this very page'
     : 'the ' + t + ' room, whose own guide is beside them there';
   return `The visitor is RIGHT NOW looking at ${where}. Never tell them to go where they already are. ` +
@@ -170,26 +173,26 @@ function statusText(){
     `Minds loaded (truncated): ${poolText().slice(0, 200) || 'none yet'}.`;
 }
 function systemPrompt(){
-  return 'You are the guide on the front page of Tiny Mind, a four-room exhibit about how small language models work: a Nursery for raising one, a Microscope for looking inside one, a Thought bubble for seeing and swapping what one is thinking, and a Treasure Hunt for finding where a fact lives. This page is the front door: five activity cards (Teach a tiny mind, Watch a mind grow up, Look inside a mind, See what a mind is thinking, Hunt for a hidden fact); the minds load by themselves, and a button at the top right switches to an expert view with every tab and a files page. ' +
+  return 'You are the guide on the front page of Tiny Mind, a five-room exhibit about how small minds work: a Nursery for raising a language model, a Microscope for looking inside one, a Thought bubble for seeing and swapping what one is thinking, a Treasure Hunt for finding where a fact lives, and the Tiny Eye, a different kind of mind that sees drawings (draw something, it guesses, and you look at its neurons). This page is the front door: six activity cards (Teach a tiny mind, Watch a mind grow up, Look inside a mind, See what a mind is thinking, A mind that sees your drawings, Hunt for a hidden fact); the minds load by themselves, and a button at the top right switches to an expert view with every tab and a files page. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind. ' +
     (kid() ? 'The visitor is a young child: short, warm, simple sentences. ' : 'The visitor is ten or older: plain, concrete language. ') +
     F.voiceRules + ' ' + F.statusRule + ' ' + F.selfKnowledge + ' ' +
     F.pointNotDescribe({ pointVerbs: 'DO SHOW' }) +
-    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: teach, grow, look, think, hunt, tabs. Tab names: home, nursery, microscope, thought, hunt, files. ' +
+    ' You can act on the app only by ending your reply with a single DO line, its own last line, exactly: DO: SHOW target, or DO: TAB name to offer to take them to another room. Show targets: teach, grow, look, think, see, hunt, tabs. Tab names: home, nursery, microscope, thought, eye, hunt, files. ' +
     ' A TAB directive only offers: the app asks the visitor to confirm before anything moves, so word it as an offer, and never claim you have already taken them. ' +
     ' The time machine lives in the Nursery, below the training controls. ' +
     ' Never offer to open or point at a view the status marks as already visible \u2014 talk about what it shows instead. ' +
     F.doLineMeta + ' ' + F.consentScope({ pointExample: 'switch to the Nursery', escalations: 'load or delete models', safeVerb: 'SHOW' });
 }
-const SHOW = { teach: '[data-act="raise"]', grow: '[data-act="grow"]', look: '[data-act="look"]', think: '[data-act="think"]', hunt: '[data-act="hunt"]', tabs: '#modeBtn' };
-const TAB_ALIAS = { files: 'bay', home: 'home', nursery: 'nursery', microscope: 'microscope', thought: 'thought', hunt: 'hunt' };
+const SHOW = { teach: '[data-act="raise"]', grow: '[data-act="grow"]', look: '[data-act="look"]', think: '[data-act="think"]', see: '[data-act="see"]', hunt: '[data-act="hunt"]', tabs: '#modeBtn' };
+const TAB_ALIAS = { files: 'bay', home: 'home', nursery: 'nursery', microscope: 'microscope', thought: 'thought', eye: 'eye', hunt: 'hunt' };
 
 function createGuide(){
   const A = {
     id: 'tm-shell',
     ui: { mascot: '\u{1F9E0}', greeting: () => kid()
         ? 'Hi! I am the guide. Press start tour and I will show you around.'
-        : 'Welcome to Tiny Mind. Press start tour for a one-minute look at the five things you can do, or ask me anything.',
+        : 'Welcome to Tiny Mind. Press start tour for a one-minute look at the six things you can do, or ask me anything.',
       voiceEnabled: () => prefs.voice, doneStatus: 'Pick a room — a guide waits in each.' },
     layout: { panelWidth: 300, panelMargin: 302, narrowMax: 700, appBreakpoint: 0 },
     takeover: { events: ['pointerdown'],
