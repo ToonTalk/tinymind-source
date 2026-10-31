@@ -8,7 +8,7 @@
 // rows are bit-identical to the one-piece-at-a-time path for any number of workers
 // (E14 checks this). DOM-free; Node + browser.
 
-import { matmulBatch, rmsnorm, softmax, argmax } from './model.js';
+import { matmulBatch, rmsnorm, softmax, argmax, expertSwitches, routeExperts } from './model.js';
 import { Capture, lensInput } from './capture.js';
 import { jLensInput } from './jlens.js';
 import { plan } from './steer.js';
@@ -221,6 +221,7 @@ export async function forwardBatch(model, ids, start, { tap = null, ablate = nul
   const kvMul = c.nHeads / c.nKvHeads;
   if (start + N > c.seqLen) throw new Error(`forwardBatch: ${start + N} positions > seqLen ${c.seqLen}`);
 
+  const sw = expertSwitches(c, ablate);
   let abH = null, abNL = null;   // same reading of `ablate` as forward()
   if (ablate) {
     const abN = ablate instanceof Set ? null : ablate.neurons;
@@ -305,25 +306,28 @@ export async function forwardBatch(model, ids, start, { tap = null, ablate = nul
     if (tap && tap.residual) for (let p = 0; p < N; p++) tap.residual(l, 'attn', start + p, row(X, p, dim));
 
     for (let p = 0; p < N; p++) rmsnorm(row(XB, p, dim), row(X, p, dim), w.rmsFfn, l * dim, dim);
-    if (pool) await pool.ffn(l, XB, N, HB);
+    if (c.experts) expertLayer(model, l, XB, N, start, sw, tap, O);   // the experts run here, not in the pool
     else {
-      matmulBatch(HB, XB, w.w1, l * dim * hd, N, dim, hd);
-      matmulBatch(HB2, XB, w.w3, l * dim * hd, N, dim, hd);
-      for (let i = 0; i < N * hd; i++) {
-        let val = HB[i];
-        val = f(val * f(1 / f(1 + f(Math.exp(-val)))));
-        val = f(val * HB2[i]);
-        HB[i] = val;
+      if (pool) await pool.ffn(l, XB, N, HB);
+      else {
+        matmulBatch(HB, XB, w.w1, l * dim * hd, N, dim, hd);
+        matmulBatch(HB2, XB, w.w3, l * dim * hd, N, dim, hd);
+        for (let i = 0; i < N * hd; i++) {
+          let val = HB[i];
+          val = f(val * f(1 / f(1 + f(Math.exp(-val)))));
+          val = f(val * HB2[i]);
+          HB[i] = val;
+        }
       }
-    }
-    for (let p = 0; p < N; p++) {
-      const hb = row(HB, p, hd);
-      if (abNL) for (const j of abNL[l]) hb[j] = 0;
-      if (tap && tap.ffn) tap.ffn(l, start + p, hb);   // a clamp written here is what w2 reads
-    }
+      for (let p = 0; p < N; p++) {
+        const hb = row(HB, p, hd);
+        if (abNL) for (const j of abNL[l]) hb[j] = 0;
+        if (tap && tap.ffn) tap.ffn(l, start + p, hb);   // a clamp written here is what w2 reads
+      }
 
-    if (pool) await pool.mm('w2', l, HB, N, O);
-    else matmulBatch(O, HB, w.w2, l * hd * dim, N, hd, dim);
+      if (pool) await pool.mm('w2', l, HB, N, O);
+      else matmulBatch(O, HB, w.w2, l * hd * dim, N, hd, dim);
+    }
     for (let i = 0; i < N * dim; i++) X[i] = X[i] + O[i];
     if (edit && edit.layers.has(l)) for (let p = 0; p < N; p++) edit.fn(l, start + p, row(X, p, dim));
     if (tap && tap.residual) for (let p = 0; p < N; p++) tap.residual(l, 'ffn', start + p, row(X, p, dim));
@@ -332,6 +336,58 @@ export async function forwardBatch(model, ids, start, { tap = null, ablate = nul
 
   for (let p = 0; p < N; p++) rmsnorm(row(X, p, dim), row(X, p, dim), w.rmsFinal, 0, dim);
   return X;
+}
+
+// A layer of experts over N rows of normed inputs XB (a mind made of experts; see model.js):
+// the router for every row in one product, then each expert once, over just the rows sent to
+// it. out [N, dim] gets each row's weighted sum, added best choice first as forward() adds it,
+// so every number matches the one-piece path. The experts are small (15M-sized minds), so they
+// run on this thread; the pool still does the attention and the classifier.
+function expertLayer(model, l, XB, N, start, sw, tap, out) {
+  const c = model.config, w = model.weights, ex = c.experts, f = Math.fround;
+  const n = ex.n, k = ex.topK, eh = ex.hidden, dim = c.dim;
+  const RL = new Float32Array(N * n);
+  matmulBatch(RL, XB, w.router, l * n * dim, N, dim, n);
+  const top = new Int32Array(N * k).fill(-1), gate = new Float32Array(N * k);
+  const probs = new Float32Array(n), t1 = new Int32Array(k), g1 = new Float32Array(k);
+  const offL = sw && sw.off[l], muteL = sw && sw.mute[l];
+  for (let p = 0; p < N; p++) {
+    const kk = routeExperts(RL.subarray(p * n, (p + 1) * n), probs, n, k, ex.renorm, offL, t1, g1);
+    if (tap && tap.router) tap.router(l, start + p, probs, t1, g1, kk);
+    for (let j = 0; j < kk; j++) { top[p * k + j] = t1[j]; gate[p * k + j] = g1[j]; }
+  }
+  const C = new Float32Array(k * N * dim), has = new Uint8Array(k * N);   // C[j][p]: row p's j-th choice
+  for (let e = 0; e < n; e++) {
+    if (muteL && muteL.has(e)) continue;   // muted: chosen, but adds nothing
+    const rows = [];
+    for (let p = 0; p < N; p++) for (let j = 0; j < k; j++) if (top[p * k + j] === e) rows.push(p, j);
+    const R = rows.length / 2;
+    if (!R) continue;
+    const Xe = new Float32Array(R * dim);
+    for (let r = 0; r < R; r++) Xe.set(XB.subarray(rows[2 * r] * dim, (rows[2 * r] + 1) * dim), r * dim);
+    const H = new Float32Array(R * eh), H2 = new Float32Array(R * eh), Y = new Float32Array(R * dim), le = l * n + e;
+    matmulBatch(H, Xe, w.ew1, le * eh * dim, R, dim, eh);
+    matmulBatch(H2, Xe, w.ew3, le * eh * dim, R, dim, eh);
+    for (let i = 0; i < R * eh; i++) {
+      let val = H[i];
+      val = f(val * f(1 / f(1 + f(Math.exp(-val)))));
+      val = f(val * H2[i]);
+      H[i] = val;
+    }
+    matmulBatch(Y, H, w.ew2, le * dim * eh, R, eh, dim);
+    for (let r = 0; r < R; r++) {
+      const p = rows[2 * r], j = rows[2 * r + 1], g = gate[p * k + j], o = (j * N + p) * dim;
+      for (let i = 0; i < dim; i++) C[o + i] = f(g * Y[r * dim + i]);
+      has[j * N + p] = 1;
+    }
+  }
+  for (let p = 0; p < N; p++) {
+    for (let i = 0; i < dim; i++) {
+      let acc = 0;
+      for (let j = 0; j < k; j++) if (has[j * N + p]) acc = f(acc + C[(j * N + p) * dim + i]);
+      out[p * dim + i] = acc;
+    }
+  }
 }
 
 // logits [r1 - r0, vocab] for rows r0..r1 of classifier inputs Xn [*, dim]

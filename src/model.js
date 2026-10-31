@@ -15,24 +15,78 @@
 // attention output (their pattern is still computed and tapped, so the microscope can
 // show WHAT was removed); ablated neurons have their SwiGLU-gated activation zeroed
 // before w2. With ablate unset the code path is identical to the G1-parity-tested one.
+//
+// A mind made of experts (config.experts, from bin-reader) has no dense feed-forward: in
+// each layer a router scores the n experts from the normed residual, softmax, and the word
+// goes to the top k, each weighted by its probability (renormalized over the chosen ones
+// when experts.renorm); an expert is a small SwiGLU (ew1, ew3, then ew2). Its switches ride
+// on `ablate`: mute: Set<"l:e"> keeps the router's choice but zeroes that expert's output;
+// reroute: Set<"l:e"> means the router may not choose it (its logit is masked before the
+// softmax, so the word goes to its next choice). tap.router(l, pos, probs, top, gate, k)
+// sees each layer's choice (probs after any reroute mask; COPY if kept).
 // DOM-free; Node + browser.
 
 const f = Math.fround;
 
 export function createState(config) {
-  const c = config;
+  const c = config, ex = c.experts;
+  const h = ex ? Math.max(c.hiddenDim, ex.hidden) : c.hiddenDim;
   return {
     x: new Float32Array(c.dim),
     xb: new Float32Array(c.dim),
     xb2: new Float32Array(c.dim),
-    hb: new Float32Array(c.hiddenDim),
-    hb2: new Float32Array(c.hiddenDim),
+    hb: new Float32Array(h),
+    hb2: new Float32Array(h),
     q: new Float32Array(c.dim),
     att: new Float32Array(c.nHeads * c.seqLen),
     logits: new Float32Array(c.vocabSize),
     keyCache: new Float32Array(c.nLayers * c.seqLen * c.kvDim),
     valueCache: new Float32Array(c.nLayers * c.seqLen * c.kvDim),
+    ...(ex ? { rl: new Float32Array(ex.n), rp: new Float32Array(ex.n), top: new Int32Array(ex.topK),
+      gate: new Float32Array(ex.topK), eo: new Float32Array(c.dim), acc: new Float32Array(c.dim) } : {}),
   };
+}
+
+// the experts' switches from `ablate`, per layer: { mute: [Set|null], off: [Set|null] }, or null
+export function expertSwitches(c, ablate) {
+  if (!c.experts || !ablate || ablate instanceof Set || !(ablate.mute || ablate.reroute)) return null;
+  const per = (keys) => {
+    const out = Array.from({ length: c.nLayers }, () => null);
+    for (const k of keys || []) {
+      const [l, e] = String(k).split(':').map(Number);
+      if (l >= 0 && l < c.nLayers && e >= 0 && e < c.experts.n) (out[l] || (out[l] = new Set())).add(e);
+    }
+    return out;
+  };
+  return { mute: per(ablate.mute), off: per(ablate.reroute) };
+}
+
+// which experts one word goes to: logits [n] -> probs [n] (softmax over the experts the router
+// may choose; offL = the rerouted ones, or null), top [k] best first (ties: the lower number),
+// gate [k]. Returns how many were chosen (0 only if every expert is rerouted). forward() and
+// batch.js both route through here, so they always choose alike.
+export function routeExperts(logits, probs, n, k, renorm, offL, top, gate) {
+  let allowed = 0;
+  for (let e = 0; e < n; e++) { const off = offL && offL.has(e); probs[e] = off ? -Infinity : logits[e]; if (!off) allowed++; }
+  if (!allowed) { probs.fill(0); return 0; }
+  softmax(probs, 0, n);
+  const kk = Math.min(k, allowed);
+  for (let j = 0; j < kk; j++) {
+    let best = -1;
+    for (let e = 0; e < n; e++) {
+      if (offL && offL.has(e)) continue;
+      let taken = false;
+      for (let i = 0; i < j; i++) if (top[i] === e) taken = true;
+      if (!taken && (best < 0 || probs[e] > probs[best])) best = e;
+    }
+    top[j] = best; gate[j] = probs[best];
+  }
+  if (renorm) {
+    let s = 0;
+    for (let j = 0; j < kk; j++) s = f(s + gate[j]);
+    for (let j = 0; j < kk; j++) gate[j] = f(gate[j] / s);
+  }
+  return kk;
 }
 
 export function createModel(checkpoint) {
@@ -148,6 +202,7 @@ export function forward(model, token, pos, tap = null, ablate = null) {
     }
   }
 
+  const ex = c.experts, sw = expertSwitches(c, ablate);
   x.set(w.tokenEmbedding.subarray(token * dim, (token + 1) * dim));
 
   for (let l = 0; l < c.nLayers; l++) {
@@ -214,6 +269,23 @@ export function forward(model, token, pos, tap = null, ablate = null) {
     if (tap && tap.residual) tap.residual(l, 'attn', pos, x);
 
     rmsnorm(s.xb, x, w.rmsFfn, l * dim, dim);
+    if (ex) {   // a mind made of experts: the router chooses, the chosen experts work
+      const n = ex.n, eh = ex.hidden;
+      matmul(s.rl, s.xb, w.router, l * n * dim, dim, n);
+      const kk = routeExperts(s.rl, s.rp, n, ex.topK, ex.renorm, sw && sw.off[l], s.top, s.gate);
+      if (tap && tap.router) tap.router(l, pos, s.rp, s.top, s.gate, kk);
+      s.acc.fill(0);
+      for (let j = 0; j < kk; j++) {
+        const e = s.top[j];
+        if (sw && sw.mute[l] && sw.mute[l].has(e)) continue;   // muted: chosen, but adds nothing
+        expertFfn(s, w, l * n + e, dim, eh);
+        const g = s.gate[j];
+        for (let i = 0; i < dim; i++) s.acc[i] = f(s.acc[i] + f(g * s.eo[i]));
+      }
+      for (let i = 0; i < dim; i++) x[i] = x[i] + s.acc[i];
+      if (tap && tap.residual) tap.residual(l, 'ffn', pos, x);
+      continue;
+    }
     matmul(s.hb, s.xb, w.w1, l * dim * hiddenDim, dim, hiddenDim);
     matmul(s.hb2, s.xb, w.w3, l * dim * hiddenDim, dim, hiddenDim);
     for (let i = 0; i < hiddenDim; i++) {
@@ -233,6 +305,19 @@ export function forward(model, token, pos, tap = null, ablate = null) {
   rmsnorm(x, x, w.rmsFinal, 0, dim);
   matmul(s.logits, x, w.wcls, 0, dim, c.vocabSize);
   return s.logits;
+}
+
+// one expert (index le = layer * n + expert) on s.xb -> s.eo, the dense SwiGLU's arithmetic
+function expertFfn(s, w, le, dim, eh) {
+  matmul(s.hb, s.xb, w.ew1, le * eh * dim, dim, eh);
+  matmul(s.hb2, s.xb, w.ew3, le * eh * dim, dim, eh);
+  for (let i = 0; i < eh; i++) {
+    let val = s.hb[i];
+    val = f(val * f(1 / f(1 + f(Math.exp(-val)))));
+    val = f(val * s.hb2[i]);
+    s.hb[i] = val;
+  }
+  matmul(s.eo, s.hb, w.ew2, le * dim * eh, eh, dim);
 }
 
 export function argmax(arr, n = arr.length) {

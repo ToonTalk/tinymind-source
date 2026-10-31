@@ -61,6 +61,14 @@ export function checkpointVocab(u8) {
   return dim > 0 && dim <= 16384 && layers > 0 && layers <= 256 && vocab > 1 ? vocab : -1;
 }
 
+// a mind made of experts (tools/moe/export.py): a llama2.c header with hidden_dim 0, its feed-forward
+// in a "MoE1" block after the usual weights (src/bin-reader.js reads it). It opens only in the
+// Experts room, and only it does.
+export function checkpointHasExperts(u8) {
+  if (checkpointVocab(u8) < 0) return false;
+  return new DataView(u8.buffer, u8.byteOffset, 28).getInt32(4, true) === 0;
+}
+
 // folder drop: FileSystemEntry -> [{name, u8}] (browser only; readEntries pages by 100)
 export function walkEntry(entry) {
   return new Promise((resolve) => {

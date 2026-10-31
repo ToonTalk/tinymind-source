@@ -5,6 +5,11 @@
 //   then fp32 weights in the order listed in layout() below,
 //   then TWO legacy blocks (seq_len*head_size/2 floats each — old RoPE freq_cis) to skip,
 //   then wcls [vocab, dim] only if unshared.
+// A mind made of experts (tools/moe/export.py, "MoE1") has hidden_dim = 0, so w1/w2/w3 take no
+// space, and an experts block follows the weights: "MoE1", then 7 x int32 (version 1,
+// n_experts, top_k, expert_hidden, flags: bit 0 = renormalize the chosen weights, 0, 0), then
+// fp32 router [L, E, dim], w1 [L, E, eh, dim], w2 [L, E, dim, eh], w3 [L, E, eh, dim].
+// config.experts = { n, topK, hidden, renorm }; weights.router / ew1 / ew2 / ew3.
 // DOM-free: operates on ArrayBuffer/Uint8Array, runs in Node and browser.
 
 const HEADER_INTS = 7;
@@ -65,7 +70,21 @@ export function readCheckpoint(data) {
   }
   if (config.sharedWeights) weights.wcls = weights.tokenEmbedding;
 
-  const expectedBytes = HEADER_BYTES + p * 4;
+  let expectedBytes = HEADER_BYTES + p * 4;
+  if (hiddenDim === 0 && expectedBytes + 32 <= len && dv.getUint32(expectedBytes, false) === 0x4d6f4531) {   // "MoE1"
+    const [version, n, topK, hidden, flags] = [1, 2, 3, 4, 5].map(i => dv.getInt32(expectedBytes + 4 * i, true));
+    if (version !== 1) throw new Error('bin-reader: experts block version ' + version);
+    config.experts = { n, topK, hidden, renorm: (flags & 1) === 1 };
+    p += 8;
+    const L = nLayers;
+    for (const [name, size] of [['router', L * n * dim], ['ew1', L * n * hidden * dim], ['ew2', L * n * dim * hidden], ['ew3', L * n * hidden * dim]]) {
+      offsets.push({ name, offsetFloats: p, size });
+      weights[name] = floats.subarray(p, p + size);
+      p += size;
+    }
+    for (const name of ['w1', 'w2', 'w3']) weights[name] = new Float32Array(0);   // no dense feed-forward
+    expectedBytes = HEADER_BYTES + p * 4;
+  }
   if (expectedBytes !== len) {
     throw new Error(`bin-reader: layout consumed ${expectedBytes} bytes but file is ${len}`);
   }
@@ -76,6 +95,7 @@ export function readCheckpoint(data) {
 // run.c and this reader both skip them). `weights` uses the field names from readCheckpoint.
 export function writeCheckpoint(config, weights) {
   const c = config;
+  if (c.experts) throw new Error('writeCheckpoint: a mind made of experts is not written here (tools/moe/export.py makes them)');
   const tensors = layout(c);
   const totalFloats = tensors.reduce((a, t) => a + t.size, 0);
   const out = new ArrayBuffer(HEADER_BYTES + totalFloats * 4);

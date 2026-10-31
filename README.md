@@ -26,6 +26,10 @@ node tools/make-arc.js A         # from-scratch arc -> arc/newborn/ (overnight; 
 node tools/make-arc-zips.js      # zog-arc.zip, newborn-arc.zip, tiny-mind-starter.zip -> dist/
 node tools/eye/ship.mjs          # the Tiny Eye from its Phase 0 export -> eye/ (reports/eye/feasibility.md;
                                  #   training and labeling: tools/eye/*.py, Python + PyTorch)
+# the mind made of experts (reports/moe/feasibility.md; training, export and labeling: tools/moe/,
+#   Python + PyTorch). Its .bin is not in git: export it, or copy it, into models/
+python tools/moe/export.py <ckpt-top1>/moe/final.pt models/stories-moe-top1.bin
+python tools/moe/parity.py models/stories-moe-top1.bin tests/fixtures/moe-top1-parity.json   # E18's fixture
 ```
 
 ## Layout
@@ -54,7 +58,10 @@ node tools/eye/ship.mjs          # the Tiny Eye from its Phase 0 export -> eye/ 
 - `hunt/` — Session C app: the treasure hunt. Probe a question, get falsifiable
   clues from the built-in or LLM detective, prove or bust them with head/neuron/team
   ablations. Voice + little-kid mode toggles.
-- `models/` — downloaded checkpoints/tokenizers + TinyStories-valid (not in git).
+- `models/` — downloaded checkpoints/tokenizers + TinyStories-valid (not in git), and the mind made
+  of experts, `stories-moe-top1.bin` (76.8 MB; tools/moe/export.py writes it; the top-2 mind
+  `stories-moe.bin` is optional, for E18 only). src/bin-reader.js reads its experts block; model.js
+  and batch.js run its router and experts, with experts muted or rerouted (E18: PyTorch parity).
 - `vendor/llama2.c` — reference implementation (MIT), cloned at Phase 0 time.
 
 ## Attribution
