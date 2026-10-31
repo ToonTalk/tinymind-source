@@ -897,7 +897,7 @@ async function main() {
       // the words travel: piece 4 (the beginning's last) drops through layers 1-6 to experts (4 + l) % 8, and "Let" comes out
       const tb = doc.getElementById('travelBtn');
       check('a written story offers "watch the words travel"', !tb.hidden);
-      doc.getElementById('tSpeed').value = '90';
+      doc.querySelector('#tSpeed button[data-ms="90"]').click();
       tb.click();
       check('the board: six layers of eight experts, and the replay starts with the beginning\'s last word',
         doc.querySelectorAll('#board .bcell').length === 48 && doc.body.dataset.travel === 'main' && doc.body.dataset.travelPos === '4' && !doc.getElementById('travel').hidden);
@@ -910,9 +910,19 @@ async function main() {
       check('the guide says how to read the board', spoke(w, 'drop through the six layers'));
       check('the guide knows the board, and can point at it', /watch the words travel/.test(w.__guide.system()) && /Targets: [^.]*travel/.test(w.__guide.system()));
       doc.querySelectorAll('#strip .tok')[2].click();
-      check('clicking a word replays its trip', doc.body.dataset.travelPos === '3' || doc.body.dataset.travelPos === '2');
-      await until(() => doc.body.dataset.travelPos === '3', 5000);
-      check('... from that word, then waits', doc.body.dataset.travelPos === '3' && doc.getElementById('tPlay').textContent.includes('play'));
+      check('clicking a word replays its trip', doc.body.dataset.travelPos === '3');
+      await until(() => doc.body.dataset.travelPos === '4' && doc.body.dataset.travelStep === '0', 5000);
+      await new Promise(r => setTimeout(r, 400));
+      check('... and stops when its next word is out', doc.body.dataset.travelPos === '4' && doc.body.dataset.travelStep === '0' && doc.getElementById('tPlay').textContent.includes('play'));
+      const names = () => [...doc.querySelectorAll('#board .bname')].map(n => n.textContent);
+      doc.getElementById('tStep').click();
+      check('one step at a time: first the word appears above layer 1', doc.body.dataset.travelStep === '1' &&
+        doc.getElementById('chip').style.visibility === 'visible' && names().every(n => !n));
+      doc.getElementById('tStep').click();
+      check('... the next step lands it on its expert in layer 1, and no further', names()[0].startsWith('expert 4:') && !names()[1] && doc.body.dataset.travelPos === '4');
+      for (let i = 0; i < 6; i++) doc.getElementById('tStep').click();
+      check('... and after layer 6, the next word comes out', doc.body.dataset.travelPos === '5' && doc.body.dataset.travelStep === '0' &&
+        /→ Let/.test(doc.querySelector('#board .bout').textContent), doc.querySelector('#board .bout').textContent);
       check("a word's router vote: eight bars, the chosen one marked, and its expert in every layer",
         doc.querySelectorAll('#votes .vbar').length === 8 && doc.querySelectorAll('#votes .vbar.chosen').length === 1 && doc.querySelectorAll('#votes .lchip').length === 6);
       doc.querySelector('.ecard[data-expert="2:5"] .watch').click();
@@ -921,15 +931,19 @@ async function main() {
       doc.querySelector('.ecard[data-expert="2:2"] .offb').click();
       const ask = wk.sent.find(m => m.type === 'write' && m.tag === 'off');
       check('switching an expert off rewrites from the same beginning with it muted', !!ask && ask.mute.join() === '2:2' && ask.reroute.length === 0 && ask.promptIds.length === 5);
-      wk.fakeReceive(story(off, ids, 'off', ['2:2']));
+      const offIds = ids.slice(); offIds[6] = 29916;   // the rewrite parts from the story here
+      wk.fakeReceive(story(off, offIds, 'off', ['2:2']));
       check('the rewrite shows beside the story, its changed words lit', doc.querySelectorAll('#paneOff .new').length === 1 && doc.querySelector('#paneOff .new').textContent.includes("Let'") &&
         doc.querySelectorAll('#paneOn .gone').length === 1);
       check('the apostrophe challenge is solved and the card now says what the expert does', doc.body.dataset.solved.split(',').includes('2:2') &&
         /lose their ending/.test(doc.querySelector('.ecard[data-expert="2:2"] .found').textContent));
-      check('the board can now replay the rewrite instead', doc.querySelectorAll('#travelWhich button').length === 2);
-      doc.querySelectorAll('#travelWhich button')[1].click();
+      check('switching an expert off turns the board to the rewrite (and a button turns it back)',
+        doc.querySelectorAll('#travelWhich button').length === 2 && doc.body.dataset.travel === 'off');
       check('... where the switched-off expert shows its plug', doc.body.dataset.travel === 'off' && doc.querySelectorAll('#board .bcell.off').length === 1 &&
         doc.querySelectorAll('#board .bcell')[2 * 8 + 2].classList.contains('off'));
+      await until(() => doc.body.dataset.travelPos === '6', 8000);
+      check('... and the step where the two stories part is marked', /with every expert on, it was “'s”/.test(doc.querySelector('#board .bout').textContent) &&
+        doc.querySelectorAll('#travelText .new').length === 1, doc.querySelector('#board .bout').textContent);
       doc.getElementById('tClose').click();
       check('closing the board brings back its button', doc.getElementById('travel').hidden && !tb.hidden && doc.body.dataset.travel === '');
       await until(() => spoke(w, 'Challenge solved'), 3000);
@@ -937,7 +951,11 @@ async function main() {
       wk.sent.length = 0;
       doc.getElementById('reroute').checked = true; doc.getElementById('reroute').dispatchEvent(new w.Event('change'));
       check('the advanced switch reroutes instead of muting', wk.sent.some(m => m.type === 'write' && m.tag === 'off' && m.reroute.join() === '2:2' && m.mute.length === 0));
+      const colors = () => [...doc.querySelectorAll('#strip .tok')].map(t => t.style.background).join();
+      const before = colors();
       [...doc.querySelectorAll('#layers button')][1].click();
+      check('another layer recolors the words (the row says the colors are its experts)',
+        colors() !== before && /color the words by the experts of layer/.test(doc.getElementById('layers').textContent));
       check('layer 2 shows its own eight cards', doc.body.dataset.layer === '2' && /the where words expert/.test(doc.getElementById('cards').textContent));
       [...doc.querySelectorAll('#strip .tok')].find(t => t.textContent === ' and').click();
       check('finding an "and" that went somewhere else solves the router challenge', doc.body.dataset.solved.split(',').includes('router'));

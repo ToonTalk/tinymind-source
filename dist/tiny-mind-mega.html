@@ -19306,7 +19306,7 @@ window.__vgDeferBoot(createGuide);
   .pchip { background: #232937; color: var(--ink); font-size: 12px; padding: .15rem .5rem; margin: 0; border-radius: 999px; }
   #genOut { white-space: pre-wrap; font-size: 13.5px; margin-top: .4rem; color: var(--dim); }
   #strip { line-height: 2.05; white-space: pre-wrap; font-size: 14.5px; margin-top: .5rem; }
-  #strip .tok { border-radius: 4px; cursor: pointer; padding: .1rem 0; }
+  #strip .tok { border-radius: 4px; cursor: pointer; padding: .1rem 0; transition: background-color .35s; }
   #strip .tok:hover { outline: 1px solid var(--dim); }
   #strip .tok.sel { outline: 2px solid #fff; }
   #strip.watching .tok { background: transparent !important; color: #6c7586; }
@@ -19329,14 +19329,20 @@ window.__vgDeferBoot(createGuide);
   #board .blab { font-size: 12px; color: var(--dim); text-align: right; padding-right: .3rem; white-space: nowrap; }
   #board .bcell { height: 24px; border-radius: 5px; border: 1px solid var(--edge); outline: 2px solid transparent; transition: background .25s, outline-color .2s;
                   display: flex; align-items: center; justify-content: center; font-size: 11px; }
-  #board .bcell.off { border: 1px dashed var(--red); background: transparent !important; }
+  #board .bcell.off { border: 1px dashed var(--red); background: transparent !important; font-size: 14px; }
   #board .bname { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: .4rem; }
   #board .bname.silent { color: var(--red); }
-  #board .bout { grid-column: 2 / span 8; height: 26px; border: 1px dashed #3a4152; border-radius: 6px; display: flex; align-items: center; padding: 0 .6rem; font-size: 13.5px; }
+  #board .bout { grid-column: 2 / -1; min-height: 26px; border: 1px dashed #3a4152; border-radius: 6px; display: flex; flex-wrap: wrap; align-items: center;
+                 padding: .1rem .6rem; font-size: 13.5px; }
   #chip { position: absolute; transform: translate(-50%, -50%); background: #fff3d6; color: #12141a; border-radius: 6px; padding: 0 .45rem; font-size: 12.5px;
           font-weight: 600; white-space: pre; transition: left .18s, top .18s; pointer-events: none; z-index: 2; box-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
   .tctl { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .55rem; }
-  .tctl select { background: #232937; color: var(--ink); border: 0; border-radius: 6px; padding: .2rem .35rem; font: inherit; font-size: 12px; }
+  .tctl .hint { margin-left: .4rem; }
+  #tSpeed button { background: #232937; margin: 0 .15rem 0 0; }
+  #tSpeed button.on { background: #6b5320; color: #fff3d6; }
+  #travelText .new { background: rgba(255, 210, 127, .28); border-radius: 3px; }
+  #board .bout.parted { border-color: var(--gold); }
+  #board .bout .was { color: var(--gold); font-size: 12.5px; margin-left: .6rem; }
   #votes { margin-top: .5rem; border-top: 1px solid var(--edge); padding-top: .5rem; display: none; }
   .vbar { display: flex; align-items: center; gap: .4rem; margin: .16rem 0; font-size: 13px; }
   .vbar .vname { width: 15em; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -19714,7 +19720,7 @@ window.__vgDeferBoot = async function(create){
   <div id="progress"><div></div></div>
   <div id="genOut"></div>
   <div id="strip" class="hint">the story will appear here, each word colored by the expert that handled it…</div>
-  <div class="layers" id="layers"><span class="hint">layer:</span></div>
+  <div class="layers" id="layers"><span class="hint">color the words by the experts of layer:</span></div>
   <div id="layerNote" class="hint"></div>
   <button id="travelBtn" class="small alt" hidden>▶ watch the words travel through all six layers</button>
   <div id="travel" hidden>
@@ -19726,9 +19732,10 @@ window.__vgDeferBoot = async function(create){
     <div id="board"></div>
     <div class="tctl">
       <button id="tPlay" class="small">⏸ pause</button>
-      <button id="tStep" class="small alt">next word</button>
+      <button id="tStep" class="small alt" title="move the word down one layer">▸ one step</button>
+      <span class="hint">speed:</span>
+      <span id="tSpeed"><button class="small" data-ms="420">slow</button><button class="small on" data-ms="220">normal</button><button class="small" data-ms="90">fast</button></span>
       <button id="tAgain" class="small alt">↺ start over</button>
-      <select id="tSpeed" title="how fast the words travel"><option value="420">slow</option><option value="220" selected>normal</option><option value="90">fast</option></select>
       <button id="tClose" class="small alt">close</button>
     </div>
   </div>
@@ -22323,8 +22330,11 @@ function renderLayers() {
 }
 function setLayer(l) {
   S.layer = l;
-  if (S.watch && +S.watch.split(':')[0] !== l) S.watch = null;
-  renderLayers(); renderCards(); renderStrip(); renderVotes();
+  const watched = !!S.watch;
+  if (S.watch && +S.watch.split(':')[0] !== l) { S.watch = null; document.body.dataset.watch = ''; }
+  renderLayers(); renderCards(); renderVotes();
+  if (watched) renderStrip(); else recolorStrip();
+  if (S.story && !S.busy) status(`each word is now colored by its expert in layer ${l + 1}. Click a word for the router's vote.`);
   emit('layerChanged', { layer: l + 1, warmup: !!(DATA && DATA.layers[l].warmup) });
 }
 
@@ -22390,11 +22400,23 @@ function renderStrip() {
     sp.className = 'tok' + (p < st.promptLen ? ' prompt' : '') + (p === S.sel ? ' sel' : '');
     sp.dataset.pos = p;
     sp.textContent = piece === '\n' ? '⏎\n' : piece;
-    sp.style.background = tint(e, .3);
+    sp.style.background = tint(e, STRIP_A);
     if (S.watch && chosen(st, p, wl) === we) { sp.classList.add('lit'); sp.style.setProperty('background', COLORS[we], 'important'); }
-    sp.title = `expert ${e}${nameOf(S.layer, e) ? ': ' + nameOf(S.layer, e) : ''} (layer ${S.layer + 1}) · click for the router's vote`;
+    sp.title = tokTitle(e);
     sp.onclick = () => selectPiece(p);
     el.appendChild(sp);
+  });
+}
+const STRIP_A = 0.5;
+const tokTitle = e => `expert ${e}${nameOf(S.layer, e) ? ': ' + nameOf(S.layer, e) : ''} (layer ${S.layer + 1}) · click for the router's vote`;
+// another layer: the same words take their new experts' colors in a ripple from the first word to the last
+function recolorStrip() {
+  const st = S.story; if (!st) return;
+  document.querySelectorAll('#strip .tok').forEach((sp, i) => {
+    const e = chosen(st, +sp.dataset.pos, S.layer);
+    sp.style.transitionDelay = Math.min(i * 6, 700) + 'ms';
+    sp.style.background = tint(e, STRIP_A);
+    sp.title = tokTitle(e);
   });
 }
 function selectPiece(p) {
@@ -22404,7 +22426,7 @@ function selectPiece(p) {
   const st = S.story, R = DATA && DATA.router;
   const e = chosen(st, p, S.layer);
   emit('pieceChosen', { piece: st.pieces[p], layer: S.layer + 1, expert: e });
-  if (T.open && T.which === 'main') { resetTravel('main', p); travelStep(); }   // replay this word's trip
+  if (T.open) { resetTravel('main', p); T.auto = 'word'; travelTick(); }   // replay this word's trip
   // the router challenge: this word, in its layer, not with its usual expert
   if (R && st.ids[p] === R.id && S.layer === R.layer && e !== R.usual) solve('router', `“${R.word.trim()}” went to expert ${e} here, not expert ${R.usual}`);
 }
@@ -22447,12 +22469,14 @@ function toggleWatch(k) {
 }
 
 // ---------- the words travel: a replay of a story, each word dropping through the six layers ----------
-// T.pos is the word dropping in (or next to): its trip ends with the next word, which drops in after it.
-// The counts are how many of the story's words, up to that one, each expert has had.
-const T = { open: false, which: 'main', pos: 0, counts: null, playing: false, busy: false, run: 0 };
+// A word's trip is eight steps: it appears above layer 1 (step 0), lands on its expert in each layer
+// (steps 1 to 6), and the next word comes out at the bottom (step 7); then that word drops in. T.pos is
+// the word on its trip, T.step the next step to take. The counts are how many of the story's words,
+// up to this one, each expert has had. With a rewrite, the board replays it (its switched-off experts
+// show 🔌), and marks where the two stories part.
+const T = { open: false, which: 'main', pos: 0, step: 0, counts: null, auto: null, ms: 220, timer: 0, parted: -1 };
 const B = { cells: [], names: [], out: null, chip: null };
 const travelStory = () => T.which === 'off' && S.offStory ? S.offStory : S.story;
-const wait = ms => new Promise(r => setTimeout(r, ms));
 const chipText = piece => /^\s*\n/.test(piece) ? '⏎' : piece.replace(/^ /, '') || '␣';
 function buildBoard() {
   if (B.out) return;
@@ -22469,7 +22493,7 @@ function buildBoard() {
     B.names.push(add('bname'));
   }
   add('blab', 'next word');
-  B.out = add('bout'); add('');
+  B.out = add('bout');
   B.chip = add(''); B.chip.id = 'chip'; B.chip.style.visibility = 'hidden';
 }
 function travelCounts(st, upto) {
@@ -22486,12 +22510,20 @@ function paintBoard(st) {
     c.textContent = off ? '🔌' : n || '';
   }
 }
+// the first piece where the story and its rewrite differ (they share the beginning and always take the likeliest word)
+function partedAt() {
+  const a = S.story, b = S.offStory;
+  if (!a || !b) return -1;
+  const n = Math.min(a.ids.length, b.ids.length);
+  for (let p = a.promptLen; p < n; p++) if (a.ids[p] !== b.ids[p]) return p;
+  return a.ids.length === b.ids.length ? -1 : n;
+}
 function travelText(st) {
   const el = $('travelText'); el.innerHTML = '';
   for (let p = 1; p <= Math.min(T.pos, st.pieces.length - 1); p++) {
     const sp = document.createElement('span');
     sp.textContent = st.pieces[p];
-    sp.className = (p < st.promptLen ? 'pr' : '') + (p === T.pos ? ' cur' : '');
+    sp.className = (p < st.promptLen ? 'pr' : '') + (T.parted > 0 && p >= T.parted ? ' new' : '') + (p === T.pos ? ' cur' : '');
     el.appendChild(sp);
   }
   el.scrollTop = el.scrollHeight;
@@ -22500,7 +22532,8 @@ function travelText(st) {
 function travelWhich() {
   const box = $('travelWhich'); box.innerHTML = '';
   if (!S.offStory) return;
-  for (const [w, label] of [['main', 'replay the story'], ['off', 'replay the rewrite, ' + offWho(S.offStory.keys, S.offStory.rerouted)]]) {
+  const lab = document.createElement('span'); lab.className = 'hint'; lab.textContent = 'replaying:'; box.appendChild(lab);
+  for (const [w, label] of [['main', 'the story with every expert on'], ['off', 'the rewrite, ' + offWho(S.offStory.keys, S.offStory.rerouted)]]) {
     const b = document.createElement('button');
     b.className = 'small' + (T.which === w ? ' on' : ''); b.textContent = label;
     b.onclick = () => { resetTravel(w); travelPlay(true); };
@@ -22508,80 +22541,97 @@ function travelWhich() {
   }
 }
 function travelPlay(on) {
-  T.playing = on;
+  T.auto = on ? 'play' : null;
   $('tPlay').textContent = on ? '⏸ pause' : '▶ play';
-  if (on && !T.busy) travelStep();
+  clearTimeout(T.timer);
+  if (on) travelTick();
 }
 function clearTrip() {
   for (const n of B.names) { n.textContent = ''; n.className = 'bname'; }
-  B.out.textContent = ''; B.chip.style.visibility = 'hidden';
+  B.out.textContent = ''; B.out.className = 'bout'; B.chip.style.visibility = 'hidden';
 }
-// start the replay over (or jump it to piece p), cancelling a trip under way
+// start the replay over (or jump it to piece p)
 function resetTravel(which = T.which, p = null) {
-  T.run++; T.busy = false;
+  clearTimeout(T.timer); T.auto = null;
   T.which = which === 'off' && S.offStory ? 'off' : 'main';
   const st = travelStory();
   document.body.dataset.travel = T.open ? T.which : '';
   if (!st) return;
-  T.pos = p === null ? st.promptLen - 1 : p;
+  T.parted = partedAt();
+  T.pos = p === null ? st.promptLen - 1 : p; T.step = 0;
   travelCounts(st, T.pos - 1);
   clearTrip(); paintBoard(st); travelText(st); travelWhich(); travelPlay(false);
+  document.body.dataset.travelStep = 0;
 }
 function placeChip(el, dy = 0) {
   B.chip.style.left = (el.offsetLeft + el.offsetWidth / 2) + 'px';
   B.chip.style.top = (el.offsetTop + el.offsetHeight / 2 + dy) + 'px';
 }
-async function travelStep() {
+// take the next step of the trip; false when the story has no more words to send
+function travelStepOnce() {
   const st = travelStory();
-  if (!st || T.busy) return;
-  if (T.pos >= st.ids.length) { travelPlay(false); return; }
-  const run = T.run, gone = () => run !== T.run, ms = +$('tSpeed').value, p = T.pos;
-  T.busy = true;
-  paintBoard(st); clearTrip();
-  B.chip.style.transition = 'none'; B.chip.textContent = chipText(st.pieces[p]);
-  placeChip(B.cells[0][chosen(st, p, 0)], -30); B.chip.style.visibility = 'visible';
-  void B.chip.offsetWidth; B.chip.style.transition = '';
-  await wait(ms); if (gone()) return;
-  let silent = null;
-  for (let l = 0; l < st.L; l++) {
-    const e = chosen(st, p, l), c = B.cells[l][e];
+  if (!st || T.pos >= st.ids.length) return false;
+  const p = T.pos, s = T.step;
+  if (s === 0) {   // the word appears above layer 1
+    paintBoard(st); clearTrip();
+    B.chip.style.transition = 'none'; B.chip.textContent = chipText(st.pieces[p]);
+    placeChip(B.cells[0][chosen(st, p, 0)], -30); B.chip.style.visibility = 'visible';
+    void B.chip.offsetWidth; B.chip.style.transition = '';
+  } else if (s <= st.L) {   // it lands on its expert in layer s
+    const l = s - 1, e = chosen(st, p, l), c = B.cells[l][e];
     placeChip(c);
-    await wait(ms * 0.9); if (gone()) return;
     T.counts[l][e]++;
     if (st.keys.includes(key(l, e))) {   // muted: the router still sends the word here, but nothing comes back
-      B.names[l].textContent = `expert ${e} is switched off: it says nothing`; B.names[l].className = 'bname silent';
-      silent = tag(l, e);
+      B.names[l].textContent = `expert ${e} is off: it says nothing`; B.names[l].className = 'bname silent';
+      emit('travelSilent', { expert: tag(l, e) });
     } else {
       c.style.background = COLORS[e]; c.style.color = '#12141a'; c.style.outlineColor = '#fff'; c.textContent = T.counts[l][e];
       B.names[l].textContent = `expert ${e}: ${nameOf(l, e) || 'no clear job found'}`;
     }
-    await wait(ms * 0.4); if (gone()) return;
+  } else {   // out comes the next word
+    B.chip.style.visibility = 'hidden';
+    B.out.textContent = p + 1 < st.pieces.length ? '→ ' + chipText(st.pieces[p + 1]) : '(the story stops here)';
+    const other = T.which === 'off' ? S.story : S.offStory;
+    if (p + 1 === T.parted && other && p + 1 < other.pieces.length) {   // where the two stories part
+      const was = document.createElement('span'); was.className = 'was';
+      was.textContent = T.which === 'off' ? `with every expert on, it was “${chipText(other.pieces[p + 1])}”: the stories part here`
+        : `in the rewrite it is “${chipText(other.pieces[p + 1])}”: the stories part here`;
+      B.out.appendChild(was); B.out.className = 'bout parted';
+      emit('travelParted', { rewrite: T.which === 'off', word: st.pieces[p + 1], other: other.pieces[p + 1] });
+    }
+    T.pos = p + 1; travelText(st);
   }
-  placeChip(B.out);
-  await wait(ms); if (gone()) return;
-  B.chip.style.visibility = 'hidden';
-  B.out.textContent = p + 1 < st.pieces.length ? '→ ' + chipText(st.pieces[p + 1]) : '(the story stops here)';
-  T.pos = p + 1; travelText(st);
-  if (silent) emit('travelSilent', { expert: silent, next: st.pieces[p + 1] || '' });
-  await wait(ms * 1.5); if (gone()) return;
-  T.busy = false;
-  if (T.pos >= st.ids.length) travelPlay(false);
-  else if (T.playing) travelStep();
+  T.step = s > st.L ? 0 : s + 1;
+  document.body.dataset.travelStep = T.step;
+  return true;
+}
+// playing: a step, a pause, the next step; a word replayed on its own stops when its next word is out
+function travelTick() {
+  clearTimeout(T.timer);
+  if (!T.auto) return;
+  const s = T.step;
+  if (!travelStepOnce()) { travelPlay(false); return; }
+  if (T.auto === 'word' && T.step === 0) { T.auto = null; return; }
+  T.timer = setTimeout(travelTick, T.ms * (s === 0 ? 1 : s > 6 ? 2.2 : 1.3));
 }
 $('travelBtn').onclick = () => {
   T.open = true; $('travel').hidden = false; $('travelBtn').hidden = true;
-  buildBoard(); resetTravel('main'); travelPlay(true);
+  buildBoard(); resetTravel(S.offStory ? 'off' : 'main'); travelPlay(true);
   emit('travelOpened', {});
 };
 $('tPlay').onclick = () => {
   const st = travelStory();
-  if (!T.playing && st && T.pos >= st.ids.length) resetTravel();
-  travelPlay(!T.playing);
+  if (!T.auto && st && T.pos >= st.ids.length) resetTravel();
+  travelPlay(T.auto !== 'play');
 };
-$('tStep').onclick = () => { travelPlay(false); if (!T.busy) travelStep(); };
+$('tStep').onclick = () => { travelPlay(false); travelStepOnce(); };
+$('tSpeed').querySelectorAll('button').forEach(b => b.onclick = () => {
+  T.ms = +b.dataset.ms;
+  $('tSpeed').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+});
 $('tAgain').onclick = () => { resetTravel(); travelPlay(true); };
 $('tClose').onclick = () => {
-  T.open = false; T.run++; T.busy = false; T.playing = false;
+  T.open = false; clearTimeout(T.timer); T.auto = null;
   $('travel').hidden = true; $('travelBtn').hidden = !S.story; document.body.dataset.travel = '';
 };
 
@@ -22818,7 +22868,7 @@ worker.onmessage = (e) => {
       keys: [...m.mute, ...m.reroute], rerouted: m.reroute.length > 0 };   // the switches it was written with
     if (m.tag === 'off') {
       S.offStory = st;
-      if (T.open && T.which === 'off') { resetTravel('off'); travelPlay(true); }
+      if (T.open) { resetTravel('off'); travelPlay(true); }   // switching an expert off shows on the board at once
       showPanes();
       const changed = textOf(st) !== textOf(S.story);
       status(changed ? 'done: the changed words light up in the second story' : 'the story came out the same: this expert was not needed for it. Try another beginning, or another expert.');
@@ -23724,6 +23774,11 @@ const EVENTS = {
   travelSilent: { priority: 'moment', cooldownMs: 20000,
     lines: p => `That word landed on ${p && p.expert ? p.expert : 'the switched-off expert'}, which is switched off: the router still sent it there, but the expert said nothing, so the word got no help in that layer. Look at the word that came out at the bottom.`,
     kidLines: 'The word landed on the switched-off helper, and it said nothing! Look at what came out at the bottom.' },
+  travelParted: { priority: 'verdict', cooldownMs: 10000,
+    lines: p => p && p.rewrite
+      ? `Here the two stories part: with every expert on, the next word was "${(p.other || '').trim() || p.other}"; with the switch, it is "${(p.word || '').trim() || p.word}". They began the same and always take the most likely word, so everything after this follows from that one change.`
+      : `Here the two stories part: in the rewrite with the switch, the next word is "${p && ((p.other || '').trim() || p.other)}" instead. Everything after this follows from that one change.`,
+    kidLines: 'Look! Here the two stories go different ways. One word changed, and everything after it changed too.' },
   layerChanged: { priority: 'ambient', cooldownMs: 30000, condition: p => !!(p && p.warmup),
     lines: 'Layer 1 is the warm-up layer: its router has not made up its mind, so its votes are small and most of its experts barely matter.',
     kidLines: 'This is the warm-up layer. Its helpers do not do much yet.' },
@@ -23770,7 +23825,7 @@ function statusText(){
     + (li.classList.contains('done') ? ' (' + txt2(li.querySelector('.got')) + ')' : ' (the page\'s hint: ' + txt2(li.querySelector('.chint')).replace(/^💡 hint\s*/, '') + ')')).join(' | ') : '';
   const votes = $('votes') && $('votes').style.display !== 'none' ? txt('votes') : 'no word chosen';
   const trip = $('board') ? [...$('board').querySelectorAll('.bname')].map((n, i) => 'layer ' + (i + 1) + ': ' + (n.textContent || '(not reached yet)')).join('; ') : '';
-  const travel = b.travel ? `open, replaying ${b.travel === 'off' ? 'the rewrite' : 'the story'}; the word traveling or last traveled: "${txt('chip')}", its experts so far: ${trip}; out at the bottom: ${txt2($('board') && $('board').querySelector('.bout')) || '(nothing yet)'}`
+  const travel = b.travel ? `open, replaying ${b.travel === 'off' ? 'the rewrite (with the switch)' : 'the story with every expert on'}; the word traveling or last traveled: "${txt('chip')}", its experts so far: ${trip}; out at the bottom: ${txt2($('board') && $('board').querySelector('.bout')) || '(nothing yet)'}`
     : 'closed';
   return `Story written: ${b.story === '1' ? 'yes' : 'NOT yet'}. Beginning box: ${(($('story') && $('story').value) || '').slice(0, 160)}. Layer shown: ${b.layer || '3'}${b.layer === '1' ? ' (the warm-up layer)' : ''}. ${txt('layerNote')} ` +
     `Story: ${txt('strip').slice(0, 700)}. Chosen word and the router's vote: ${votes.slice(0, 700)}. Words-travel board (under the story): ${travel.slice(0, 700)}. ` +
@@ -23782,7 +23837,7 @@ function txt2(el){ return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; 
 
 function systemPrompt(){
   return 'You are the guide beside the Tiny Mind Experts room: a mind made of experts, a small story-writing language model (19 million connections, 12 million used for each word) trained on children\'s stories. In each of its six layers, a router sends every word to ONE of eight experts (top-1). It writes as well as an ordinary mind of its size, a little better in fact. ' +
-    'The boxes, by their names on the page: box one, "the story": beginnings to pick, "write on", and the story with every word colored by its expert in the chosen layer (layer buttons below it; layer 3 is shown first); clicking a word shows "the router\'s vote" (bars for all eight experts; the biggest gets the word) and which expert it went to "in every layer". Under the story, "▶ watch the words travel" opens a board of six rows (the layers) of eight experts: each word of the story drops through it, landing in each layer on the expert the router chose, which lights up (its number counts the story\'s words it has had so far; its name shows beside the row); after layer 6, the next word comes out at the bottom and drops in next. That is how the mind writes: one word in, the next word out. A switched-off expert shows 🔌; a word that lands on it gets no help there ("it says nothing"). Clicking a word in the story replays that word\'s trip; if there is a rewrite, the board can replay it instead. Box two, "meet the experts of layer N": eight cards with a name, the words that almost always go to that expert, how busy it is (about 12% of words each on average), "👁 watch" (its words glow in the story) and "🔌 switch off"; "more about it" tells where the name came from. Box three, "switch an expert off": the mind writes the same story again from the same beginning with the expert switched off, always picking its most likely word, so the only difference is the switch; changed words light up. Switched off means MUTED: the router still sends the word there, but the expert\'s answer is zero. Under "what does switched off mean" there is a second switch, "send its words to their second choice instead" (rerouting): the router may not pick that expert, so its words go to the expert it voted for next. Box four: challenges. ' +
+    'The boxes, by their names on the page: box one, "the story": beginnings to pick, "write on", and the story with every word colored by its expert in the chosen layer (layer buttons below it; layer 3 is shown first); clicking a word shows "the router\'s vote" (bars for all eight experts; the biggest gets the word) and which expert it went to "in every layer". Under the story, "▶ watch the words travel" opens a board of six rows (the layers) of eight experts: each word of the story drops through it, landing in each layer on the expert the router chose, which lights up (its number counts the story\'s words it has had so far; its name shows beside the row); after layer 6, the next word comes out at the bottom and drops in next. That is how the mind writes: one word in, the next word out. Play/pause, "▸ one step" (the word moves down one layer per press), speed (slow, normal, fast), start over. When an expert is switched off, the board replays the rewrite (buttons above it switch back to the story with every expert on): the switched-off expert shows 🔌, a word that lands on it gets no help there ("it says nothing"), and the step where the two stories part is marked at the bottom ("with every expert on, it was ..."). Clicking a word in the story replays that word\'s trip. The words in the story are colored by the experts of the layer chosen under it ("color the words by the experts of layer"); choosing another layer recolors them. Box two, "meet the experts of layer N": eight cards with a name, the words that almost always go to that expert, how busy it is (about 12% of words each on average), "👁 watch" (its words glow in the story) and "🔌 switch off"; "more about it" tells where the name came from. Box three, "switch an expert off": the mind writes the same story again from the same beginning with the expert switched off, always picking its most likely word, so the only difference is the switch; changed words light up. Switched off means MUTED: the router still sends the word there, but the expert\'s answer is zero. Under "what does switched off mean" there is a second switch, "send its words to their second choice instead" (rerouting): the router may not pick that expert, so its words go to the expert it voted for next. Box four: challenges. ' +
     'Be honest about what was measured. The experts are WORD SORTERS, not topic experts like an animal expert or a math expert: each gets its own list of words (in layers 2 to 6 the word alone decides the route about 80 times in 100; the rest of the time the story around it does), and in the higher layers those lists line up with grammar jobs: naming words, linking words, the ends of sentences. Say this plainly when asked what an expert does or whether there is an expert for some topic. ' +
     'Names: a bigger A I (gpt-6.1-sol) read the words each expert gets and named it; then another A I, given only the name, had to pick out which words go to that expert; a name is shown only if it was right at least 75 times in 100. Other cards say "no clear job found": their word lists are real, but no name described them well. Some experts with no clear name still do something you can see when switched off: names come from the words an expert gets, jobs show up when you switch it off. ' +
     'Layer 1 is a warm-up layer: its router has not made up its mind (the expert it picks gets only about a fifth of the say), so switching off most of its experts does almost nothing, and no names were found for its experts. ' +
