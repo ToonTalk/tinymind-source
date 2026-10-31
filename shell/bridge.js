@@ -18,8 +18,9 @@
     return new Promise((resolve, reject) => {
       const id = ++seq; pending.set(id, { resolve, reject });
       parent.postMessage({ tm: 'rpc', id, method, args }, '*');
-      // Claude can take minutes (the viewer's consent dialog, then thinking and writing eight stories)
-      const ms = method === 'claude.complete' ? 300000 : 60000;
+      // Claude can take minutes (the viewer's consent dialog, then thinking and writing eight stories),
+      // and the Expert Storyteller is a 77 MB download
+      const ms = method === 'claude.complete' ? 300000 : method === 'experts.get' ? 1800000 : 60000;
       setTimeout(() => { const p = pending.get(id); if (p) { pending.delete(id); p.reject(new Error(method + ' timed out')); } }, ms);
     });
   }
@@ -55,6 +56,8 @@
       tryEye(100);
     } else if (m.tm === 'unload') {   // another room took the big mind: let this one go (memory)
       if (window.__tmUnload) window.__tmUnload();
+    } else if (m.tm === 'mind-missing') {   // the shell could not get this room's own mind: the room says why
+      if (window.__tmMindMissing) window.__tmMindMissing(m.why || '');
     } else if (m.tm === 'select-arc') {
       const trySelectArc = (n) => {
         if (window.__tmSelectArc) window.__tmSelectArc(m.arc);

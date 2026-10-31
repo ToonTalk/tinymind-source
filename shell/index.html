@@ -2,7 +2,7 @@
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tiny Mind</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Cg%20stroke%3D%27%238fd3a7%27%20stroke-width%3D%271.5%27%20fill%3D%27%238fd3a7%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M16%207%20L9%2011%20L13%2020%20L19%2022%20L23%2012%20Z%27%20fill%3D%27none%27/%3E%3Cline%20x1%3D%2716%27%20y1%3D%277%27%20x2%3D%2713%27%20y2%3D%2720%27/%3E%3Cline%20x1%3D%279%27%20y1%3D%2711%27%20x2%3D%2719%27%20y2%3D%2722%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2711%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2723%27%20cy%3D%2712%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2713%27%20cy%3D%2720%27%20r%3D%272.5%27/%3E%3Ccircle%20cx%3D%2719%27%20cy%3D%2722%27%20r%3D%272.5%27/%3E%3C/g%3E%3C/svg%3E">
-<!-- Tiny Mind mega edition: Nursery + Microscope + Thought bubble + Hunt + Tiny Eye in one file. Each app runs
+<!-- Tiny Mind mega edition: Nursery + Microscope + Thought bubble + Experts + Hunt + Tiny Eye in one file. Each app runs
      byte-intact in its own iframe; this shell owns model ingest (zip/folder/files),
      file egress (child frames cannot download or use the clipboard — exports bubble
      up here where a real click works), and the storage + keyless-Claude bridge. -->
@@ -85,6 +85,7 @@ body.vg-open #simpleToast{left:calc((100% - 302px) / 2) !important}
     <div class="tab" data-tab="nursery">🐣 nursery</div>
     <div class="tab" data-tab="microscope">🔬 microscope</div>
     <div class="tab" data-tab="thought">💭 thought bubble</div>
+    <div class="tab" data-tab="experts">👥 experts</div>
     <div class="tab" data-tab="eye">👁 eye</div>
     <div class="tab" data-tab="hunt">🎯 hunt</div>
   </span>
@@ -107,6 +108,8 @@ body.vg-open #simpleToast{left:calc((100% - 302px) / 2) !important}
           <span class="d">See which words a mind is weighing up, layer by layer, and find out what single neurons care about.</span></button>
         <button class="act" data-act="think"><span class="em">💭</span><b>See what a mind is thinking</b>
           <span class="d">Watch the words a mind is holding in mind as it reads or writes, then swap one of its thoughts and see the story change.</span></button>
+        <button class="act" data-act="experts"><span class="em">👥</span><b>Meet a mind made of experts</b>
+          <span class="d">In this mind, a router sends every word to one of eight experts. Watch who gets which words, then switch an expert off and see what breaks.</span></button>
         <button class="act" data-act="see"><span class="em">👁</span><b>A mind that sees your drawings</b>
           <span class="d">Draw something and a tiny mind guesses what it is. Then look at its neurons: most have one main job you can name.</span></button>
         <button class="act" data-act="hunt"><span class="em">🎯</span><b>Hunt for a hidden fact</b>
@@ -148,6 +151,7 @@ body.vg-open #simpleToast{left:calc((100% - 302px) / 2) !important}
 <template id="tpl-microscope">@@APP_MICROSCOPE@@</template>
 <template id="tpl-hunt">@@APP_HUNT@@</template>
 <template id="tpl-thought">@@APP_THOUGHT@@</template>
+<template id="tpl-experts">@@APP_EXPERTS@@</template>
 <template id="tpl-eye">@@APP_EYE@@</template>
 
 <script>
@@ -209,13 +213,16 @@ async function claudeComplete(prompt) {
 }
 
 /* ---------- frames ---------- */
-const APPS = ['nursery', 'microscope', 'hunt', 'thought', 'eye'];
-const frames = {}, ready = {}, queues = { nursery: [], microscope: [], hunt: [], thought: [], eye: [] };
+const APPS = ['nursery', 'microscope', 'hunt', 'thought', 'experts', 'eye'];
+const frames = {}, ready = {}, queues = { nursery: [], microscope: [], hunt: [], thought: [], experts: [], eye: [] };
 // the rooms that read the big 32,000-piece minds; the Thought bubble needs a mind with a thinking-ahead lens
 const BIG_ROOMS = ['microscope', 'thought'];
 // the Tiny Eye is its own kind of mind (kind 'eye'): it opens only in the eye room, and no story mind opens there
 const isEye = m => !!m && m.kind === 'eye';
-const fitsRoom = (app, m) => app === 'eye' ? isEye(m) : isEye(m) ? false
+// so is the Expert Storyteller (kind 'experts', a mind made of experts): it opens only in the Experts room
+const isExperts = m => !!m && m.kind === 'experts';
+const ownRoom = m => isEye(m) ? 'eye' : isExperts(m) ? 'experts' : null;   // a mind that opens in one room only
+const fitsRoom = (app, m) => (app === 'eye' || app === 'experts' || ownRoom(m)) ? ownRoom(m) === app
   : app === 'microscope' ? true : app === 'thought' ? (m.vocab !== 512 && !!lensFor[baseName(m)]) : is512(m);
 function ensureFrame(app) {
   if (frames[app]) return frames[app];
@@ -273,6 +280,12 @@ window.addEventListener('message', async (e) => {
         if (!u8) throw new Error(name + ' was not found beside the app');
         value = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
       }
+      else if (m.method === 'experts.get') {   // the Experts room's own "get it" button: fetch its mind and send it there
+        const mind = await fetchExpertsWithProgress(++actToken);
+        hideLoading();
+        if (!mind) throw new Error(expertsWhy || 'the Expert Storyteller could not be fetched');
+        openModelInApp(app, mind);
+      }
       else if (m.method === 'arc.tokenizer') {
         const tok = tokFor(+m.args[0] || 512);
         if (!tok) throw new Error('no vocab-' + m.args[0] + ' tokenizer in the bay — drop tok512.bin');
@@ -302,11 +315,14 @@ const GIANT_FILE = 'stories110M.bin';
 // the 110M mind is too big for GitHub Pages, so it comes from its original home (CORS-open)
 const GIANT_URL = 'https://huggingface.co/karpathy/tinyllamas/resolve/main/stories110M.bin';
 const GIANT_BYTES = 438381596;
-const isStoryBig = m => !isEye(m) && m.vocab !== 512;
+const isStoryBig = m => !ownRoom(m) && m.vocab !== 512;
 const giant     = () => pool.models.find(m => isStoryBig(m) && baseName(m).toLowerCase() === GIANT_FILE.toLowerCase());
 const specimen  = () => pool.models.find(m => isStoryBig(m) && baseName(m).toLowerCase() === 'stories15m.bin') ||
                         pool.models.find(m => isStoryBig(m) && m !== giant());
 const eyeMind   = () => pool.models.find(isEye);
+const EXPERTS_FILE = 'stories-moe-top1.bin';   // the Expert Storyteller (tools/moe), fetched when its room opens
+const EXPERTS_BYTES = 76796604;
+const expertsMind = () => pool.models.find(isExperts);
 const lensFor = {};                            // mind file -> its "thinking ahead" lens {name, u8}
 // The pretrained base has a deliberately strict identity. A saved model such as
 // sisi-260K.bin must remain a trained-mind choice, never silently occupy this slot.
@@ -346,6 +362,7 @@ function characterOf(m) {
 function defaultMindName(m) {
   const n = baseName(m).toLowerCase();
   if (isEye(m)) return 'the Tiny Eye';
+  if (isExperts(m)) return 'the Expert Storyteller';
   if (m.vocab !== 512 && /^stories110m\.bin$/.test(n)) return 'Giant Storyteller';
   if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return 'Big Storyteller';
   if (/^stories260k\.bin$/.test(n)) return 'Tiny Storyteller';
@@ -360,6 +377,7 @@ function mindName(m) { return mindNames[m.name] || defaultMindName(m); }
 function mindAbout(m) {
   const n = baseName(m).toLowerCase();
   if (isEye(m)) return Math.round(((m.eye && m.eye.manifest.params) || 82704) / 1000) + ' thousand connections · learned 24 kinds of things from 240,000 Quick, Draw! doodles · a mind that sees, not a story mind';
+  if (isExperts(m)) return 'a mind made of experts: 19 million connections, 12 million at work on each word · eight experts and a router in each layer · learned from about two million children\'s stories';
   if (m.vocab !== 512 && /^stories110m\.bin$/.test(n)) return '110 million connections · learned from about two million children\'s stories · shows "thinking ahead" best';
   if (m.vocab !== 512 && /^stories15m\.bin$/.test(n)) return '15 million connections · learned from about two million children\'s stories';
   if (/^stories260k\.bin$/.test(n)) return '260 thousand connections · learned from children\'s stories';
@@ -380,8 +398,9 @@ const ACTS = {
   hunt:  { app: 'hunt', title: '🎯 Hunt for a hidden fact', pick: () => raisedLatest() || binding260() || zog260() || fresh260() },
   think: { app: 'thought', title: '💭 See what a mind is thinking', pick: () => [giant(), specimen()].find(m => m && lensFor[baseName(m)]), big: true, needsLens: true },
   see:   { app: 'eye', title: '👁 A mind that sees your drawings', pick: () => eyeMind(), eye: true },
+  experts: { app: 'experts', title: '👥 Meet a mind made of experts', pick: () => expertsMind(), experts: true },
 };
-const APP_TITLES = { nursery: '🐣 Nursery', microscope: '🔬 Microscope', hunt: '🎯 Hunt', thought: '💭 Thought bubble', eye: '👁 Tiny Eye' };
+const APP_TITLES = { nursery: '🐣 Nursery', microscope: '🔬 Microscope', hunt: '🎯 Hunt', thought: '💭 Thought bubble', experts: '👥 Experts', eye: '👁 Tiny Eye' };
 let currentAct = null;
 let uiMode = 'simple';
 try { if (localStorage.getItem('tm-ui-mode') === 'expert') uiMode = 'expert'; } catch (e) {}
@@ -415,6 +434,7 @@ function renderMindPick() {
   if (BIG_ROOMS.includes(app) && !specimen() && tmCanFetch()) opts.unshift('<option value="big">Big Storyteller (downloads 58 MB once)</option>');
   if (BIG_ROOMS.includes(app) && !giant() && canGiant()) opts.unshift('<option value="giant">Giant Storyteller — recommended (downloads 440 MB once)</option>');
   if (app === 'eye' && !eyeMind() && tmCanFetch()) opts.unshift('<option value="eye">the Tiny Eye (downloads 4 MB once)</option>');
+  if (app === 'experts' && !expertsMind() && tmCanFetch()) opts.unshift('<option value="experts">the Expert Storyteller (downloads 77 MB once)</option>');
   opts.push('<option value="file">📂 open saved work, or a mind file…</option>');
   const cur = frameModel[app] ? 'm:' + encodeURIComponent(frameModel[app]) : '';
   $('mindRename').style.display = cur ? '' : 'none';
@@ -466,13 +486,14 @@ async function startActivity(key) {
   }
   if (loaded.has(app) && frameModel[app] && act.pick() && frameModel[app] === act.pick().name) { selectTab(app); return; }
   let model = act.pick();
-  if (!model && !act.eye) {   // the eye never comes in the start-up packs: no need to wait for them
+  if (!model && !act.eye && !act.experts) {   // the eye and the experts never come in the start-up packs: no need to wait for them
     showLoading('Getting the minds ready…', 'This takes a moment the first time; after that they are remembered.');
     await tmStartReady;
     if (token !== actToken) return;
     model = act.pick();
   }
   if (!model && act.eye) model = await fetchEyeWithProgress(token);
+  if (!model && act.experts) model = await fetchExpertsWithProgress(token);
   if (!model && act.big && canGiant()) {
     if (await giantCached()) model = await fetchGiantWithProgress(token, app);
     else { chooseLookMind(token, app); return; }
@@ -573,6 +594,9 @@ const CARDS = {
   eye: { title: 'The Tiny Eye', sub: 'A mind that sees drawings: it opens only here, and no story mind opens in this room.', trainedVerb: '', opts: [
     { h: 'the Tiny Eye', p: '82 thousand connections; learned 24 kinds of things from 240,000 Quick, Draw! doodles. Comes with 5,000 doodles it never trained on, for its neuron cards.', get: eyeMind },
   ]},
+  experts: { title: 'The Expert Storyteller', sub: 'A mind made of experts: it opens only here, and no other mind opens in this room.', trainedVerb: '', opts: [
+    { h: 'the Expert Storyteller', p: 'The Big Storyteller\'s size and shape, but each layer has eight experts and a router that sends every word to one of them. Learned from about two million children\'s stories.', get: expertsMind },
+  ]},
   hunt: { title: 'Choose a mind to hunt in', sub: 'The Hunt always uses a 260K mind (vocab 512).', trainedVerb: 'hunt in', opts: [
     { h: 'the Zog mind', p: 'A 260K model trained on Zog stories — plenty of learned structure to track down.', get: zog260 },
   ]},
@@ -584,6 +608,7 @@ function renderOverlay(app) {
   const opt = (h, p, model, fetchable) => {
     const tok = model ? (isEye(model) || tokFor(model.vocab)) : null, ok = model && tok;
     if (!model && fetchable === 'eye') return '<div class="opt"><h3>' + h + '</h3><p>' + p + '</p><button data-eye="1">⬇ get it (4 MB, once) →</button></div>';
+    if (!model && fetchable === 'experts') return '<div class="opt"><h3>' + h + '</h3><p>' + p + '</p><button data-experts="1">⬇ get it (77 MB, once) →</button></div>';
     if (!model && fetchable) return '<div class="opt"><h3>' + h + '</h3><p>' + p + '</p><button data-big="1">⬇ get it (58 MB, once) →</button></div>';
     const why = !model ? (tmStartPending ? 'still loading — one moment' : 'not found beside the app — drop its file in 📁 files')
       : !tok ? 'drop its tokenizer (vocab ' + model.vocab + ') in 📁 files' : '';
@@ -591,7 +616,8 @@ function renderOverlay(app) {
       + (ok ? '<button data-model="' + escHtml(model.name) + '">open ' + escHtml(model.name) + ' →</button>'
             : '<span class="why">⚠ ' + why + '</span>') + '</div>';
   };
-  let rows = c.opts.map(o => opt(o.h, o.p, o.get(), o.get === eyeMind ? tmCanFetch() && 'eye' : o.get === specimen && tmCanFetch())).join('');
+  let rows = c.opts.map(o => opt(o.h, o.p, o.get(), o.get === eyeMind ? tmCanFetch() && 'eye' : o.get === expertsMind ? tmCanFetch() && 'experts'
+    : o.get === specimen && tmCanFetch())).join('');
   if (app === 'nursery') {
     const escH = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     for (const m of shellArcs.list()) {
@@ -602,7 +628,7 @@ function renderOverlay(app) {
     }
   }
   // enumerate every mind the user trained + exported — the fixed slots miss these
-  if (app !== 'thought' && app !== 'eye') for (const m of trainedModels()) {
+  if (app !== 'thought' && app !== 'eye' && app !== 'experts') for (const m of trainedModels()) {
     const verb = c.trainedVerb || 'open';
     rows += opt('🌱 ' + verb + ': ' + m.name,
       (/^(export|trained)$/.test(m.origin) ? 'A mind you raised in the Nursery' : 'A vocab-' + m.vocab + ' mind you loaded') + ' (vocab ' + m.vocab + ').', m);
@@ -617,6 +643,12 @@ function renderOverlay(app) {
   $('overlay').querySelectorAll('button[data-eye]').forEach(b => b.onclick = async () => {
     const token = ++actToken;
     const m = await fetchEyeWithProgress(token);
+    hideLoading();
+    if (m) openModelInApp(app, m); else selectTab(app);
+  });
+  $('overlay').querySelectorAll('button[data-experts]').forEach(b => b.onclick = async () => {
+    const token = ++actToken;
+    const m = await fetchExpertsWithProgress(token);
     hideLoading();
     if (m) openModelInApp(app, m); else selectTab(app);
   });
@@ -666,7 +698,8 @@ function selectTab(tab) {
   const old = document.getElementById('vgChooseAnother'); if (old && (!APPS.includes(tab) || uiMode === 'simple')) old.remove();
   if (!APPS.includes(tab)) hideOverlay();
   else if (loaded.has(tab) || revealed.has(tab)) { hideOverlay(); ensureFrame(tab).classList.remove('hide'); showChooseAnother(tab); }
-  else if (uiMode === 'simple') { startActivity(tab === 'nursery' ? 'raise' : tab === 'microscope' ? 'look' : tab === 'thought' ? 'think' : tab === 'eye' ? 'see' : 'hunt'); return; }
+  else if (uiMode === 'simple') { startActivity(tab === 'nursery' ? 'raise' : tab === 'microscope' ? 'look' : tab === 'thought' ? 'think' : tab === 'eye' ? 'see'
+    : tab === 'experts' ? 'experts' : 'hunt'); return; }
   else { ensureFrame(tab); showOverlay(tab); }   // boot the frame behind the overlay
   refreshBar();
 }
@@ -689,6 +722,7 @@ $('mindPick').onchange = async () => {
   if (v === 'big') { const token = ++actToken; const m = await fetchBigWithProgress(token, app); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
   if (v === 'giant') { const token = ++actToken; const m = await fetchGiantWithProgress(token, app); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
   if (v === 'eye') { const token = ++actToken; const m = await fetchEyeWithProgress(token); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
+  if (v === 'experts') { const token = ++actToken; const m = await fetchExpertsWithProgress(token); hideLoading(); if (m) openModelInApp(app, m); else selectTab(app); return; }
   const model = v.startsWith('m:') && pool.models.find(m => m.name === decodeURIComponent(v.slice(2)));
   if (model) openModelInApp(app, model);
 };
@@ -696,7 +730,7 @@ window.__tmShell = { frames, shellStorage, selectTab, APPS, tmWrite, startActivi
 const tmRestoreReady = tmRestorePool(); // vg wave 4: bring back last visit's bay before same-folder discovery
 
 function openModelInApp(app, model) {
-  if (isEye(model) !== (app === 'eye')) { say(mindName(model) + ' cannot open in the ' + app + ' room', 'warn'); return; }   // the eye and the story minds never swap rooms
+  if (ownRoom(model) !== (app === 'eye' || app === 'experts' ? app : null)) { say(mindName(model) + ' cannot open in the ' + app + ' room', 'warn'); return; }   // the eye and the experts each keep to their own room
   if (isEye(model)) {   // its manifest, weights and sample doodles (copies: the pool keeps its own)
     const e = model.eye, copy = u8 => u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
     sendToApp(app, { tm: 'load-eye', name: model.name, manifest: e.manifestText, weights: copy(model.u8), sample: copy(e.sample) });
@@ -737,7 +771,7 @@ function renderPool() {
     const tr = document.createElement('tr');
     const cell = document.createElement('td');
     for (const app of APPS) {
-      if ((app === 'eye') !== isEye(mo)) continue;   // the eye opens only in its room, and only it does
+      if ((app === 'eye') !== isEye(mo) || (app === 'experts') !== isExperts(mo)) continue;   // the eye and the experts open only in their rooms, and only they do
       if (app === 'nursery' && mo.vocab !== 512) continue;   // the trainee is the 512 mind
       if (app === 'thought' && !fitsRoom('thought', mo)) continue;   // only minds with a thinking-ahead map
       const b = document.createElement('button');
@@ -778,7 +812,7 @@ function addModel(name, u8, vocab, origin, meta) {
   }
   origin = origin || 'ingest';
   meta = cloneModelMeta(meta);
-  pool.models.push({ name, u8, vocab, origin, meta });
+  pool.models.push({ name, u8, vocab, origin, meta, ...(checkpointHasExperts(u8) ? { kind: 'experts' } : {}) });
   tmPersist('model', name, u8, { origin, modelMeta: meta });
   renderPool();
 }
@@ -1012,13 +1046,52 @@ async function fetchEyeWithProgress(token) {
   return eyeMind() || null;
 }
 
+/* ---------- the Expert Storyteller: stories-moe-top1.bin (a mind made of experts, tools/moe) and the
+   32,000-piece tokenizer, fetched when the Experts room first opens, like the big storyteller. The
+   pool tags it kind 'experts' by its header (checkpointHasExperts), so it opens only in that room. */
+let expertsPromise = null, expertsWhy = '';   // why the last try failed: the room says it (the shell's status line is hidden there)
+// beside the app, else (development: the page served from the repo's dist/ or shell/) in the repo's models/ folder
+const besideOrModels = async (name, opts) => await tmGetBytes(name, opts) || (TM_ASSETS ? null : await tmGetBytes('../models/' + name, opts));
+function ensureExperts(onProgress) {
+  if (expertsMind() && tokFor(expertsMind().vocab)) return Promise.resolve(true);
+  if (!tmCanFetch()) { expertsWhy = 'this page was opened straight from a file, and a page opened that way cannot fetch other files'; return Promise.resolve(false); }
+  if (expertsPromise) return expertsPromise;
+  expertsPromise = (async () => {
+    try {
+      if (!pool.toks.some(t => t.vocab === 32000)) {
+        const tk = await besideOrModels('tokenizer.bin');
+        if (!tk) throw new Error('tokenizer.bin is not beside this page');
+        await shellIngest([{ name: 'tokenizer.bin', u8: tk, origin: 'same-folder' }]);
+      }
+      if (!expertsMind()) {
+        const u8 = await besideOrModels(EXPERTS_FILE, { onProgress, expected: EXPERTS_BYTES });
+        if (!u8) throw new Error(EXPERTS_FILE + ' is not beside this page');
+        await shellIngest([{ name: EXPERTS_FILE, u8, origin: 'same-folder' }]);
+      }
+    } catch (e) { expertsWhy = String((e && e.message) || e); say('could not get the Expert Storyteller: ' + expertsWhy, 'warn'); }
+    expertsPromise = null;
+    return !!(expertsMind() && tokFor(expertsMind().vocab));
+  })();
+  return expertsPromise;
+}
+async function fetchExpertsWithProgress(token) {
+  showLoading('Getting the Expert Storyteller…', 'A mind made of experts: a 77 MB download, only the first time; your browser keeps it after that.');
+  const ok = await ensureExperts(loadProgress);
+  if (token !== actToken) return null;
+  if (!ok) {
+    say('could not get the Expert Storyteller here — drop stories-moe-top1.bin and tokenizer.bin in 📁 files', 'warn');
+    sendToApp('experts', { tm: 'mind-missing', why: expertsWhy });
+  }
+  return expertsMind() || null;
+}
+
 /* ---------- "save my work": one .zip of the minds you raised + your storybook ----------
    Browser storage belongs to one web address (the site, an old copy, each artifact), so
    it is not where work you care about should live. The bundle opens anywhere Tiny Mind
    runs: drop it, or choose it from the "mind" menu. tiny-mind-work.json (written last)
    carries what the .bin files cannot: where each mind came from and its character. */
 const WORK_MANIFEST = 'tiny-mind-work.json';
-const BUILT_IN_MINDS = /^(stories260k(-zog|-binding|-binding-max)?|stories15m|stories110m)\.bin$/i;
+const BUILT_IN_MINDS = /^(stories260k(-zog|-binding|-binding-max)?|stories15m|stories110m|stories-moe-top1)\.bin$/i;
 const pendingWorkMeta = new Map();             // mind file -> {origin, meta} from a manifest read before the mind
 async function buildWorkZip() {
   const entries = [], models = [];

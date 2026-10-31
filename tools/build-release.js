@@ -1,4 +1,4 @@
-// build-release.js — package each app (microscope, nursery, hunt, thought, eye) into ONE self-
+// build-release.js — package each app (microscope, nursery, hunt, thought, experts, eye) into ONE self-
 // contained HTML file in dist/, and compose all three into the MEGA edition
 // (dist/tiny-mind-mega.html): the shell from shell/index.html hosting the apps
 // byte-intact in iframes, per the artifact session's architecture (merged back
@@ -13,15 +13,15 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const APPS = ['microscope', 'nursery', 'hunt', 'thought', 'eye'];
+const APPS = ['microscope', 'nursery', 'hunt', 'thought', 'experts', 'eye'];
 const CORE = ['bin-reader.js', 'tokenizer.js', 'model.js', 'capture.js', 'train.js'];
 const PAGE_EXTRA = ['llm.js', 'app-shims.js', 'scrubber.js', 'hunt-evidence.js', 'ingest.js', 'embed-data.js'];
 const WORKER_EXTRA = { nursery: ['embed-data.js'], microscope: ['steer.js', 'neuron-atlas.js', 'jlens.js', 'batch.js'], hunt: [],
-  thought: ['steer.js', 'jlens.js', 'batch.js', 'thought.js'], eye: ['eye.js'] };
+  thought: ['steer.js', 'jlens.js', 'batch.js', 'thought.js'], experts: ['steer.js', 'jlens.js', 'batch.js', 'thought.js', 'experts.js'], eye: ['eye.js'] };
 // the story-mind core every worker gets, unless a room needs none of it (the Tiny Eye is not a story mind)
 const WORKER_CORE = { eye: [] };
 // page-only extras for one app (the others' pages stay byte-identical)
-const PAGE_APP_EXTRA = { nursery: ['ghostwriter.js'], microscope: ['neuron-atlas.js'], hunt: [], thought: [], eye: ['eye.js'] };
+const PAGE_APP_EXTRA = { nursery: ['ghostwriter.js'], microscope: ['neuron-atlas.js'], hunt: [], thought: [], experts: [], eye: ['eye.js'] };
 // the Tiny Eye's files: too big to inline (the sample doodles are 3.9 MB, the training recording 3.8 MB),
 // so they ship beside the pages and the shell fetches them the way it fetches the story minds; the
 // recording and the squeezed eye only when the room asks (tools/eye/ship.mjs makes them all)
@@ -96,6 +96,13 @@ const thoughtVocab = JSON.parse(await readFile(join(ROOT, 'thought', 'vocab.json
 if (!Array.isArray(thoughtVocab.prunedIds) || !Array.isArray(thoughtVocab.wordStartIds) || !thoughtVocab.alias || !Array.isArray(thoughtVocab.themeWords)) {
   throw new Error('thought: vocab.json must have prunedIds, wordStartIds, alias and themeWords');
 }
+// the Experts room's cards (tools/moe/ship.py, ~35 KB): built into its page. Its mind (stories-moe-top1.bin,
+// 77 MB) ships beside the site like stories15M (tools/build-site.mjs), never inside a page
+const expertsData = JSON.parse(await readFile(join(ROOT, 'experts', 'experts.json'), 'utf8'));
+if (expertsData.format !== 'tiny-mind-experts-v1' || expertsData.experts.length !== 48 || expertsData.layers.length !== 6 ||
+    expertsData.experts.filter(e => e.effect).length !== 5 || !expertsData.router) {
+  throw new Error('experts: experts.json must be tiny-mind-experts-v1 with 48 experts, 6 layers, 5 effects and a router word (tools/moe/ship.py)');
+}
 const sameFolderResources = JSON.parse(await readFile(join(ROOT, 'shell', 'resources.json'), 'utf8'));
 if (!sameFolderResources || sameFolderResources.version !== 1 ||
     !Array.isArray(sameFolderResources.resources) ||
@@ -140,6 +147,7 @@ for (const app of APPS) {
     ? `\nconst __TM_EMBEDDED_ZOG_STORIES__ = JSON.parse(${embedString(JSON.stringify(zogStories))});\n` +
       `const __TM_EMBEDDED_BINDING_CORPUS__ = JSON.parse(${embedString(JSON.stringify(bindingCorpus))});\n`
     : app === 'thought' ? `\nconst __TM_THOUGHT_VOCAB__ = JSON.parse(${embedString(JSON.stringify(thoughtVocab))});\n`
+    : app === 'experts' ? `\nconst __TM_EXPERTS__ = JSON.parse(${embedString(JSON.stringify(expertsData))});\n`
     : '';
   const appExtra = PAGE_APP_EXTRA[app].length ? '\n' + await bundleOf(PAGE_APP_EXTRA[app]) : '';
   const bundled = embeddedData +

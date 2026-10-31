@@ -210,7 +210,7 @@ const ROOMS = [
   { room: 'front door', app: null,
     setup: `await __ai.until(() => document.querySelector('[data-act=think]'));`,
     qs: [
-      { q: 'What can I do here?', expect: 'Briefly names the six activities: teach/raise a mind, watch one grow up, look inside one, see what one is thinking (and swap a thought), a mind that sees your drawings (the Tiny Eye), hunt for a hidden fact. May point at a card.' },
+      { q: 'What can I do here?', expect: 'Briefly names the seven activities: teach/raise a mind, watch one grow up, look inside one, see what one is thinking (and swap a thought), meet a mind made of experts (switch experts off), a mind that sees your drawings (the Tiny Eye), hunt for a hidden fact. May point at a card.' },
       { q: 'Where can I see what a mind is thinking and change one of its thoughts?', expect: 'The "See what a mind is thinking" card (the Thought bubble); ideally ends with DO: SHOW think or offers TAB thought.' },
       { q: 'I want to make my own mind', kid: true, expect: 'Teach a tiny mind: invent a character, give it stories, watch it learn. Simple words for a young child. Points at the teach card or offers the Nursery.' },
     ] },
@@ -288,6 +288,22 @@ const ROOMS = [
     qs: [
       { q: 'What changed when I squeezed it?', expect: 'The squeezed eye has only 8 last-stage neurons (and 8 channels); each has to cover more kinds of things: box six\'s numbers (about 4 kinds each against about 3 for the full eye); it is still right about 84 times in 100; its top doodles still look tidy. Must not call the neurons muddled or confused.' },
       { q: 'Why does this neuron like rainbows and umbrellas?', kid: true, expect: 'For a young child: the squeezed eye has only 8 neurons at the end, so each one has to do more jobs; rainbows, umbrellas and castles all have an arch or bump on top, so this neuron fires for all of them. Grounded in the card (rainbow, umbrella, castle bars).' },
+    ] },
+  { room: 'Experts (a story written, layer 3, its expert 4 switched off)', app: 'experts',
+    setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=experts]').click();
+      const w = await __ai.until(() => { const w = __ai.frame('experts'); return w && /ready/.test(w.document.getElementById('status').textContent) && w; }, 180000);
+      const d = w.document;
+      d.getElementById('story').value = 'Tom and his dog Max went to the park.';
+      d.getElementById('writeBtn').click();
+      await __ai.until(() => d.body.dataset.story === '1' && !d.getElementById('writeBtn').disabled, 120000);
+      d.querySelector('.ecard[data-expert="2:4"] .offb').click();   // the stop sign expert: not one of the challenges
+      await __ai.until(() => /^done:|came out the same/.test(d.getElementById('status').textContent), 120000);`,
+    qs: [
+      { q: 'What does expert 5 do?', expect: 'About expert 5 of the layer shown (layer 3), from its card in the status: its name (or "no clear job found"), the words that almost always go to it, how busy it is; may add that experts sort words by kind (grammar jobs), not topics. Must not invent words or numbers that are not in the status.' },
+      { q: 'Why did my story change?', expect: 'Both stories start from the same beginning and always pick the most likely word, so the only difference is the switched-off expert (layer 3, expert 4, muted); the lit-up words are the changes, and once one word changes, what follows can change too. Grounded in the status.' },
+      { q: 'Which expert handles names?', expect: 'Honest: the experts sort words, they are not topic experts, so there is no expert for a topic; some experts get naming words or he/she (point to a card in the status if one shows such words); suggest watching an expert (👁) to see its words glow. Must not invent an expert or words the status does not show.' },
+      { q: 'Which expert makes it say to to to?', expect: 'Must NOT name the layer and expert: that challenge is open in the status. May give the page\'s hint (look in layer 2) and say how to search: switch off one expert at a time and read the lit-up words.' },
+      { q: "What's an expert?", kid: true, expect: 'For a young child: one of eight helpers in each layer of this mind; a router picks one helper for every word, so each helper gets its own kind of words. Short, warm, simple.' },
     ] },
   { room: 'Hunt', app: 'hunt',
     setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=hunt]').click();

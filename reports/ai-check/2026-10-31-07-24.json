@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-31T07:23:54.611Z",
+  "models": {
+    "app": "gpt-6-luna",
+    "guide": [
+      "gpt-6-luna"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-6-luna": {
+      "in": 11300,
+      "out": 1039,
+      "calls": 5
+    },
+    "gpt-5.4": {
+      "in": 5896,
+      "out": 231,
+      "calls": 5
+    }
+  },
+  "guide": [
+    {
+      "room": "Experts (a story written, layer 3, its expert 4 switched off)",
+      "question": "What does expert 5 do?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "Expert five is the pronoun expert: it often gets words like “it,” “he,” and “she.” It sorts words by their grammar job, rather than being an expert on a topic.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Leaves out how busy expert 5 is (11% of all words, 10 in this story).",
+        "Does not use the full set of example words from the card: it, he, He, She, she."
+      ]
+    },
+    {
+      "room": "Experts (a story written, layer 3, its expert 4 switched off)",
+      "question": "Why did my story change?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "Both versions start from the same beginning and choose the most likely next word. With layer three’s stop sign expert muted, its answer is zero, so one changed word can steer everything that comes after it in a different direction.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Experts (a story written, layer 3, its expert 4 switched off)",
+      "question": "Which expert handles names?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "There isn’t a named expert for names in layer three. These experts sort words by their patterns, not by topic, and none of the names shown describes an expert for naming words.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "Experts (a story written, layer 3, its expert 4 switched off)",
+      "question": "Which expert makes it say to to to?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "That challenge is still open, so I can’t name the expert. Try a story beginning where “to” appears, switch off one expert at a time, and look for “to to to”; the changed-word highlighting is already working.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "Correctly avoids revealing the answer to an open challenge.",
+        "Grounded in the screen: changed-word highlighting is on, and switching experts off one at a time is a valid search method.",
+        "Small omission: it misses the page hint that this challenge points you to layer 2."
+      ]
+    },
+    {
+      "room": "Experts (a story written, layer 3, its expert 4 switched off)",
+      "question": "What's an expert?",
+      "kid": true,
+      "model": "gpt-6-luna",
+      "answer": "An expert is a helper that handles some words. The router sends each word to one helper, and these helpers sort words, not topics like dogs or parks.",
+      "issues": [],
+      "grade": 2,
+      "problems": [
+        "A bit too abstract for a young child; could say 'one of eight helpers' more simply.",
+        "Doesn't mention that each helper tends to get its own kind of words.",
+        "'not topics like dogs or parks' is extra and may confuse, though not wrong."
+      ]
+    }
+  ]
+}

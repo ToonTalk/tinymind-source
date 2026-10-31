@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tiny Mind — a mind made of experts</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%231a1f2b%27/%3E%3Ccircle%20cx%3D%2710%27%20cy%3D%2712%27%20r%3D%274%27%20fill%3D%27%23ffc27a%27/%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%2712%27%20r%3D%274%27%20fill%3D%27%238fb8ff%27/%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%2722%27%20r%3D%274%27%20fill%3D%27%23a8e88f%27/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #12141a; --card: #1b1f28; --edge: #2b3140; --ink: #dde3ec; --dim: #8791a3;
+    --green: #8fd3a7; --blue: #9ecbff; --gold: #ffd27f; --pink: #ff9ec2; --red: #ff9c9c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink);
+         margin: 0; padding: 1rem 1.2rem; font-size: 15px; }
+  h1 { font-size: 20px; margin: 0; color: var(--gold); }
+  .sub { color: var(--dim); margin: .15rem 0 1rem; font-size: 13px; max-width: 900px; line-height: 1.45; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+          padding: .8rem 1rem; margin-bottom: .9rem; min-width: 0; }
+  .card h2 { font-size: 14px; margin: 0 0 .5rem; color: var(--blue); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; align-items: start; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  button { background: #2d5a3d; color: #eaffea; border: 0; border-radius: 6px;
+           padding: .4rem .8rem; margin: .15rem .3rem .15rem 0; cursor: pointer; font: inherit; }
+  button.alt { background: #2b4a6f; }
+  button.small { padding: .15rem .5rem; font-size: 12px; }
+  button:disabled { opacity: .35; cursor: default; }
+  textarea { width: 100%; min-height: 54px; background: #12151c; color: var(--ink);
+             border: 1px solid var(--edge); border-radius: 8px; padding: .5rem; font: inherit; }
+  .hint { color: var(--dim); font-size: 12.5px; }
+  #mindBox { border: 2px dashed #3a4152; border-radius: 8px; padding: .55rem .8rem; margin: .1rem 0 .6rem; font-size: 13.5px; line-height: 1.45; }
+  #mindBox.over { border-color: var(--green); }
+  #mindBox[hidden] { display: none; }
+  #mindBox button { margin-top: .35rem; }
+  #mindWhy { margin-top: .2rem; }
+  #mindWhy.err { color: var(--red); }
+  #status { color: var(--dim); font-size: 12.5px; min-height: 1.2em; margin-top: .3rem; }
+  #progress { height: 6px; background: #262c38; border-radius: 4px; overflow: hidden; margin: .3rem 0; display: none; }
+  #progress div { height: 100%; width: 0; background: var(--gold); transition: width .15s; }
+  .chips { display: flex; flex-wrap: wrap; gap: .25rem; margin: .3rem 0; align-items: center; }
+  .pchip { background: #232937; color: var(--ink); font-size: 12px; padding: .15rem .5rem; margin: 0; border-radius: 999px; }
+  #genOut { white-space: pre-wrap; font-size: 13.5px; margin-top: .4rem; color: var(--dim); }
+  #strip { line-height: 2.05; white-space: pre-wrap; font-size: 14.5px; margin-top: .5rem; }
+  #strip .tok { border-radius: 4px; cursor: pointer; padding: .1rem 0; }
+  #strip .tok:hover { outline: 1px solid var(--dim); }
+  #strip .tok.sel { outline: 2px solid #fff; }
+  #strip.watching .tok { background: transparent !important; color: #6c7586; }
+  #strip.watching .tok.lit { color: #12141a; font-weight: 600; }
+  #strip .tok.prompt { text-decoration: underline dotted rgba(135, 145, 163, .6); text-underline-offset: 4px; }
+  .layers { margin-top: .5rem; }
+  .layers button { background: #232937; }
+  .layers button.on { background: #6b5320; color: #fff3d6; }
+  #layerNote { margin-top: .2rem; }
+  #travelBtn { margin-top: .45rem; }
+  #travelBtn[hidden], #travel[hidden] { display: none; }
+  #travel { margin-top: .5rem; border-top: 1px solid var(--edge); padding-top: .5rem; }
+  #travelWhich button { background: #232937; }
+  #travelWhich button.on { background: #6b5320; color: #fff3d6; }
+  #travelText { white-space: pre-wrap; font-size: 13.5px; line-height: 1.6; margin: .35rem 0 .3rem; max-height: 8em; overflow-y: auto; }
+  #travelText .pr { color: var(--dim); }
+  #travelText .cur { background: rgba(255, 210, 127, .35); border-radius: 3px; }
+  #board { position: relative; display: grid; grid-template-columns: 8.2em repeat(8, 34px) minmax(0, 1fr); column-gap: 5px; row-gap: 6px;
+           align-items: center; padding-top: 1.7rem; }
+  #board .blab { font-size: 12px; color: var(--dim); text-align: right; padding-right: .3rem; white-space: nowrap; }
+  #board .bcell { height: 24px; border-radius: 5px; border: 1px solid var(--edge); outline: 2px solid transparent; transition: background .25s, outline-color .2s;
+                  display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  #board .bcell.off { border: 1px dashed var(--red); background: transparent !important; }
+  #board .bname { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: .4rem; }
+  #board .bname.silent { color: var(--red); }
+  #board .bout { grid-column: 2 / span 8; height: 26px; border: 1px dashed #3a4152; border-radius: 6px; display: flex; align-items: center; padding: 0 .6rem; font-size: 13.5px; }
+  #chip { position: absolute; transform: translate(-50%, -50%); background: #fff3d6; color: #12141a; border-radius: 6px; padding: 0 .45rem; font-size: 12.5px;
+          font-weight: 600; white-space: pre; transition: left .18s, top .18s; pointer-events: none; z-index: 2; box-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+  .tctl { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .55rem; }
+  .tctl select { background: #232937; color: var(--ink); border: 0; border-radius: 6px; padding: .2rem .35rem; font: inherit; font-size: 12px; }
+  #votes { margin-top: .5rem; border-top: 1px solid var(--edge); padding-top: .5rem; display: none; }
+  .vbar { display: flex; align-items: center; gap: .4rem; margin: .16rem 0; font-size: 13px; }
+  .vbar .vname { width: 15em; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vbar .vtrack { flex: 1; height: 12px; background: #262c38; border-radius: 4px; position: relative; overflow: hidden; max-width: 260px; }
+  .vbar .vfill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; opacity: .55; }
+  .vbar.chosen .vfill { opacity: 1; }
+  .vbar.chosen .vname { color: #fff; font-weight: 600; }
+  .vbar .vpct { width: 4.2em; flex: none; text-align: right; font-size: 12px; color: var(--dim); }
+  .lchip { background: #232937; border-radius: 6px; padding: .1rem .45rem; font-size: 12px; cursor: pointer; display: inline-flex; gap: .3rem; align-items: center; }
+  .sw { display: inline-block; width: .8em; height: .8em; border-radius: 3px; flex: none; }
+  .ecards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .55rem; }
+  .ecard { background: #161a22; border: 1px solid var(--edge); border-radius: 8px; padding: .5rem .6rem; font-size: 13px; min-width: 0; }
+  .ecard.off { border-color: var(--red); }
+  .ecard.watched { border-color: #fff; }
+  .ecard .etop { display: flex; gap: .4rem; align-items: center; }
+  .ecard .enum { color: var(--dim); font-size: 12px; flex: none; }
+  .ecard .ename { color: #fff; font-weight: 600; }
+  .ecard .ename.none { color: var(--dim); font-weight: 400; font-style: italic; }
+  .ecard .ewords { margin: .25rem 0; color: var(--ink); font-size: 12.5px; }
+  .ecard .ewords span { background: #232937; border-radius: 4px; padding: 0 .3rem; margin-right: .15rem; white-space: pre; }
+  .busy { display: flex; align-items: center; gap: .4rem; font-size: 11.5px; color: var(--dim); }
+  .busy .btrack { width: 70px; height: 7px; background: #262c38; border-radius: 4px; position: relative; overflow: hidden; flex: none; }
+  .busy .bfill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+  .ecard details { margin-top: .25rem; font-size: 12px; color: var(--dim); line-height: 1.45; }
+  .ecard details summary { cursor: pointer; }
+  .ecard details p { margin: .25rem 0 0; }
+  .ecard .found { color: var(--green); font-size: 12px; margin-top: .25rem; }
+  .ecard button.on { background: #7a2f2f; }
+  .ecard button.watching { background: #6b5320; }
+  .pane { font-size: 13.5px; line-height: 1.55; margin: .35rem 0 .5rem; white-space: pre-wrap; }
+  .pane .who { color: var(--dim); font-size: 12px; display: block; }
+  .pane .new { background: rgba(255, 210, 127, .28); border-radius: 3px; }
+  .pane .gone { color: #6c7586; text-decoration: line-through; }
+  details.why { font-size: 12.5px; color: var(--dim); margin-top: .35rem; }
+  details.why summary { cursor: pointer; }
+  details.why p { margin: .3rem 0 0; line-height: 1.45; }
+  .lesson { color: var(--gold); font-size: 12.5px; margin-top: .5rem; line-height: 1.45; }
+  #challenges { margin: 0; padding-left: 1.3rem; }
+  #challenges li { margin: .35rem 0; font-size: 13.5px; line-height: 1.4; }
+  #challenges li.done { color: var(--green); }
+  #challenges .chint { font-size: 12px; color: var(--dim); }
+  #challenges .chint summary { cursor: pointer; display: inline; }
+  #challenges .got { font-size: 12.5px; color: var(--green); display: block; }
+  [data-vg-explain] { cursor: help; text-decoration: underline dotted rgba(135, 145, 163, .6); text-underline-offset: 3px; }
+  .foot { color: var(--dim); font-size: 12px; margin-top: .8rem; line-height: 1.5; max-width: 900px; }
+</style>
+</head>
+<body>
+<h1>👥 Tiny Mind — a mind made of experts</h1>
+<div class="sub">In each of this mind's six layers, a <span data-vg-explain="router">router</span> sends every word to one of eight
+  <span data-vg-explain="expert">experts</span>. Watch which expert gets each word, then switch an expert off and see what breaks.</div>
+<div class="card" id="storyCard">
+  <h2>1 · the story <span class="hint">— pick a beginning, and the mind writes on</span></h2>
+  <div id="mindBox">
+    <div>This room has a mind of its own, the <b>Expert Storyteller</b>. It is a 77 MB download, only the first time: after that, your browser keeps it.</div>
+    <button id="getMind">⬇ get the Expert Storyteller</button>
+    <div id="mindWhy" class="hint"></div>
+  </div>
+  <div class="chips" id="beginChips"></div>
+  <textarea id="story">Once upon a time, there was a little girl named Lily.</textarea>
+  <button id="writeBtn" disabled>✍️ write on</button>
+  <button id="stopBtn" class="small alt" disabled>■ stop</button>
+  <div id="status"></div>
+  <div id="progress"><div></div></div>
+  <div id="genOut"></div>
+  <div id="strip" class="hint">the story will appear here, each word colored by the expert that handled it…</div>
+  <div class="layers" id="layers"><span class="hint">layer:</span></div>
+  <div id="layerNote" class="hint"></div>
+  <button id="travelBtn" class="small alt" hidden>▶ watch the words travel through all six layers</button>
+  <div id="travel" hidden>
+    <div class="hint">Each word drops through the six layers. In each layer the router sends it to one of the eight experts, which lights up
+      (its number counts the story's words it has had so far). After layer 6, out comes the next word, and that word drops in next.
+      Click any word in the story to replay its trip.</div>
+    <div class="chips" id="travelWhich"></div>
+    <div id="travelText"></div>
+    <div id="board"></div>
+    <div class="tctl">
+      <button id="tPlay" class="small">⏸ pause</button>
+      <button id="tStep" class="small alt">next word</button>
+      <button id="tAgain" class="small alt">↺ start over</button>
+      <select id="tSpeed" title="how fast the words travel"><option value="420">slow</option><option value="220" selected>normal</option><option value="90">fast</option></select>
+      <button id="tClose" class="small alt">close</button>
+    </div>
+  </div>
+  <div id="votes"></div>
+</div>
+
+<div class="card" id="expertsCard">
+  <h2>2 · meet the experts of layer <span id="layerNum">3</span> <span class="hint">— the colors in the story are these experts</span></h2>
+  <div id="cards" class="ecards"></div>
+  <div class="lesson">These are not topic experts, like an animal expert or a space expert. Each one gets its own list of words, and in the higher
+    layers those lists become grammar jobs: naming words, linking words, the ends of sentences.</div>
+</div>
+
+<div class="grid">
+  <div class="card" id="offCard">
+    <h2>3 · 🔌 switch an expert off <span class="hint">— the mind writes the same story again, and the changes light up</span></h2>
+    <div id="offList" class="chips"><span class="hint">none switched off: press 🔌 on an expert above</span></div>
+    <div class="pane" id="paneOn"><span class="who">with every expert on</span>—</div>
+    <div class="pane" id="paneOff"><span class="who">with the switched-off expert</span>—</div>
+    <button id="allOn" class="small alt" disabled>switch them all back on</button>
+    <details class="why" id="howOff"><summary>what does “switched off” mean? (and a second kind of switch)</summary>
+      <p><span data-vg-explain="mute">Switched off means muted:</span> the router still sends the word to that expert, but the expert says nothing,
+        so the word gets no help in that layer. Both stories always pick the mind's most likely next word, so the only difference between them is the switch.</p>
+      <p><label><input type="checkbox" id="reroute"> <span data-vg-explain="reroute">send its words to their second choice instead</span></label>:
+        the router may not choose that expert at all, so each of its words goes to the expert it liked next best. That other expert can often do
+        some of the work, so the story changes less.</p></details>
+  </div>
+
+  <div class="card" id="challengeCard">
+    <h2>4 · 🎯 challenges <span class="hint">— find the expert that does it</span></h2>
+    <ol id="challenges"></ol>
+    <div class="hint" style="margin-top:.4rem">Switch off just one expert at a time, so you know which one did it.</div>
+  </div>
+</div>
+
+<details class="why" id="aboutMind"><summary>about this mind</summary>
+  <p>It is the same size and shape as the Big Storyteller (six layers), trained on the same children's stories, but each layer's
+    thinking part is split into eight small experts, and a router picks one for every word. It writes as well as an ordinary mind of its size.</p>
+  <p>Where do the names come from? A bigger A I (gpt-6.1-sol) read hundreds of words each expert gets and named it. Then another A I, given only
+    that name, had to pick out which words go to that expert. A name is shown only if it got them right at least 75 times in 100. The others say
+    “no clear job found”.</p>
+  <p>Today's big AIs are often built this way, with experts and routers. This one also came in a version that sends each word to two experts:
+    two experts per word write a little better but are harder to break.</p>
+</details>
+<p class="foot" id="foot">A mind made of experts: 19 million connections, of which 12 million work on each word. It learned from about two million children's stories.</p>
+
+<script type="module">
+import { makeInlineWorker, fetchFirst } from '../src/app-shims.js';
+const $ = id => document.getElementById(id);
+// @tm-worker-boot — build-release swaps this block for the blob boot with the
+// inline-worker fallback (the artifact sandbox refuses blob-URL Workers)
+let worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+let workerMode = 'background worker';
+// @tm-worker-boot-end
+
+// the expert cards (tools/moe/ship.py): built into the page by the release build, read from beside this page in
+// development (no top-level await: the page also runs as a classic script)
+let DATA = typeof __TM_EXPERTS__ !== 'undefined' ? __TM_EXPERTS__ : null;
+
+const COLORS = ['#ff9e9e', '#ffc27a', '#ffe27a', '#a8e88f', '#7fe0d6', '#8fb8ff', '#c39bff', '#ff9ed8'];
+const tint = (e, a) => { const h = COLORS[e]; const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`; };
+const BEGINNINGS = ['Once upon a time, there was a little girl named Lily.', 'Tom and his dog Max went to the park.',
+  'Mom said, "Do not touch the hot stove."', 'Sara wanted to fly like a bird.', 'The little car was sad because it was old.',
+  'It was a rainy day. Lucy could not go outside to play.'];
+const MAX_NEW = 120;
+const DEFAULT_LAYER = 2;   // layer 3: names and switches are both strong there
+
+const S = {
+  ready: false, busy: false, writing: false, layer: DEFAULT_LAYER,
+  story: null,            // the story with every expert on: { ids, pieces, top, probs, L, E, k, promptLen }
+  offStory: null,         // the same beginning, rewritten with the switches
+  off: [],                // switched-off experts, "l:e"
+  watch: null,            // the expert being watched, "l:e"
+  sel: -1,                // the chosen piece
+  pending: null,          // a rewrite asked for while busy
+  solved: new Set(),
+};
+try { for (const k of JSON.parse(localStorage.getItem('tm-experts-solved') || '[]')) S.solved.add(k); } catch (e) {}
+const saveSolved = () => { try { localStorage.setItem('tm-experts-solved', JSON.stringify([...S.solved])); } catch (e) {} };
+const emit = (n, p) => { try { if (window.vgEmit) window.vgEmit(n, p); } catch (e) {} };
+const expertOf = (l, e) => DATA && DATA.experts.find(x => x.layer === l && x.expert === e);
+const key = (l, e) => l + ':' + e;
+const tag = (l, e) => `L${l + 1}·E${e}`;
+function nameOf(l, e) { const x = expertOf(l, e); return x && x.name ? x.name : null; }
+function status(msg, isErr) { $('status').textContent = msg; $('status').style.color = isErr ? 'var(--red)' : 'var(--dim)'; }
+// a vote as a share, or in kid words in kid mode (the guide's formatter)
+const fmtP = p => (window.__vgPrefs && window.__vgPrefs.kid && window.__vgPct) ? window.__vgPct(p, 0) : p < 0.01 ? 'under 1%' : Math.round(100 * p) + '%';
+function progress(frac) {
+  const p = $('progress');
+  if (frac === null) { p.style.display = 'none'; return; }
+  p.style.display = 'block'; p.firstElementChild.style.width = Math.round(100 * frac) + '%';
+}
+function setBusy(b) {
+  S.busy = b;
+  $('writeBtn').disabled = b || !S.ready;
+  $('stopBtn').disabled = !S.writing;
+  $('allOn').disabled = !S.off.length;
+}
+
+// ---------- beginnings and layers ----------
+for (const p of BEGINNINGS) {
+  const b = document.createElement('button');
+  b.className = 'pchip'; b.textContent = p.length > 40 ? p.slice(0, 40) + '…' : p; b.title = p;
+  b.onclick = () => { $('story').value = p; };
+  $('beginChips').appendChild(b);
+}
+function renderLayers() {
+  const box = $('layers');
+  box.querySelectorAll('button').forEach(b => b.remove());
+  const n = DATA ? DATA.layers.length : 6;
+  for (let l = 0; l < n; l++) {
+    const b = document.createElement('button');
+    b.className = 'small' + (l === S.layer ? ' on' : '');
+    b.textContent = 'layer ' + (l + 1) + (DATA && DATA.layers[l].warmup ? ' (warm-up)' : '');
+    b.onclick = () => setLayer(l);
+    box.appendChild(b);
+  }
+  const L = DATA && DATA.layers[S.layer];
+  $('layerNote').innerHTML = !L ? '' : L.warmup
+    ? '<b>Layer 1 is a warm-up layer.</b> Its router has not made up its mind: it gives the expert it picks only about a fifth of the say, '
+      + 'so switching off most of its experts does almost nothing, and no one could find names for their jobs. The word decides its route only '
+      + Math.round(100 * L.wordRule) + ' times in 100.'
+    : `In layer ${S.layer + 1}, the word itself decides which expert it goes to about ${Math.round(100 * L.wordRule)} times in 100; the rest of the time, the story around it does.`;
+  $('layerNum').textContent = S.layer + 1;
+  document.body.dataset.layer = String(S.layer + 1);
+}
+function setLayer(l) {
+  S.layer = l;
+  if (S.watch && +S.watch.split(':')[0] !== l) S.watch = null;
+  renderLayers(); renderCards(); renderStrip(); renderVotes();
+  emit('layerChanged', { layer: l + 1, warmup: !!(DATA && DATA.layers[l].warmup) });
+}
+
+// ---------- the expert cards ----------
+const pct = x => Math.round(100 * x);
+function renderCards() {
+  const box = $('cards'); box.innerHTML = '';
+  if (!DATA) { box.innerHTML = '<span class="hint">the expert cards (experts.json) are missing beside this page</span>'; return; }
+  const l = S.layer, counts = new Array(8).fill(0);
+  if (S.story) for (let p = 1; p < S.story.ids.length; p++) { const e = chosen(S.story, p, l); if (e >= 0) counts[e]++; }
+  for (const x of DATA.experts.filter(x => x.layer === l)) {
+    const e = x.expert, k = key(l, e);
+    const c = document.createElement('div');
+    c.className = 'ecard' + (S.off.includes(k) ? ' off' : '') + (S.watch === k ? ' watched' : '');
+    c.dataset.expert = k;
+    const name = x.name ? `<span class="ename">${esc(x.name)}</span>` : '<span class="ename none">no clear job found</span>';
+    const words = x.words.slice(0, 5).map(w => `<span>${esc(showWord(w))}</span>`).join('');
+    const found = foundEffect(k);
+    c.innerHTML = `<div class="etop"><span class="sw" style="background:${COLORS[e]}"></span><span class="enum">expert ${e}</span> ${name}</div>` +
+      `<div class="ewords">${words}</div>` +
+      `<div class="busy"><span class="btrack"><span class="bfill" style="width:${Math.min(100, pct(x.share / 0.25))}%;background:${COLORS[e]}"></span></span>` +
+      `gets ${pct(x.share)}% of all words${S.story ? ` · ${counts[e]} in this story` : ''}</div>` +
+      `<button class="small alt watch${S.watch === k ? ' watching' : ''}" title="make the words this expert handles glow in the story">👁 ${S.watch === k ? 'watching' : 'watch'}</button>` +
+      `<button class="small offb${S.off.includes(k) ? ' on' : ''}" title="the mind writes the story again without this expert">🔌 ${S.off.includes(k) ? 'switched off' : 'switch off'}</button>` +
+      (found ? `<div class="found">🎯 you found what it does: ${esc(found)}</div>` : '') +
+      `<details><summary>more about it</summary>${moreAbout(x)}</details>`;
+    c.querySelector('.watch').onclick = () => toggleWatch(k);
+    c.querySelector('.offb').onclick = () => toggleOff(k);
+    box.appendChild(c);
+  }
+}
+function moreAbout(x) {
+  const s = x.sol, lu = x.luna, out = [];
+  if (x.name) out.push(`<p>${esc(s.job)}</p><p>A bigger A I named it “${esc(s.name)}”. Given only that name, another A I picked out the words that go to it `
+    + `right ${pct(s.score)} times in 100.${lu.passed ? ` (A second A I called it “${esc(lu.name)}”, right ${pct(lu.score)} times in 100.)` : ''}</p>`);
+  else out.push(`<p>A bigger A I guessed “${esc(s.name)}”, but given only that name, another A I picked out its words right only ${pct(s.score)} times in 100: `
+    + `not enough to call it this expert's job.${lu.passed ? ` (A second A I's guess, “${esc(lu.name)}”, did better: ${pct(lu.score)} times in 100.)` : ''} Its words are still real: they almost always come here.</p>`);
+  out.push(`<p>Its words, above, are words the router sends here almost every time. Switched off, it makes the mind about ${pct(x.cost.mute)}% `
+    + `more surprised by each next word${x.cost.mute < 0.01 ? ': it hardly matters' : ''}.</p>`);
+  return out.join('');
+}
+// a word as it shows on a card: a new line as ⏎, punctuation and capitalized words (a sentence's first word
+// after a new line has no space) as themselves, a piece from the middle of a word with a dash
+function showWord(w) {
+  if (/^\s*\n/.test(w)) return '⏎';
+  if (w.startsWith(' ')) return w.slice(1) || '␣';
+  return /^[a-z]/.test(w) ? '-' + w : w;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+
+// ---------- the story strip ----------
+const chosen = (st, p, l) => st.top[(p * st.L + l) * st.k];
+function renderStrip() {
+  const el = $('strip'), st = S.story;
+  if (!st) return;
+  el.innerHTML = ''; el.classList.remove('hint');
+  el.classList.toggle('watching', !!S.watch);
+  const [wl, we] = S.watch ? S.watch.split(':').map(Number) : [-1, -1];
+  st.pieces.forEach((piece, p) => {
+    if (p === 0) return;
+    const sp = document.createElement('span');
+    const e = chosen(st, p, S.layer);
+    sp.className = 'tok' + (p < st.promptLen ? ' prompt' : '') + (p === S.sel ? ' sel' : '');
+    sp.dataset.pos = p;
+    sp.textContent = piece === '\n' ? '⏎\n' : piece;
+    sp.style.background = tint(e, .3);
+    if (S.watch && chosen(st, p, wl) === we) { sp.classList.add('lit'); sp.style.setProperty('background', COLORS[we], 'important'); }
+    sp.title = `expert ${e}${nameOf(S.layer, e) ? ': ' + nameOf(S.layer, e) : ''} (layer ${S.layer + 1}) · click for the router's vote`;
+    sp.onclick = () => selectPiece(p);
+    el.appendChild(sp);
+  });
+}
+function selectPiece(p) {
+  S.sel = p;
+  document.querySelectorAll('#strip .tok').forEach(t => t.classList.toggle('sel', +t.dataset.pos === p));
+  renderVotes();
+  const st = S.story, R = DATA && DATA.router;
+  const e = chosen(st, p, S.layer);
+  emit('pieceChosen', { piece: st.pieces[p], layer: S.layer + 1, expert: e });
+  if (T.open && T.which === 'main') { resetTravel('main', p); travelStep(); }   // replay this word's trip
+  // the router challenge: this word, in its layer, not with its usual expert
+  if (R && st.ids[p] === R.id && S.layer === R.layer && e !== R.usual) solve('router', `“${R.word.trim()}” went to expert ${e} here, not expert ${R.usual}`);
+}
+function renderVotes() {
+  const box = $('votes'), st = S.story, p = S.sel;
+  if (!st || p < 1 || p >= st.ids.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const l = S.layer, E = st.E, votes = Array.from(st.probs.subarray((p * st.L + l) * E, (p * st.L + l + 1) * E)), c = chosen(st, p, l);
+  const piece = st.pieces[p].trim() || JSON.stringify(st.pieces[p]);
+  let html = `<div class="hint" style="margin-bottom:.2rem"><b style="color:var(--ink)">“${esc(piece)}”</b>: the router's vote in layer ${l + 1}. `
+    + `It sends the word to the expert with the biggest vote${DATA && DATA.layers[l].warmup ? ' (in this warm-up layer, no vote is very big)' : ''}.</div>`;
+  votes.forEach((v, e) => {
+    const nm = nameOf(l, e);
+    html += `<div class="vbar${e === c ? ' chosen' : ''}"><span class="vname"><span class="sw" style="background:${COLORS[e]}"></span> expert ${e}${nm ? ' · ' + esc(nm) : ''}</span>`
+      + `<span class="vtrack"><span class="vfill" style="width:${(100 * v).toFixed(1)}%;background:${COLORS[e]}"></span></span>`
+      + `<span class="vpct">${fmtP(v)}</span></div>`;
+  });
+  html += '<div class="hint" style="margin-top:.35rem">in every layer: ';
+  for (let li = 0; li < st.L; li++) {
+    const ce = chosen(st, p, li);
+    html += `<span class="lchip" data-l="${li}" title="${esc(nameOf(li, ce) || 'no clear job found')}"><span class="sw" style="background:${COLORS[ce]}"></span>layer ${li + 1}: expert ${ce}</span> `;
+  }
+  html += '</div>';
+  if (S.off.length && S.off.some(k => +k.split(':')[0] === l && +k.split(':')[1] === c) && !$('reroute').checked)
+    html += '<div class="hint" style="color:var(--red)">That expert is switched off: in the rewritten story, words it gets go unhelped in this layer.</div>';
+  box.innerHTML = html;
+  box.querySelectorAll('.lchip').forEach(ch => ch.onclick = () => setLayer(+ch.dataset.l));
+}
+
+// ---------- watch ----------
+function toggleWatch(k) {
+  S.watch = S.watch === k ? null : k;
+  document.body.dataset.watch = S.watch ? tag(...S.watch.split(':').map(Number)) : '';
+  renderCards(); renderStrip();
+  if (S.watch) {
+    const [l, e] = S.watch.split(':').map(Number);
+    let n = 0; if (S.story) for (let p = 1; p < S.story.ids.length; p++) if (chosen(S.story, p, l) === e) n++;
+    emit('expertWatched', { layer: l + 1, expert: e, name: nameOf(l, e), n, story: !!S.story });
+  }
+}
+
+// ---------- the words travel: a replay of a story, each word dropping through the six layers ----------
+// T.pos is the word dropping in (or next to): its trip ends with the next word, which drops in after it.
+// The counts are how many of the story's words, up to that one, each expert has had.
+const T = { open: false, which: 'main', pos: 0, counts: null, playing: false, busy: false, run: 0 };
+const B = { cells: [], names: [], out: null, chip: null };
+const travelStory = () => T.which === 'off' && S.offStory ? S.offStory : S.story;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const chipText = piece => /^\s*\n/.test(piece) ? '⏎' : piece.replace(/^ /, '') || '␣';
+function buildBoard() {
+  if (B.out) return;
+  const b = $('board');
+  const add = (cls, text) => { const d = document.createElement('div'); d.className = cls; d.textContent = text || ''; b.appendChild(d); return d; };
+  for (let l = 0; l < 6; l++) {
+    add('blab', 'layer ' + (l + 1) + (DATA && DATA.layers[l].warmup ? ' (warm-up)' : ''));
+    B.cells.push([]);
+    for (let e = 0; e < 8; e++) {
+      const c = add('bcell');
+      c.title = `layer ${l + 1}, expert ${e}: ${nameOf(l, e) || 'no clear job found'}`;
+      B.cells[l].push(c);
+    }
+    B.names.push(add('bname'));
+  }
+  add('blab', 'next word');
+  B.out = add('bout'); add('');
+  B.chip = add(''); B.chip.id = 'chip'; B.chip.style.visibility = 'hidden';
+}
+function travelCounts(st, upto) {
+  T.counts = Array.from({ length: st.L }, () => new Array(st.E).fill(0));
+  for (let p = 1; p <= upto; p++) for (let l = 0; l < st.L; l++) T.counts[l][chosen(st, p, l)]++;
+}
+function paintBoard(st) {
+  for (let l = 0; l < st.L; l++) for (let e = 0; e < st.E; e++) {
+    const c = B.cells[l][e], off = st.keys.includes(key(l, e)), n = T.counts[l][e], a = 0.12 + 0.7 * Math.min(1, n / 10);
+    c.className = 'bcell' + (off ? ' off' : '');
+    c.style.background = off ? '' : tint(e, a);
+    c.style.color = a > 0.5 ? '#12141a' : 'var(--ink)';
+    c.style.outlineColor = 'transparent';
+    c.textContent = off ? '🔌' : n || '';
+  }
+}
+function travelText(st) {
+  const el = $('travelText'); el.innerHTML = '';
+  for (let p = 1; p <= Math.min(T.pos, st.pieces.length - 1); p++) {
+    const sp = document.createElement('span');
+    sp.textContent = st.pieces[p];
+    sp.className = (p < st.promptLen ? 'pr' : '') + (p === T.pos ? ' cur' : '');
+    el.appendChild(sp);
+  }
+  el.scrollTop = el.scrollHeight;
+  document.body.dataset.travelPos = T.pos;
+}
+function travelWhich() {
+  const box = $('travelWhich'); box.innerHTML = '';
+  if (!S.offStory) return;
+  for (const [w, label] of [['main', 'replay the story'], ['off', 'replay the rewrite, ' + offWho(S.offStory.keys, S.offStory.rerouted)]]) {
+    const b = document.createElement('button');
+    b.className = 'small' + (T.which === w ? ' on' : ''); b.textContent = label;
+    b.onclick = () => { resetTravel(w); travelPlay(true); };
+    box.appendChild(b);
+  }
+}
+function travelPlay(on) {
+  T.playing = on;
+  $('tPlay').textContent = on ? '⏸ pause' : '▶ play';
+  if (on && !T.busy) travelStep();
+}
+function clearTrip() {
+  for (const n of B.names) { n.textContent = ''; n.className = 'bname'; }
+  B.out.textContent = ''; B.chip.style.visibility = 'hidden';
+}
+// start the replay over (or jump it to piece p), cancelling a trip under way
+function resetTravel(which = T.which, p = null) {
+  T.run++; T.busy = false;
+  T.which = which === 'off' && S.offStory ? 'off' : 'main';
+  const st = travelStory();
+  document.body.dataset.travel = T.open ? T.which : '';
+  if (!st) return;
+  T.pos = p === null ? st.promptLen - 1 : p;
+  travelCounts(st, T.pos - 1);
+  clearTrip(); paintBoard(st); travelText(st); travelWhich(); travelPlay(false);
+}
+function placeChip(el, dy = 0) {
+  B.chip.style.left = (el.offsetLeft + el.offsetWidth / 2) + 'px';
+  B.chip.style.top = (el.offsetTop + el.offsetHeight / 2 + dy) + 'px';
+}
+async function travelStep() {
+  const st = travelStory();
+  if (!st || T.busy) return;
+  if (T.pos >= st.ids.length) { travelPlay(false); return; }
+  const run = T.run, gone = () => run !== T.run, ms = +$('tSpeed').value, p = T.pos;
+  T.busy = true;
+  paintBoard(st); clearTrip();
+  B.chip.style.transition = 'none'; B.chip.textContent = chipText(st.pieces[p]);
+  placeChip(B.cells[0][chosen(st, p, 0)], -30); B.chip.style.visibility = 'visible';
+  void B.chip.offsetWidth; B.chip.style.transition = '';
+  await wait(ms); if (gone()) return;
+  let silent = null;
+  for (let l = 0; l < st.L; l++) {
+    const e = chosen(st, p, l), c = B.cells[l][e];
+    placeChip(c);
+    await wait(ms * 0.9); if (gone()) return;
+    T.counts[l][e]++;
+    if (st.keys.includes(key(l, e))) {   // muted: the router still sends the word here, but nothing comes back
+      B.names[l].textContent = `expert ${e} is switched off: it says nothing`; B.names[l].className = 'bname silent';
+      silent = tag(l, e);
+    } else {
+      c.style.background = COLORS[e]; c.style.color = '#12141a'; c.style.outlineColor = '#fff'; c.textContent = T.counts[l][e];
+      B.names[l].textContent = `expert ${e}: ${nameOf(l, e) || 'no clear job found'}`;
+    }
+    await wait(ms * 0.4); if (gone()) return;
+  }
+  placeChip(B.out);
+  await wait(ms); if (gone()) return;
+  B.chip.style.visibility = 'hidden';
+  B.out.textContent = p + 1 < st.pieces.length ? '→ ' + chipText(st.pieces[p + 1]) : '(the story stops here)';
+  T.pos = p + 1; travelText(st);
+  if (silent) emit('travelSilent', { expert: silent, next: st.pieces[p + 1] || '' });
+  await wait(ms * 1.5); if (gone()) return;
+  T.busy = false;
+  if (T.pos >= st.ids.length) travelPlay(false);
+  else if (T.playing) travelStep();
+}
+$('travelBtn').onclick = () => {
+  T.open = true; $('travel').hidden = false; $('travelBtn').hidden = true;
+  buildBoard(); resetTravel('main'); travelPlay(true);
+  emit('travelOpened', {});
+};
+$('tPlay').onclick = () => {
+  const st = travelStory();
+  if (!T.playing && st && T.pos >= st.ids.length) resetTravel();
+  travelPlay(!T.playing);
+};
+$('tStep').onclick = () => { travelPlay(false); if (!T.busy) travelStep(); };
+$('tAgain').onclick = () => { resetTravel(); travelPlay(true); };
+$('tClose').onclick = () => {
+  T.open = false; T.run++; T.busy = false; T.playing = false;
+  $('travel').hidden = true; $('travelBtn').hidden = !S.story; document.body.dataset.travel = '';
+};
+
+// ---------- switch off ----------
+function toggleOff(k) {
+  const i = S.off.indexOf(k);
+  if (i >= 0) S.off.splice(i, 1); else S.off.push(k);
+  document.body.dataset.off = S.off.map(x => tag(...x.split(':').map(Number))).join(', ');
+  renderOffList(); renderCards(); setBusy(S.busy);
+  if (!S.off.length) { S.offStory = null; showPanes(); return; }
+  if (!S.story) { status('switched off: now write a story, and the mind writes it twice, with and without'); return; }
+  rewrite();
+}
+$('allOn').onclick = () => { S.off = []; document.body.dataset.off = ''; S.offStory = null; renderOffList(); renderCards(); showPanes(); setBusy(S.busy); };
+$('reroute').onchange = () => { document.body.dataset.reroute = $('reroute').checked ? '1' : ''; if (S.off.length && S.story) rewrite(); };
+function renderOffList() {
+  const box = $('offList'); box.innerHTML = '';
+  if (!S.off.length) { box.innerHTML = '<span class="hint">none switched off: press 🔌 on an expert above</span>'; return; }
+  for (const k of S.off) {
+    const [l, e] = k.split(':').map(Number);
+    const b = document.createElement('button');
+    b.className = 'small'; b.title = 'switch it back on';
+    b.innerHTML = `<span class="sw" style="background:${COLORS[e]}"></span> layer ${l + 1}, expert ${e}${nameOf(l, e) ? ': ' + esc(nameOf(l, e)) : ''} ✕`;
+    b.onclick = () => toggleOff(k);
+    box.appendChild(b);
+  }
+}
+function switches() { return $('reroute').checked ? { mute: [], reroute: S.off.slice() } : { mute: S.off.slice(), reroute: [] }; }
+function rewrite() {
+  if (!S.story || !S.off.length) return;
+  if (S.busy) { S.pending = 'rewrite'; return; }
+  S.writing = true; setBusy(true);
+  pane('paneOff', offWho(S.off, $('reroute').checked), S.story.pieces.slice(1, S.story.promptLen).join(''));
+  status('the mind is writing the story again, ' + offWho(S.off, $('reroute').checked) + '…');
+  worker.postMessage({ type: 'write', tag: 'off', promptIds: S.story.ids.slice(0, S.story.promptLen), maxNew: MAX_NEW, ...switches() });
+}
+function offWho(keys, rerouted) {
+  const names = keys.map(k => { const [l, e] = k.split(':').map(Number); return `layer ${l + 1}, expert ${e}`; });
+  return `with ${names.join(' and ')} ${rerouted ? 'sending its words to their second choice' : 'switched off'}`;
+}
+
+// ---------- the two stories, side by side ----------
+function pane(id, who, text) {
+  const el = $(id); el.innerHTML = '';
+  const w = document.createElement('span'); w.className = 'who'; w.textContent = who; el.appendChild(w);
+  el.appendChild(document.createTextNode(text));
+}
+// words in one story and not the other, by a longest-common-subsequence over words
+function wordDiff(a, b) {
+  const A = a.match(/\S+\s*|\s+/g) || [], B = b.match(/\S+\s*|\s+/g) || [];
+  const n = A.length, m = B.length, T = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  const same = (x, y) => x.trim() === y.trim();
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) T[i][j] = same(A[i], B[j]) ? T[i + 1][j + 1] + 1 : Math.max(T[i + 1][j], T[i][j + 1]);
+  const keepA = new Uint8Array(n), keepB = new Uint8Array(m);
+  for (let i = 0, j = 0; i < n && j < m;) {
+    if (same(A[i], B[j])) { keepA[i] = keepB[j] = 1; i++; j++; } else if (T[i + 1][j] >= T[i][j + 1]) i++; else j++;
+  }
+  return { A, B, keepA, keepB };
+}
+function marked(id, who, words, keep, cls) {
+  const el = $(id); el.innerHTML = '';
+  const w = document.createElement('span'); w.className = 'who'; w.textContent = who; el.appendChild(w);
+  words.forEach((t, i) => {
+    if (keep[i] || !t.trim()) { el.appendChild(document.createTextNode(t)); return; }
+    const s = document.createElement('span'); s.className = cls; s.textContent = t; el.appendChild(s);
+  });
+}
+const textOf = st => st.pieces.slice(1).join('');
+function showPanes() {
+  if (T.open) { if (T.which === 'off' && !S.offStory) resetTravel('main'); else travelWhich(); }
+  if (!S.story) return;
+  const on = textOf(S.story);
+  if (!S.offStory || !S.off.length) { pane('paneOn', 'with every expert on', on); pane('paneOff', 'with the switched-off expert', '—'); return; }
+  const off = textOf(S.offStory), d = wordDiff(on, off);
+  marked('paneOn', 'with every expert on', d.A, d.keepA, 'gone');
+  marked('paneOff', offWho(S.offStory.keys, S.offStory.rerouted), d.B, d.keepB, 'new');
+}
+
+// ---------- challenges ----------
+const CH_TEXT = {
+  '1:1': 'Make the mind get stuck saying “to to to”.',
+  '1:2': 'Make what the characters say go blank: " ".',
+  '2:1': 'Make the mind write “said said”.',
+  '2:2': 'Make the mind forget how to finish “let’s” and “don’t”.',
+  '2:7': 'Make the mind say “wanted wanted”.',
+};
+const CH_HINT = {
+  '1:1': 'Little words like “to” all go to one expert. Look in layer 2.',
+  '1:2': 'Look in layer 2, with a beginning where someone talks.',
+  '2:1': 'Look in layer 3. The rainy-day beginning has lots of talking.',
+  '2:2': 'Look in layer 3. Try the hot stove beginning.',
+  '2:7': 'Look in layer 3. Try Tom and his dog.',
+};
+const CHALLENGES = () => {
+  const list = (DATA ? DATA.experts.filter(x => x.effect) : []).map(x => ({ id: key(x.layer, x.expert), text: CH_TEXT[key(x.layer, x.expert)],
+    hint: CH_HINT[key(x.layer, x.expert)], seen: new RegExp(x.effect.seen), x }));
+  if (DATA && DATA.router) {
+    const R = DATA.router;
+    list.push({ id: 'router', text: `In layer ${R.layer + 1}, “${R.word.trim()}” almost always goes to the same expert. Guess which one first! Then find an “${R.word.trim()}” that the router sends somewhere else.`,
+      hint: `Choose layer ${R.layer + 1} and click the “${R.word.trim()}”s in a story: the router's vote shows where each one went.` });
+  }
+  return list;
+};
+let chFound = {};
+try { chFound = JSON.parse(localStorage.getItem('tm-experts-found') || '{}') || {}; } catch (e) { chFound = {}; }
+function foundEffect(k) { const x = DATA && DATA.experts.find(y => key(y.layer, y.expert) === k); return S.solved.has(k) && x && x.effect ? x.effect.says : ''; }
+function renderChallenges() {
+  const box = $('challenges'); box.innerHTML = '';
+  for (const c of CHALLENGES()) {
+    const li = document.createElement('li');
+    li.dataset.ch = c.id;
+    const done = S.solved.has(c.id);
+    li.className = done ? 'done' : '';
+    li.innerHTML = (done ? '✅ ' : '') + esc(c.text) +
+      (done ? `<span class="got">${esc(chFound[c.id] || 'found')}</span>` : ` <details class="chint"><summary>💡 hint</summary> ${esc(c.hint)}</details>`);
+    box.appendChild(li);
+  }
+  document.body.dataset.solved = [...S.solved].join(',');
+}
+function solve(id, how) {
+  if (S.solved.has(id)) return;
+  S.solved.add(id); chFound[id] = how; saveSolved();
+  try { localStorage.setItem('tm-experts-found', JSON.stringify(chFound)); } catch (e) {}
+  renderChallenges(); renderCards();
+  status('🎯 challenge solved: ' + how);
+  emit('challengeSolved', { id, how });
+}
+// after a rewrite with exactly one expert off: did a challenge's pattern appear?
+function checkChallenges() {
+  const keys = S.offStory && S.offStory.keys;
+  if (!keys || keys.length !== 1) return;
+  const on = textOf(S.story), off = textOf(S.offStory), [l, e] = keys[0].split(':').map(Number);
+  for (const c of CHALLENGES()) {
+    if (!c.seen || S.solved.has(c.id) || !c.seen.test(off) || c.seen.test(on)) continue;
+    if (c.id === keys[0]) solve(c.id, `layer ${l + 1}, expert ${e}${nameOf(l, e) ? ' (' + nameOf(l, e) + ')' : ''}: ${c.x.effect.says}`);
+    else emit('challengeOther', { challenge: c.id, layer: l + 1, expert: e });   // another expert did it too: still a find, said by the guide
+  }
+}
+
+// ---------- loading ----------
+function looksLikeCheckpoint(buf) {
+  if (buf.byteLength < 28) return false;
+  const dv = new DataView(buf);
+  const dim = dv.getInt32(0, true), nl = dv.getInt32(8, true);
+  return dim > 0 && dim <= 8192 && nl > 0 && nl <= 128 && buf.byteLength > 500000;
+}
+const pending = { ck: null, tok: null };
+function load(files) {
+  for (const f of files) { if (looksLikeCheckpoint(f.buf)) pending.ck = f; else pending.tok = f; }
+  if (!pending.ck || !pending.tok) { status('drop the mind made of experts (stories-moe-top1.bin) and its tokenizer.bin'); return; }
+  S.ready = false; setBusy(false);
+  worker.postMessage({ type: 'load', ckptBuf: pending.ck.buf, tokBuf: pending.tok.buf }, [pending.ck.buf]);
+  status(`waking ${pending.ck.name}…`);
+  pending.ck = null;
+}
+window.__tmLoadPair = (ck, tok) => load([ck, tok]);
+window.__tmUnload = () => { worker.postMessage({ type: 'unload' }); S.ready = false; setBusy(false); showMindBox(); };
+
+// this room has one mind, so it is never "chosen": inside Tiny Mind the shell fetches it (and says why if it cannot);
+// on its own, the page fetches it from beside itself (or the repo's models/ folder, in development)
+const MIND_FILE = 'stories-moe-top1.bin';
+const DROP_HINT = `You can also drop ${MIND_FILE} and tokenizer.bin anywhere on this page.`;
+const embedded = () => !!window.__tmBridge;
+const canGet = () => embedded() ? !!window.__tmRPC : /^https?:$/i.test(window.location.protocol);
+function showMindBox(why = '', busy = false) {
+  $('mindBox').hidden = S.ready;
+  $('getMind').style.display = canGet() ? '' : 'none';
+  $('getMind').disabled = busy;
+  $('mindWhy').textContent = why ? `Could not get it: ${why}. ${DROP_HINT}` : canGet() ? '' : DROP_HINT;
+  $('mindWhy').classList.toggle('err', !!why);
+}
+window.__tmMindMissing = why => { if (!S.ready) { status(''); showMindBox(why || 'it was not found'); } };
+async function getMind() {
+  showMindBox('', true);
+  status('getting the Expert Storyteller (77 MB)…');
+  try {
+    if (embedded()) await window.__tmRPC('experts.get');   // the shell sends it here when it has it
+    else {
+      const got = async name => {
+        try { return await fetchFirst([name, '../models/' + name]); } catch (e) { throw new Error(name + ' is not beside this page'); }
+      };
+      const [ck, tok] = await Promise.all([got(MIND_FILE), got('tokenizer.bin')]);
+      load([{ name: MIND_FILE, buf: await ck.arrayBuffer() }, { name: 'tokenizer.bin', buf: await tok.arrayBuffer() }]);
+    }
+  } catch (e) { status(''); showMindBox(String((e && e.message) || e).replace(/\.$/, '')); }
+}
+$('getMind').onclick = getMind;
+
+const drop = $('mindBox');
+window.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+window.addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('over'); });
+window.addEventListener('drop', async e => {
+  e.preventDefault(); drop.classList.remove('over');
+  const snap = [...e.dataTransfer.files], files = [];
+  for (const f of snap) files.push({ name: f.name, buf: await f.arrayBuffer() });
+  if (files.length) load(files);
+});
+
+// ---------- write ----------
+$('writeBtn').onclick = () => {
+  const text = $('story').value.trim(); if (!text || S.busy) return;
+  S.writing = true; setBusy(true);
+  S.sel = -1; S.offStory = null;
+  $('genOut').textContent = text;
+  worker.postMessage({ type: 'write', tag: 'main', prompt: text, maxNew: MAX_NEW });
+  status('the mind is writing…');
+};
+$('stopBtn').onclick = () => worker.postMessage({ type: 'stop' });
+
+// ---------- the engine's answers ----------
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'error') { status(m.message, true); S.writing = false; setBusy(false); progress(null); return; }
+  if (m.type === 'loaded') {
+    if (m.notExperts) { S.ready = false; status(''); showMindBox('that mind is not made of experts (it opens in the other rooms)'); setBusy(false); return; }
+    S.ready = true; document.body.dataset.cores = m.cores;
+    showMindBox();
+    status('ready: pick a beginning and press ✍️ write on');
+    setBusy(false);
+    emit('ready', {});
+    return;
+  }
+  if (m.type === 'unloaded') { status('resting (another room is using the memory)'); showMindBox(); return; }
+  if (m.type === 'progress') { progress(m.done / m.total); return; }
+  if (m.type === 'gen-token') {
+    if (m.tag === 'main') $('genOut').textContent += m.piece;
+    else if (m.tag === 'off') $('paneOff').lastChild.textContent += m.piece;
+    return;
+  }
+  if (m.type === 'written' || m.type === 'read') {
+    progress(null);
+    S.writing = false;
+    const st = { ids: m.ids, pieces: m.pieces, top: m.top, probs: m.probs, L: m.L, E: m.E, k: m.k, promptLen: m.promptLen,
+      keys: [...m.mute, ...m.reroute], rerouted: m.reroute.length > 0 };   // the switches it was written with
+    if (m.tag === 'off') {
+      S.offStory = st;
+      if (T.open && T.which === 'off') { resetTravel('off'); travelPlay(true); }
+      showPanes();
+      const changed = textOf(st) !== textOf(S.story);
+      status(changed ? 'done: the changed words light up in the second story' : 'the story came out the same: this expert was not needed for it. Try another beginning, or another expert.');
+      emit('expertOff', { changed, off: st.keys.map(k => tag(...k.split(':').map(Number))), reroute: st.rerouted });
+      checkChallenges();
+    } else {
+      S.story = st; S.sel = -1;
+      $('genOut').textContent = '';
+      $('travelBtn').hidden = T.open;
+      if (T.open) { resetTravel('main'); travelPlay(true); }
+      renderStrip(); renderCards(); renderVotes(); showPanes();
+      document.body.dataset.story = '1';
+      status(`wrote ${st.ids.length - st.promptLen} words${m.stopped ? ' (stopped)' : ''}: each word is colored by its expert in layer ${S.layer + 1}. Click a word for the router's vote.`);
+      emit('storyRead', { n: st.ids.length - 1, layer: S.layer + 1 });
+      if (S.off.length) { setBusy(false); rewrite(); return; }
+    }
+    setBusy(false);
+    if (S.pending === 'rewrite') { S.pending = null; if (S.off.length) rewrite(); }
+  }
+};
+
+function start() {
+  renderLayers(); renderCards(); renderChallenges();
+  if (!DATA) status('the expert cards (experts.json) are missing beside this page', true);
+  if (S.ready) return;
+  showMindBox();
+  if (!embedded() && canGet()) getMind();   // inside Tiny Mind, the shell is already getting it
+}
+if (DATA) start();
+else fetch(new URL('experts.json', window.location.href)).then(r => r.json()).then(d => { DATA = d; }).catch(() => {}).then(start);
+</script>
+</body>
+</html>

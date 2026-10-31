@@ -49,6 +49,15 @@ python tools/moe/parity.py models/stories-moe-top1.bin tests/fixtures/moe-top1-p
 - `thought/` — the Thought bubble: the J-Lens Explorer's instrument on Tiny Mind's engine
   (src/thought.js + batch.js): thinking ahead / layer by layer / DIFF readouts over the story
   vocabulary (`thought/vocab.json`), the heat glow, and swap & rewrite. Big and Giant Storytellers.
+- `experts/` — the Experts room (plans/experts-room.md, reports/moe/feasibility.md): the Expert
+  Storyteller, a mind made of experts (top-1 of 8 per layer; src/experts.js on batch.js). The story is
+  colored by the expert each word went to in a chosen layer (layer 1 shown as a warm-up layer), the
+  router's vote for any word, "watch the words travel" (each word drops through all six layers, one
+  expert per layer, and the next word comes out), the 48 expert cards (`experts/experts.json`, tools/moe/ship.py: gpt-6.1-sol's
+  names where they predict the router, "no clear job found" elsewhere), 👁 watch an expert, 🔌 switch one
+  off (muted; rerouting is the advanced switch) with the rewrite's changed words marked, and challenges
+  from the five confirmed switch-off effects plus one for the router. Its mind is models/stories-moe-top1.bin;
+  with `node tools/serve.js 8137`, http://localhost:8137/experts/ opens the room straight from the source (no build).
 - `eye/` — the Tiny Eye, a mind that sees drawings (plans/tiny-eye.md): a tiny ConvNeXt-style
   doodle network (src/eye.js, 83 thousand weights, 24 Quick, Draw! categories). Draw pad made the
   way Quick, Draw!'s bitmaps were, guess bars, every stage's neurons lighting up, neuron cards with

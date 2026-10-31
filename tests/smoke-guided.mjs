@@ -112,8 +112,8 @@ const spoke = (w, s) => logTexts(w).some(t => t.includes(s));
 async function main() {
   console.log('-- build fingerprint assertions --');
   const count = (s) => { let n = 0, i = -1; while ((i = BUILT.indexOf(s, i + 1)) !== -1) n++; return n; };
-  check('six vg-core v2 copies', count('version:2,fragments') === 6);
-  check('six </body> tags', count('</body>') === 6);
+  check('seven vg-core v2 copies', count('version:2,fragments') === 7);
+  check('seven </body> tags', count('</body>') === 7);
   check('probe-fact handler in worker blob', count("m.type === 'probe-fact'") >= 1);
   check('selectTab broadcast spliced', BUILT.includes("tm: 'vg-tab'"));
   check('pref rebroadcast spliced', BUILT.includes('// vg: pref sync'));
@@ -122,7 +122,7 @@ async function main() {
   check('toggle labels unclipped (kid, nowrap)', BUILT.includes('id="vgKid"> kid<') && !BUILT.includes('id="vgKid"> little-kid<'));
   check('provider table shipped (app-key reuse)', BUILT.split('__vgProviders').length - 1 >= 3);
   check('no drop-the-starter-pack quest left in the shell tour', !BUILT.includes('skipIf: poolHasModel') && !BUILT.includes('catchTheBrain'));
-  check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 6);
+  check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 7);
   check('shellStorage gained list (404-noise fix)', BUILT.includes('async list(prefix)'));
   check('never-offer-visible rule in all four prompts', BUILT.split('talk about what it shows instead').length - 1 >= 4);
   check('bay persistence shipped', BUILT.includes("const tmRestoreReady = tmRestorePool(); // vg wave 4") &&
@@ -147,16 +147,16 @@ async function main() {
   check('one ask path shared by every guide', BUILT.split('window.__vgAsk = async function').length - 1 >= 3 && BUILT.split('__vgAsk(sys, usr').length - 1 >= 3);
   check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("localStorage.getItem('tm-key-' + p)"));
   check('shell page carries its own LLM helpers', BUILT.includes('if (!window.__vgProviders) window.__vgProviders') && BUILT.includes('if (!window.__vgRememberedKey) window.__vgRememberedKey'));
-  check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 6 && BUILT.split("a.on('showBlocked'").length - 1 === 6);
+  check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 7 && BUILT.split("a.on('showBlocked'").length - 1 === 7);
   check('hosted arcs discover more than one manifest', BUILT.includes("tmGetJson('arc/arcs.json')") && BUILT.includes('manifest.more || []'));
   check('bay names what it remembered', BUILT.includes("recs.map(r => r.name).join(', ')"));
   check('bay arc line no longer prints raw keys', BUILT.includes('m.label || arcKidLabel(m)'));
-  check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 6);
+  check('DO directive is caught even when it ends a prose line', BUILT.split('const m=s.match(/DO:[ \\t]*([A-Z_]+)').length - 1 === 7);
   check('TAB is a gated verb', BUILT.includes('TAB: { gated: true,') && BUILT.includes('ratifyText(p, t)'));
   check('ablation narration varies after the first', BUILT.includes('ablationAgain:') && BUILT.includes('const AGAIN_KID'));
   check('time machine can write a story from the moment', BUILT.includes('id="scrubStory"') && BUILT.includes("type: 'sample-now', prompt: prefix"));
   check('app readouts route through the kid-odds formatter',
-    BUILT.split('window.__vgPct(').length - 1 >= 7 && BUILT.split('window.__vgPct = function').length - 1 === 5);
+    BUILT.split('window.__vgPct(').length - 1 >= 7 && BUILT.split('window.__vgPct = function').length - 1 === 6);
   check('hunt pct() honours kid mode', BUILT.includes("if (window.__vgPrefs && window.__vgPrefs.kid && window.__vgOdds)\n    return window.__vgOdds.phrase(p, true, { compact: true });   // kid mode"));
   check('prefill no longer depends on the loaded message', BUILT.includes("new MutationObserver(() => maybePrefillStory()).observe(mi"));
   check('core exposes click-to-ask (explain + explainable)', BUILT.includes('explain:vgExplainTopic, explainable:vgExplainable') && BUILT.includes('function vgExplainable('));
@@ -846,6 +846,107 @@ async function main() {
     }
   }
 
+  console.log('-- experts frame --');
+  {
+    const errors = [];
+    const dom = makeDom(extractTemplate('experts'), errors, w => mkStorage(w));
+    const w = dom.window;
+    const booted = await until(() => w.__guide, 6000);
+    check('experts guide boots', booted);
+    if (booted) {
+      const G = w.__guide; G.setWordMs(0);
+      check('experts tour: welcome, write, colors, travel, cards, switch, challenges', G.steps.map(s => s.name).join(',') === 'welcome,write,colors,travel,cards,switch,challenges', G.steps.map(s => s.name).join(','));
+      const doc = w.document, wk = w.__vgW.workers[0];
+      check('experts worker shimmed', !!wk);
+      const box = doc.getElementById('mindBox');
+      check('before its mind arrives, the room says it has a mind of its own (no "choose a mind")',
+        !box.hidden && /Expert Storyteller/.test(box.textContent) && !/choose a mind/.test(doc.body.textContent));
+      w.__tmMindMissing('stories-moe-top1.bin is not beside this page');
+      check('when the shell cannot get it, the room says why, and that it can be dropped',
+        /not beside this page/.test(doc.getElementById('mindWhy').textContent) && /drop stories-moe-top1\.bin and tokenizer\.bin/.test(doc.getElementById('mindWhy').textContent));
+      const ck = new ArrayBuffer(600000), dv = new DataView(ck);
+      [288, 0, 6, 6, 6, 32000, 256].forEach((v, i) => dv.setInt32(i * 4, v, true));
+      w.__tmLoadPair({ name: 'stories-moe-top1.bin', buf: ck }, { name: 'tokenizer.bin', buf: new ArrayBuffer(16) });
+      check('the mind and its tokenizer go to the worker', wk.sent.some(m => m.type === 'load' && m.ckptBuf && m.tokBuf));
+      wk.fakeReceive({ type: 'loaded', config: { nLayers: 6, experts: { n: 8, topK: 1, hidden: 192, renorm: false } }, cores: 4 });
+      check('once the mind is awake, that box goes away', box.hidden);
+      check('layer 3 is shown first: eight cards, named or "no clear job found"', doc.body.dataset.layer === '3' && doc.querySelectorAll('#cards .ecard').length === 8 &&
+        doc.querySelectorAll('#cards .ename.none').length === 2 && /the comma expert/.test(doc.getElementById('cards').textContent));
+      check('the cards say the experts are not topic experts', /not topic experts/.test(doc.getElementById('expertsCard').textContent));
+      check('six challenges: five switch-off effects and the router word', doc.querySelectorAll('#challenges li').length === 6);
+      // a story: the piece at each position goes to expert (pos + layer) % 8; " and" (322) in layer 2 goes to expert 1, not its usual 6
+      const story = (pieces, ids, tag, mute = [], reroute = []) => {
+        const N = pieces.length, top = new Int8Array(N * 6), probs = new Float32Array(N * 6 * 8);
+        for (let p = 0; p < N; p++) for (let l = 0; l < 6; l++) {
+          const e = ids[p] === 322 && l === 1 ? 1 : (p + l) % 8;
+          top[p * 6 + l] = e;
+          for (let x = 0; x < 8; x++) probs[(p * 6 + l) * 8 + x] = x === e ? 0.51 : 0.07;
+        }
+        return { type: 'written', tag, ids, pieces, top, gate: new Float32Array(N * 6), probs, L: 6, E: 8, k: 1, promptLen: 5, mute, reroute };
+      };
+      const on = ['', 'Mom', ' said', ',', ' "', 'Let', "'s", ' go', ' and', ' see', '."'];
+      const off = ['', 'Mom', ' said', ',', ' "', 'Let', "'", ' go', ' and', ' see', '."'];
+      const ids = [1, 341, 1497, 29892, 376, 12024, 29915, 748, 322, 1074, 1213];
+      doc.getElementById('writeBtn').click();
+      check('write on asks the worker for a story, greedy, from the beginning in the box', wk.sent.some(m => m.type === 'write' && m.tag === 'main' && /Lily/.test(m.prompt)));
+      wk.fakeReceive(story(on, ids, 'main'));
+      check('the story shows, every piece colored by its expert', doc.querySelectorAll('#strip .tok').length === 10 && doc.body.dataset.story === '1' &&
+        /rgba/.test(doc.querySelector('#strip .tok').style.background));
+      await until(() => spoke(w, 'each word colored by the expert'), 3000);
+      check('the guide speaks when the story is written', spoke(w, 'each word colored by the expert'));
+      // the words travel: piece 4 (the beginning's last) drops through layers 1-6 to experts (4 + l) % 8, and "Let" comes out
+      const tb = doc.getElementById('travelBtn');
+      check('a written story offers "watch the words travel"', !tb.hidden);
+      doc.getElementById('tSpeed').value = '90';
+      tb.click();
+      check('the board: six layers of eight experts, and the replay starts with the beginning\'s last word',
+        doc.querySelectorAll('#board .bcell').length === 48 && doc.body.dataset.travel === 'main' && doc.body.dataset.travelPos === '4' && !doc.getElementById('travel').hidden);
+      await until(() => doc.body.dataset.travelPos === '5', 5000);
+      const trip = [...doc.querySelectorAll('#board .bname')].map(n => n.textContent);
+      check('the word lands on one expert in each layer (named beside the row), and the next word comes out at the bottom',
+        doc.body.dataset.travelPos === '5' && /→ Let/.test(doc.querySelector('#board .bout').textContent) && trip.length === 6 &&
+        trip.every((t, l) => t.startsWith('expert ' + ((4 + l) % 8) + ':')) && trip[2] === 'expert 6: the scene starter expert', trip.join(' / '));
+      await until(() => spoke(w, 'drop through the six layers'), 3000);
+      check('the guide says how to read the board', spoke(w, 'drop through the six layers'));
+      check('the guide knows the board, and can point at it', /watch the words travel/.test(w.__guide.system()) && /Targets: [^.]*travel/.test(w.__guide.system()));
+      doc.querySelectorAll('#strip .tok')[2].click();
+      check('clicking a word replays its trip', doc.body.dataset.travelPos === '3' || doc.body.dataset.travelPos === '2');
+      await until(() => doc.body.dataset.travelPos === '3', 5000);
+      check('... from that word, then waits', doc.body.dataset.travelPos === '3' && doc.getElementById('tPlay').textContent.includes('play'));
+      check("a word's router vote: eight bars, the chosen one marked, and its expert in every layer",
+        doc.querySelectorAll('#votes .vbar').length === 8 && doc.querySelectorAll('#votes .vbar.chosen').length === 1 && doc.querySelectorAll('#votes .lchip').length === 6);
+      doc.querySelector('.ecard[data-expert="2:5"] .watch').click();
+      check('watching an expert lights up its words and dims the rest', doc.getElementById('strip').classList.contains('watching') && doc.querySelectorAll('#strip .tok.lit').length > 0 && doc.body.dataset.watch === 'L3·E5');
+      wk.sent.length = 0;
+      doc.querySelector('.ecard[data-expert="2:2"] .offb').click();
+      const ask = wk.sent.find(m => m.type === 'write' && m.tag === 'off');
+      check('switching an expert off rewrites from the same beginning with it muted', !!ask && ask.mute.join() === '2:2' && ask.reroute.length === 0 && ask.promptIds.length === 5);
+      wk.fakeReceive(story(off, ids, 'off', ['2:2']));
+      check('the rewrite shows beside the story, its changed words lit', doc.querySelectorAll('#paneOff .new').length === 1 && doc.querySelector('#paneOff .new').textContent.includes("Let'") &&
+        doc.querySelectorAll('#paneOn .gone').length === 1);
+      check('the apostrophe challenge is solved and the card now says what the expert does', doc.body.dataset.solved.split(',').includes('2:2') &&
+        /lose their ending/.test(doc.querySelector('.ecard[data-expert="2:2"] .found').textContent));
+      check('the board can now replay the rewrite instead', doc.querySelectorAll('#travelWhich button').length === 2);
+      doc.querySelectorAll('#travelWhich button')[1].click();
+      check('... where the switched-off expert shows its plug', doc.body.dataset.travel === 'off' && doc.querySelectorAll('#board .bcell.off').length === 1 &&
+        doc.querySelectorAll('#board .bcell')[2 * 8 + 2].classList.contains('off'));
+      doc.getElementById('tClose').click();
+      check('closing the board brings back its button', doc.getElementById('travel').hidden && !tb.hidden && doc.body.dataset.travel === '');
+      await until(() => spoke(w, 'Challenge solved'), 3000);
+      check('the guide celebrates the find', spoke(w, 'Challenge solved'));
+      wk.sent.length = 0;
+      doc.getElementById('reroute').checked = true; doc.getElementById('reroute').dispatchEvent(new w.Event('change'));
+      check('the advanced switch reroutes instead of muting', wk.sent.some(m => m.type === 'write' && m.tag === 'off' && m.reroute.join() === '2:2' && m.mute.length === 0));
+      [...doc.querySelectorAll('#layers button')][1].click();
+      check('layer 2 shows its own eight cards', doc.body.dataset.layer === '2' && /the where words expert/.test(doc.getElementById('cards').textContent));
+      [...doc.querySelectorAll('#strip .tok')].find(t => t.textContent === ' and').click();
+      check('finding an "and" that went somewhere else solves the router challenge', doc.body.dataset.solved.split(',').includes('router'));
+      [...doc.querySelectorAll('#layers button')][0].click();
+      check('layer 1 says it is a warm-up layer', /warm-up layer/.test(doc.getElementById('layerNote').textContent));
+      check('no unexpected experts page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+    }
+  }
+
   console.log('-- shell --');
   {
     const errors = [];
@@ -863,15 +964,15 @@ async function main() {
       w.localStorage.removeItem('tm-key-openai');
       const names = G.steps.map(s => s.name);
       check('front-door tour has one stop per card (the spotlight follows the words)',
-        names.join(',') === 'welcome,teach,grow,look,think,see,hunt,pickOne', names.join(','));
+        names.join(',') === 'welcome,teach,grow,look,think,experts,see,hunt,pickOne', names.join(','));
       check('each card stop spotlights its own card',
-        ['raise', 'grow', 'look', 'think', 'see', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
+        ['raise', 'grow', 'look', 'think', 'experts', 'see', 'hunt'].every((k, i) => G.steps[i + 1].spot === '[data-act="' + k + '"]'));
       const doc = w.document;
       check('simple view is the default: the front door shows, the tabs wait',
         doc.body.classList.contains('simple') && w.__tmShell.activeTab === 'home' &&
         !doc.getElementById('home').classList.contains('hide') && doc.getElementById('bay').classList.contains('hide'));
-      check('the front door offers the six activities',
-        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,think,see,hunt');
+      check('the front door offers the seven activities',
+        [...doc.querySelectorAll('#home .act')].map(b => b.dataset.act).join(',') === 'raise,grow,look,think,experts,see,hunt');
       check('no starter-pack quest left on the front door', !spoke(w, 'Starter pack:') && !spoke(w, 'catch the brain'));
       G.start();
       await until(() => G.state === 'done', 12000);

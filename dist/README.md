@@ -8,6 +8,10 @@ Three self-contained HTML files, no dependencies, no build tools needed to run t
   attention heatmaps, neuron highlighting, ablation lab
 - `tiny-mind-hunt.html` — the treasure hunt: probe a question, get falsifiable clues,
   prove or bust them with ablations
+- `tiny-mind-experts.html` — a mind made of experts: watch which of eight experts the router
+  gives each word, layer by layer, switch experts off and see what breaks, and the challenges.
+  Needs `stories-moe-top1.bin` (77 MB, from tools/moe; not in the repo, see the project README)
+  and `tokenizer.bin` dropped on it, or beside the mega page on the site.
 - `tiny-mind-eye.html` — the Tiny Eye, a mind that sees drawings: draw, watch its guess and
   its neurons, open a neuron's card (both ends), switch neurons off, watch it grow, squeeze it.
   Needs `tiny-eye.json`, `tiny-eye.bin` and `tiny-eye-sample.bin` beside it (or dropped on it),

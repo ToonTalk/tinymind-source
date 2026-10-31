@@ -18,6 +18,7 @@ Everything big (data, checkpoints, exported minds, characterization outputs) liv
 | `label.py` | OpenAI labeling, label and card scoring, switch-off descriptions with a blind matching test, blind story judging |
 | `report.py` | writes the feasibility report from all of the above plus `narrative.md` |
 | `parity.py` | the browser engine's fixture (tests/e18-moe.test.js): CPU float32 greedy stories, plain and with one expert muted or rerouted |
+| `ship.py` | the Experts room's expert cards (`experts/experts.json`) from the top-1 mind's characterization folders |
 Python: the jlens venv (torch 2.5.1+cu121), used read-only. On this machine:
 
 ```bash

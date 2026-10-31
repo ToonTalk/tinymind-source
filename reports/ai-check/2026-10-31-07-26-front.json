@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-31T07:26:21.010Z",
+  "models": {
+    "app": "gpt-6-luna",
+    "guide": [
+      "gpt-6-luna"
+    ],
+    "judge": "gpt-5.4"
+  },
+  "usage": {
+    "gpt-6-luna": {
+      "in": 2819,
+      "out": 656,
+      "calls": 3
+    },
+    "gpt-5.4": {
+      "in": 1241,
+      "out": 45,
+      "calls": 3
+    }
+  },
+  "guide": [
+    {
+      "room": "front door",
+      "question": "What can I do here?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "You can teach a tiny mind, watch it grow, look inside it, see and swap its thoughts, test a mind made of experts, draw for the Tiny Eye, or hunt for a hidden fact. Choose an activity card, and its mind loads by itself. The button at the top right switches to the expert view, with all the tabs and files.",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "Where can I see what a mind is thinking and change one of its thoughts?",
+      "kid": false,
+      "model": "gpt-6-luna",
+      "answer": "The Thought bubble lets you see what a mind is thinking and swap one of its thoughts. I can bring that activity into view.\nDO: SHOW think",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    },
+    {
+      "room": "front door",
+      "question": "I want to make my own mind",
+      "kid": true,
+      "model": "gpt-6-luna",
+      "answer": "The Nursery is where you can teach a tiny mind. I can offer to take you there if you like.\nDO: TAB nursery",
+      "issues": [],
+      "grade": 3,
+      "problems": []
+    }
+  ]
+}

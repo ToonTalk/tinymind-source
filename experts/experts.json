@@ -1,0 +1,1525 @@
+{
+ "format": "tiny-mind-experts-v1",
+ "mind": "stories-moe-top1.bin",
+ "about": "top-1 of 8 experts per layer, 6 layers, dim 288; trained on 514M TinyStories pieces (tools/moe); names by gpt-6.1-sol and gpt-6-luna, scored on held-out text",
+ "scorePass": 0.75,
+ "baseLoss": 1.3929,
+ "layers": [
+  {
+   "layer": 0,
+   "gateMean": 0.207,
+   "wordRule": 0.5797,
+   "warmup": true
+  },
+  {
+   "layer": 1,
+   "gateMean": 0.297,
+   "wordRule": 0.8313,
+   "warmup": false
+  },
+  {
+   "layer": 2,
+   "gateMean": 0.439,
+   "wordRule": 0.8239,
+   "warmup": false
+  },
+  {
+   "layer": 3,
+   "gateMean": 0.592,
+   "wordRule": 0.8338,
+   "warmup": false
+  },
+  {
+   "layer": 4,
+   "gateMean": 0.679,
+   "wordRule": 0.8055,
+   "warmup": false
+  },
+  {
+   "layer": 5,
+   "gateMean": 0.712,
+   "wordRule": 0.7977,
+   "warmup": false
+  }
+ ],
+ "experts": [
+  {
+   "layer": 0,
+   "expert": 0,
+   "share": 0.0988,
+   "words": [
+    "my",
+    " Once",
+    " together",
+    " end",
+    "So",
+    "bye"
+   ],
+   "sol": {
+    "name": "the Once expert",
+    "job": "It catches Once, together, particular word bits, and some stops and new lines.",
+    "score": 0.59,
+    "passed": false
+   },
+   "luna": {
+    "name": "the word-parts expert",
+    "job": "It spots chunks of longer words and special story words.",
+    "score": 0.63,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0472,
+    "reroute": 0.0434
+   },
+   "name": null
+  },
+  {
+   "layer": 0,
+   "expert": 1,
+   "share": 0.1648,
+   "words": [
+    "'",
+    " upon",
+    " him",
+    " girl",
+    " went",
+    " One"
+   ],
+   "sol": {
+    "name": "the verb buddies expert",
+    "job": "I handle little words beside action words, especially words telling where someone is or who gets the action.",
+    "score": 0.66,
+    "passed": false
+   },
+   "luna": {
+    "name": "the sentence-glue expert",
+    "job": "It handles small grammar pieces that connect and shape story sentences.",
+    "score": 0.6,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.001,
+    "reroute": 0.0007
+   },
+   "name": null
+  },
+  {
+   "layer": 0,
+   "expert": 2,
+   "share": 0.1348,
+   "words": [
+    " L",
+    "y",
+    " new",
+    "L",
+    " bird",
+    "S"
+   ],
+   "sol": {
+    "name": "the word chunks expert",
+    "job": "I collect L-name bits, certain whole words, and small chunks of longer words.",
+    "score": 0.57,
+    "passed": false
+   },
+   "luna": {
+    "name": "the word-chunk expert",
+    "job": "It handles spelling chunks from distinctive words in the story.",
+    "score": 0.54,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0037,
+    "reroute": 0.0009
+   },
+   "name": null
+  },
+  {
+   "layer": 0,
+   "expert": 3,
+   "share": 0.1113,
+   "words": [
+    " up",
+    " sc",
+    " out",
+    " sh",
+    " w",
+    "I"
+   ],
+   "sol": {
+    "name": "the after not expert",
+    "job": "I handle words after not or never, little action endings, and some word beginnings.",
+    "score": 0.67,
+    "passed": false
+   },
+   "luna": {
+    "name": "the not-words expert",
+    "job": "It handles phrases that say something isn’t true, didn’t happen, or couldn’t be done.",
+    "score": 0.54,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0069,
+    "reroute": 0.0026
+   },
+   "name": null
+  },
+  {
+   "layer": 0,
+   "expert": 4,
+   "share": 0.1313,
+   "words": [
+    " he",
+    " she",
+    " day",
+    " there",
+    " they",
+    " big"
+   ],
+   "sol": {
+    "name": "the people pointer expert",
+    "job": "It handles words that point to characters, places, and what happens next.",
+    "score": 0.66,
+    "passed": false
+   },
+   "luna": {
+    "name": "the character-and-events expert",
+    "job": "It follows story characters and helps show what happens next.",
+    "score": 0.68,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.003,
+    "reroute": 0.0017
+   },
+   "name": null
+  },
+  {
+   "layer": 0,
+   "expert": 5,
+   "share": 0.1197,
+   "words": [
+    " was",
+    "s",
+    " time",
+    " his",
+    " very",
+    " but"
+   ],
+   "sol": {
+    "name": "the comma followers expert",
+    "job": "It catches many words just after commas, plus favorite words like “was,” “time,” and “very.”",
+    "score": 0.66,
+    "passed": false
+   },
+   "luna": {
+    "name": "the sentence glue expert",
+    "job": "It handles little words that show how story actions and people fit together.",
+    "score": 0.63,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0016,
+    "reroute": 0.0012
+   },
+   "name": null
+  },
+  {
+   "layer": 0,
+   "expert": 6,
+   "share": 0.1126,
+   "words": [
+    ".",
+    " ",
+    "!",
+    " named",
+    "ny",
+    " lots"
+   ],
+   "sol": {
+    "name": "the stops expert",
+    "job": "It handles most full stops, bits of speech marks, and words that introduce story characters.",
+    "score": 0.91,
+    "passed": true
+   },
+   "luna": {
+    "name": "the story punctuation expert",
+    "job": "It catches sentence punctuation and familiar phrases that start stories or introduce a character.",
+    "score": 0.87,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.036,
+    "reroute": 0.0311
+   },
+   "name": "the stops expert"
+  },
+  {
+   "layer": 0,
+   "expert": 7,
+   "share": 0.1267,
+   "words": [
+    " \"",
+    " her",
+    ".\"",
+    " play",
+    "!\"",
+    " excited"
+   ],
+   "sol": {
+    "name": "the talking links expert",
+    "job": "It handles little links around talking, along with some favorite words and word parts.",
+    "score": 0.69,
+    "passed": false
+   },
+   "luna": {
+    "name": "the dialogue expert",
+    "job": "It helps show when characters speak and what they say.",
+    "score": 0.6,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0009,
+    "reroute": 0.0009
+   },
+   "name": null
+  },
+  {
+   "layer": 1,
+   "expert": 0,
+   "share": 0.1117,
+   "words": [
+    ".",
+    " He",
+    " She",
+    " The",
+    " They",
+    "The"
+   ],
+   "sol": {
+    "name": "the sentence edges expert",
+    "job": "I catch sentence stops and starters, plus words about friends and feelings.",
+    "score": 0.89,
+    "passed": true
+   },
+   "luna": {
+    "name": "the friendship expert",
+    "job": "It helps tell stories about friends, feelings, and learning to be kind.",
+    "score": 0.53,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0092,
+    "reroute": 0.008
+   },
+   "name": "the sentence edges expert"
+  },
+  {
+   "layer": 1,
+   "expert": 1,
+   "share": 0.1446,
+   "words": [
+    " to",
+    " in",
+    " with",
+    " that",
+    " of",
+    " on"
+   ],
+   "sol": {
+    "name": "the where words expert",
+    "job": "I handle little words that tell where things are, where they go, or how ideas connect.",
+    "score": 0.89,
+    "passed": true
+   },
+   "luna": {
+    "name": "the place words expert",
+    "job": "It handles little words that show where things are and how ideas fit together.",
+    "score": 0.84,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.2368,
+    "reroute": 0.2297
+   },
+   "name": "the where words expert",
+   "effect": {
+    "says": "The mind gets stuck on “to”: it writes “to to to” where the action should be.",
+    "example": "She loved to to to to to to to.",
+    "seen": "\\bto to\\b",
+    "tests": "muted: 20/20, then 34/34 on fresh beginnings (both models)"
+   }
+  },
+  {
+   "layer": 1,
+   "expert": 2,
+   "share": 0.1171,
+   "words": [
+    " a",
+    "'",
+    " \"",
+    " L",
+    " very",
+    " mom"
+   ],
+   "sol": {
+    "name": "the quote marks expert",
+    "job": "I catch quote marks, a and an, and a special set of short words and name bits.",
+    "score": 0.77,
+    "passed": true
+   },
+   "luna": {
+    "name": "the storybook phrase expert",
+    "job": "It helps tell simple storybook sentences and dialogue.",
+    "score": 0.85,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.1272,
+    "reroute": 0.0949
+   },
+   "name": "the quote marks expert",
+   "effect": {
+    "says": "What characters say goes blank or comes out broken: “ ” instead of their words.",
+    "example": "She asked her mom to help her. \" \" Mom said, \" \"",
+    "seen": "\" \"",
+    "tests": "muted: 15/20 and 16/20, then 29/36 and 31/36 on fresh beginnings"
+   }
+  },
+  {
+   "layer": 1,
+   "expert": 3,
+   "share": 0.1224,
+   "words": [
+    " day",
+    " time",
+    " all",
+    "y",
+    " fun",
+    " then"
+   ],
+   "sol": {
+    "name": "the day-and-time expert",
+    "job": "It handles a particular bunch of words like day and time, plus small chunks of bigger words.",
+    "score": 0.6,
+    "passed": false
+   },
+   "luna": {
+    "name": "the day-and-play expert",
+    "job": "It handles words about when children do things, where they go, and what they do for fun.",
+    "score": 0.69,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0944,
+    "reroute": 0.0882
+   },
+   "name": null
+  },
+  {
+   "layer": 1,
+   "expert": 4,
+   "share": 0.1281,
+   "words": [
+    ",",
+    " her",
+    " so",
+    " he",
+    " his",
+    " she"
+   ],
+   "sol": {
+    "name": "the commas expert",
+    "job": "I catch commas and many words that point to people or animals.",
+    "score": 0.8,
+    "passed": true
+   },
+   "luna": {
+    "name": "the character punctuation expert",
+    "job": "It helps with commas and with words that point to people and animals in a story.",
+    "score": 0.78,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0063,
+    "reroute": 0.0061
+   },
+   "name": "the commas expert"
+  },
+  {
+   "layer": 1,
+   "expert": 5,
+   "share": 0.1193,
+   "words": [
+    "\n",
+    " the",
+    " ",
+    " there",
+    ".\"",
+    "!\""
+   ],
+   "sol": {
+    "name": "the breaks expert",
+    "job": "It catches new lines, closing speech marks, and a special bunch of word pieces.",
+    "score": 0.76,
+    "passed": true
+   },
+   "luna": {
+    "name": "the sentence-break expert",
+    "job": "It helps mark where a story line or a character’s speech ends.",
+    "score": 0.74,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0342,
+    "reroute": 0.0161
+   },
+   "name": "the breaks expert"
+  },
+  {
+   "layer": 1,
+   "expert": 6,
+   "share": 0.1599,
+   "words": [
+    " and",
+    " was",
+    " said",
+    " had",
+    " went",
+    " be"
+   ],
+   "sol": {
+    "name": "the doing words expert",
+    "job": "I handle doing and being words, and often the word that joins two ideas.",
+    "score": 0.8,
+    "passed": true
+   },
+   "luna": {
+    "name": "the story verbs expert",
+    "job": "It helps tell what characters do, say, feel, or are.",
+    "score": 0.8,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0055,
+    "reroute": 0.0036
+   },
+   "name": "the doing words expert"
+  },
+  {
+   "layer": 1,
+   "expert": 7,
+   "share": 0.0969,
+   "words": [
+    "ily",
+    "my",
+    "ly",
+    "ing",
+    " again",
+    "ared"
+   ],
+   "sol": {
+    "name": "the word insides expert",
+    "job": "I handle little chunks inside words, especially their middles and endings.",
+    "score": 0.75,
+    "passed": true
+   },
+   "luna": {
+    "name": "the word-chunks expert",
+    "job": "It handles little pieces that build or finish words, especially endings like -ly and -ing.",
+    "score": 0.56,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0433,
+    "reroute": 0.0379
+   },
+   "name": "the word insides expert"
+  },
+  {
+   "layer": 2,
+   "expert": 0,
+   "share": 0.1636,
+   "words": [
+    " happy",
+    " up",
+    "ed",
+    " back",
+    " around",
+    " smiled"
+   ],
+   "sol": {
+    "name": "the describing bits expert",
+    "job": "I handle feelings, movement details, and little bits inside longer words.",
+    "score": 0.79,
+    "passed": true
+   },
+   "luna": {
+    "name": "the feelings and motion expert",
+    "job": "It notices feelings and words that show what someone is doing or where they are going.",
+    "score": 0.79,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0439,
+    "reroute": 0.0465
+   },
+   "name": "the describing bits expert"
+  },
+  {
+   "layer": 2,
+   "expert": 1,
+   "share": 0.1079,
+   "words": [
+    " said",
+    " \"",
+    " mom",
+    "s",
+    " you",
+    " asked"
+   ],
+   "sol": {
+    "name": "the talking expert",
+    "job": "I help show who is talking, what they say, and how they answer.",
+    "score": 0.74,
+    "passed": false
+   },
+   "luna": {
+    "name": "the character speech expert",
+    "job": "It helps track who is talking and the words they say.",
+    "score": 0.65,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0295,
+    "reroute": 0.0313
+   },
+   "name": null,
+   "effect": {
+    "says": "Speech gets muddled: the mind writes “said said” and drops the quote marks.",
+    "example": "Mommy said said, \"Let's go outside and play!\"",
+    "seen": "\\bsaid said\\b",
+    "tests": "muted: 19/20 and 18/20, then 30/31 and 29/31 on fresh beginnings"
+   }
+  },
+  {
+   "layer": 2,
+   "expert": 2,
+   "share": 0.1334,
+   "words": [
+    ",",
+    " a",
+    " was",
+    "'",
+    " day",
+    " L"
+   ],
+   "sol": {
+    "name": "the comma expert",
+    "job": "It handles many commas and apostrophes, plus favorite little words and word beginnings.",
+    "score": 0.81,
+    "passed": true
+   },
+   "luna": {
+    "name": "the story punctuation expert",
+    "job": "It helps simple stories flow by handling commas, apostrophes, and words like “play.”",
+    "score": 0.82,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0568,
+    "reroute": 0.061
+   },
+   "name": "the comma expert",
+   "effect": {
+    "says": "Words with an apostrophe lose their ending: “Let'” for “Let's”, “don'” for “don't”.",
+    "example": "Mom said, \"Let' go and see.\"",
+    "seen": "[A-Za-z]'(?![a-z])",
+    "tests": "muted: 15/20 and 16/20, then 30/38 and 32/38 on fresh beginnings"
+   }
+  },
+  {
+   "layer": 2,
+   "expert": 3,
+   "share": 0.1347,
+   "words": [
+    " and",
+    " the",
+    " with",
+    " of",
+    " in",
+    " for"
+   ],
+   "sol": {
+    "name": "the preposition expert",
+    "job": "It handles little linking words, plus words about seeing, finding, and helping.",
+    "score": 0.87,
+    "passed": true
+   },
+   "luna": {
+    "name": "the linking words expert",
+    "job": "It handles little words that show how people, things, places, and ideas connect.",
+    "score": 0.83,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0298,
+    "reroute": 0.0336
+   },
+   "name": "the preposition expert"
+  },
+  {
+   "layer": 2,
+   "expert": 4,
+   "share": 0.1225,
+   "words": [
+    ".",
+    "\n",
+    "!",
+    " but",
+    "t",
+    ".\""
+   ],
+   "sol": {
+    "name": "the stop sign expert",
+    "job": "I handle sentence stops, words that say no, and turns with but.",
+    "score": 0.94,
+    "passed": true
+   },
+   "luna": {
+    "name": "the stop-and-no expert",
+    "job": "It catches sentence stops and words that say no or turn the story another way.",
+    "score": 0.93,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0624,
+    "reroute": 0.0636
+   },
+   "name": "the stop sign expert"
+  },
+  {
+   "layer": 2,
+   "expert": 5,
+   "share": 0.1083,
+   "words": [
+    " it",
+    " he",
+    " He",
+    " She",
+    " she",
+    " "
+   ],
+   "sol": {
+    "name": "the pronoun expert",
+    "job": "It handles words like he, she, it, and they that point to people or things.",
+    "score": 0.79,
+    "passed": true
+   },
+   "luna": {
+    "name": "the pronoun expert",
+    "job": "It follows the people and things a story is talking about, especially through pronouns.",
+    "score": 0.79,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.041,
+    "reroute": 0.0421
+   },
+   "name": "the pronoun expert"
+  },
+  {
+   "layer": 2,
+   "expert": 6,
+   "share": 0.1213,
+   "words": [
+    " little",
+    "ily",
+    " time",
+    " Once",
+    " upon",
+    " big"
+   ],
+   "sol": {
+    "name": "the scene starter expert",
+    "job": "It helps introduce characters and start the next part of a story.",
+    "score": 0.82,
+    "passed": true
+   },
+   "luna": {
+    "name": "the story-time expert",
+    "job": "It spots phrases that introduce a story or tell when the next event happens.",
+    "score": 0.67,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0376,
+    "reroute": 0.0422
+   },
+   "name": "the scene starter expert"
+  },
+  {
+   "layer": 2,
+   "expert": 7,
+   "share": 0.1082,
+   "words": [
+    " had",
+    " wanted",
+    " went",
+    " loved",
+    " go",
+    " could"
+   ],
+   "sol": {
+    "name": "the doing words expert",
+    "job": "Handles words that tell what someone does, wants, or needs, plus helpers for those words.",
+    "score": 0.66,
+    "passed": false
+   },
+   "luna": {
+    "name": "the wanting verbs expert",
+    "job": "It handles what characters want, need, like, and begin to do.",
+    "score": 0.68,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.05,
+    "reroute": 0.0515
+   },
+   "name": null,
+   "effect": {
+    "says": "The mind gets stuck on “wanted”: “wanted wanted” before saying what someone wants.",
+    "example": "The little car wanted wanted wanted to be able.",
+    "seen": "\\bwanted wanted\\b",
+    "tests": "muted: 18/20 and 19/20, then 31/38 and 32/38 on fresh beginnings"
+   }
+  },
+  {
+   "layer": 3,
+   "expert": 0,
+   "share": 0.0736,
+   "words": [
+    " you",
+    " wanted",
+    " is",
+    " didn",
+    " couldn",
+    " can"
+   ],
+   "sol": {
+    "name": "the chat expert",
+    "job": "Helps characters ask questions, give commands, answer, and use shortened words.",
+    "score": 0.74,
+    "passed": false
+   },
+   "luna": {
+    "name": "the dialogue expert",
+    "job": "It helps handle what characters say, especially questions, answers, calls, and commands.",
+    "score": 0.71,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0145,
+    "reroute": 0.0144
+   },
+   "name": null
+  },
+  {
+   "layer": 3,
+   "expert": 1,
+   "share": 0.1596,
+   "words": [
+    ".",
+    "\n",
+    " the",
+    " \"",
+    " ",
+    " The"
+   ],
+   "sol": {
+    "name": "the sentence edges expert",
+    "job": "I handle stops, speech marks, line breaks, and the word 'the'.",
+    "score": 1.0,
+    "passed": true
+   },
+   "luna": {
+    "name": "the sentence-boundary expert",
+    "job": "It helps show where sentences and spoken words stop and new ones begin.",
+    "score": 0.95,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0266,
+    "reroute": 0.0285
+   },
+   "name": "the sentence edges expert"
+  },
+  {
+   "layer": 3,
+   "expert": 2,
+   "share": 0.126,
+   "words": [
+    " and",
+    " he",
+    " He",
+    " She",
+    " she",
+    "ily"
+   ],
+   "sol": {
+    "name": "the doer words expert",
+    "job": "Handles words that tell who does things and words that join things together.",
+    "score": 0.89,
+    "passed": true
+   },
+   "luna": {
+    "name": "the pronoun expert",
+    "job": "It handles words that tell who is acting and words that connect actions or ideas.",
+    "score": 0.87,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0214,
+    "reroute": 0.0227
+   },
+   "name": "the doer words expert"
+  },
+  {
+   "layer": 3,
+   "expert": 3,
+   "share": 0.1299,
+   "words": [
+    " day",
+    " that",
+    " time",
+    " there",
+    " One",
+    " It"
+   ],
+   "sol": {
+    "name": "the time-and-place expert",
+    "job": "I pick out time and place words, plus a few favorite story words.",
+    "score": 0.6,
+    "passed": false
+   },
+   "luna": {
+    "name": "the time-place expert",
+    "job": "It helps keep track of when and where things happen in a story.",
+    "score": 0.7,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0261,
+    "reroute": 0.0294
+   },
+   "name": null
+  },
+  {
+   "layer": 3,
+   "expert": 4,
+   "share": 0.12,
+   "words": [
+    " a",
+    " so",
+    " L",
+    " very",
+    " little",
+    " big"
+   ],
+   "sol": {
+    "name": "the describing starters expert",
+    "job": "I handle a and an, many describing words, and some word beginnings.",
+    "score": 0.68,
+    "passed": false
+   },
+   "luna": {
+    "name": "the describing-words expert",
+    "job": "It handles words that tell what things are like, how big they are, or how they feel.",
+    "score": 0.83,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0295,
+    "reroute": 0.0326
+   },
+   "name": null
+  },
+  {
+   "layer": 3,
+   "expert": 5,
+   "share": 0.115,
+   "words": [
+    " to",
+    " her",
+    " his",
+    "'",
+    " Once",
+    " loved"
+   ],
+   "sol": {
+    "name": "the owning words expert",
+    "job": "I handle 'to,' words that tell whose things they are, and some little chunks inside words.",
+    "score": 0.76,
+    "passed": true
+   },
+   "luna": {
+    "name": "the pronouns expert",
+    "job": "It notices who owns things and how story characters feel.",
+    "score": 0.69,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0268,
+    "reroute": 0.0278
+   },
+   "name": "the owning words expert"
+  },
+  {
+   "layer": 3,
+   "expert": 6,
+   "share": 0.134,
+   "words": [
+    " it",
+    "ed",
+    " up",
+    " went",
+    " him",
+    " go"
+   ],
+   "sol": {
+    "name": "the action parts expert",
+    "job": "I handle doing and moving words, plus little words showing where things go or who an action happens to.",
+    "score": 0.81,
+    "passed": true
+   },
+   "luna": {
+    "name": "the action verbs expert",
+    "job": "It spots words that tell what someone or something does, especially moving or changing.",
+    "score": 0.79,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0149,
+    "reroute": 0.0167
+   },
+   "name": "the action parts expert"
+  },
+  {
+   "layer": 3,
+   "expert": 7,
+   "share": 0.1418,
+   "words": [
+    ",",
+    " was",
+    " with",
+    " had",
+    " of",
+    " in"
+   ],
+   "sol": {
+    "name": "the links-and-commas expert",
+    "job": "It handles commas and words that tell what something is, has, or is connected to.",
+    "score": 0.82,
+    "passed": true
+   },
+   "luna": {
+    "name": "the linking words expert",
+    "job": "It handles words that show how things connect, compare, or relate to a place or time.",
+    "score": 0.81,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.02,
+    "reroute": 0.0219
+   },
+   "name": "the links-and-commas expert"
+  },
+  {
+   "layer": 4,
+   "expert": 0,
+   "share": 0.1165,
+   "words": [
+    " little",
+    " happy",
+    " big",
+    " fun",
+    "y",
+    " excited"
+   ],
+   "sol": {
+    "name": "the describing words expert",
+    "job": "I handle words and word bits that describe people, things, feelings, and amounts.",
+    "score": 0.74,
+    "passed": false
+   },
+   "luna": {
+    "name": "the describing-words expert",
+    "job": "It picks words that tell what someone or something is like, especially feelings and qualities.",
+    "score": 0.68,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.021,
+    "reroute": 0.0228
+   },
+   "name": null
+  },
+  {
+   "layer": 4,
+   "expert": 1,
+   "share": 0.1391,
+   "words": [
+    " to",
+    " in",
+    " with",
+    " had",
+    " of",
+    " for"
+   ],
+   "sol": {
+    "name": "the action links expert",
+    "job": "I handle words that link actions to people or things, plus many action words themselves.",
+    "score": 0.92,
+    "passed": true
+   },
+   "luna": {
+    "name": "the action links expert",
+    "job": "It notices action words and the little words that connect actions to people, places, and things.",
+    "score": 0.86,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0328,
+    "reroute": 0.0358
+   },
+   "name": "the action links expert"
+  },
+  {
+   "layer": 4,
+   "expert": 2,
+   "share": 0.1177,
+   "words": [
+    " he",
+    " He",
+    " She",
+    " she",
+    "ily",
+    " they"
+   ],
+   "sol": {
+    "name": "the sentence subjects expert",
+    "job": "It spots who or what a sentence says is doing, feeling, or being something.",
+    "score": 0.9,
+    "passed": true
+   },
+   "luna": {
+    "name": "the character pronouns expert",
+    "job": "It spots story characters and the words that point back to them.",
+    "score": 0.9,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0358,
+    "reroute": 0.0374
+   },
+   "name": "the sentence subjects expert"
+  },
+  {
+   "layer": 4,
+   "expert": 3,
+   "share": 0.1018,
+   "words": [
+    " ",
+    " that",
+    " said",
+    " Once",
+    " I",
+    "t"
+   ],
+   "sol": {
+    "name": "the sentence starters expert",
+    "job": "I handle words that set up sentences, questions, and what people say or think.",
+    "score": 0.74,
+    "passed": false
+   },
+   "luna": {
+    "name": "the question expert",
+    "job": "It helps characters ask questions and talk to one another.",
+    "score": 0.82,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0135,
+    "reroute": 0.0139
+   },
+   "name": null
+  },
+  {
+   "layer": 4,
+   "expert": 4,
+   "share": 0.1288,
+   "words": [
+    ",",
+    " and",
+    " was",
+    " so",
+    " very",
+    " but"
+   ],
+   "sol": {
+    "name": "the description helpers expert",
+    "job": "I handle little words that join ideas and help tell how someone or something is or feels.",
+    "score": 0.86,
+    "passed": true
+   },
+   "luna": {
+    "name": "the state and degree expert",
+    "job": "It connects parts of sentences and adds strength to descriptions.",
+    "score": 0.85,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0216,
+    "reroute": 0.0244
+   },
+   "name": "the description helpers expert"
+  },
+  {
+   "layer": 4,
+   "expert": 5,
+   "share": 0.1248,
+   "words": [
+    " it",
+    " went",
+    " go",
+    " back",
+    " him",
+    " up"
+   ],
+   "sol": {
+    "name": "the going places expert",
+    "job": "I handle coming and going, where things end up, and what people take or touch.",
+    "score": 0.85,
+    "passed": true
+   },
+   "luna": {
+    "name": "the moving-around expert",
+    "job": "It notices when characters or things go, come back, or move from place to place.",
+    "score": 0.61,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0127,
+    "reroute": 0.0133
+   },
+   "name": "the going places expert"
+  },
+  {
+   "layer": 4,
+   "expert": 6,
+   "share": 0.1084,
+   "words": [
+    "'",
+    " day",
+    " time",
+    " play",
+    " L",
+    " all"
+   ],
+   "sol": {
+    "name": "the action pieces expert",
+    "job": "I handle little pieces of doing words, plus favorite words about playing and time.",
+    "score": 0.72,
+    "passed": false
+   },
+   "luna": {
+    "name": "the action words expert",
+    "job": "It spots parts of stories where someone does something, moves, or reacts.",
+    "score": 0.74,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0257,
+    "reroute": 0.0276
+   },
+   "name": null
+  },
+  {
+   "layer": 4,
+   "expert": 7,
+   "share": 0.1629,
+   "words": [
+    ".",
+    "\n",
+    " the",
+    " a",
+    " \"",
+    " The"
+   ],
+   "sol": {
+    "name": "the sentence frame expert",
+    "job": "It handles story breaks, speech openings, and little words that introduce people and things.",
+    "score": 0.94,
+    "passed": true
+   },
+   "luna": {
+    "name": "the sentence-frame expert",
+    "job": "It helps show where sentences and bits of talking start and stop.",
+    "score": 0.86,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0229,
+    "reroute": 0.0231
+   },
+   "name": "the sentence frame expert"
+  },
+  {
+   "layer": 5,
+   "expert": 0,
+   "share": 0.0739,
+   "words": [
+    "\n",
+    " time",
+    " upon",
+    " didn",
+    " couldn",
+    "Let"
+   ],
+   "sol": {
+    "name": "the familiar phrases expert",
+    "job": "I catch familiar story openings, talking phrases, and the pauses around them.",
+    "score": 0.8,
+    "passed": true
+   },
+   "luna": {
+    "name": "the talking turns expert",
+    "job": "It helps start what characters say, especially questions, answers, greetings, and requests.",
+    "score": 0.8,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0048,
+    "reroute": 0.0065
+   },
+   "name": "the familiar phrases expert"
+  },
+  {
+   "layer": 5,
+   "expert": 1,
+   "share": 0.2012,
+   "words": [
+    " and",
+    ",",
+    " in",
+    " said",
+    " on",
+    " with"
+   ],
+   "sol": {
+    "name": "the action bridge expert",
+    "job": "I handle doing words and little words that connect actions to places, times, and other events.",
+    "score": 0.83,
+    "passed": true
+   },
+   "luna": {
+    "name": "the action words expert",
+    "job": "It spots things story characters do, say, notice, and try.",
+    "score": 0.76,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0226,
+    "reroute": 0.022
+   },
+   "name": "the action bridge expert"
+  },
+  {
+   "layer": 5,
+   "expert": 2,
+   "share": 0.1261,
+   "words": [
+    " She",
+    " He",
+    " L",
+    " she",
+    "ily",
+    " Tim"
+   ],
+   "sol": {
+    "name": "the word beginnings expert",
+    "job": "I handle he and she, pieces of names, and little beginnings of longer words.",
+    "score": 0.8,
+    "passed": true
+   },
+   "luna": {
+    "name": "the tricky word-starts expert",
+    "job": "It helps build the first chunks of words, especially words with tricky starting letter teams.",
+    "score": 0.63,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0259,
+    "reroute": 0.026
+   },
+   "name": "the word beginnings expert"
+  },
+  {
+   "layer": 5,
+   "expert": 3,
+   "share": 0.0818,
+   "words": [
+    " to",
+    " They",
+    " Once",
+    " they",
+    "t",
+    " I"
+   ],
+   "sol": {
+    "name": "the action starters expert",
+    "job": "It handles little words that get the next action ready.",
+    "score": 0.77,
+    "passed": true
+   },
+   "luna": {
+    "name": "the action helper expert",
+    "job": "It picks little words that help say what characters can or will do.",
+    "score": 0.76,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0195,
+    "reroute": 0.0205
+   },
+   "name": "the action starters expert"
+  },
+  {
+   "layer": 5,
+   "expert": 4,
+   "share": 0.1892,
+   "words": [
+    " it",
+    " there",
+    " It",
+    " play",
+    "y",
+    " fun"
+   ],
+   "sol": {
+    "name": "the it-and-there expert",
+    "job": "I handle most uses of “it” and “there,” plus many play words, place words, and word endings.",
+    "score": 0.53,
+    "passed": false
+   },
+   "luna": {
+    "name": "the everyday words expert",
+    "job": "It handles many simple words that help tell what people do, feel, and find in a story.",
+    "score": 0.68,
+    "passed": false
+   },
+   "cost": {
+    "mute": 0.0204,
+    "reroute": 0.021
+   },
+   "name": null
+  },
+  {
+   "layer": 5,
+   "expert": 5,
+   "share": 0.0994,
+   "words": [
+    ".",
+    "!",
+    " ",
+    ".\"",
+    "!\"",
+    " named"
+   ],
+   "sol": {
+    "name": "the sentence endings expert",
+    "job": "I handle sentence-ending marks and some words for naming, talking, and helping.",
+    "score": 0.91,
+    "passed": true
+   },
+   "luna": {
+    "name": "the story endings expert",
+    "job": "It helps finish story sentences and handles words that name characters or tell what they said.",
+    "score": 0.89,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0192,
+    "reroute": 0.0281
+   },
+   "name": "the sentence endings expert"
+  },
+  {
+   "layer": 5,
+   "expert": 6,
+   "share": 0.1464,
+   "words": [
+    " the",
+    " a",
+    " her",
+    " his",
+    " \"",
+    " The"
+   ],
+   "sol": {
+    "name": "the noun helpers expert",
+    "job": "I handle words that introduce or describe things, plus marks that start speech.",
+    "score": 0.93,
+    "passed": true
+   },
+   "luna": {
+    "name": "the noun helper expert",
+    "job": "It gathers words that introduce or describe people and things in a story.",
+    "score": 0.88,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0368,
+    "reroute": 0.0315
+   },
+   "name": "the noun helpers expert"
+  },
+  {
+   "layer": 5,
+   "expert": 7,
+   "share": 0.0819,
+   "words": [
+    " was",
+    " had",
+    " so",
+    " very",
+    " were",
+    " be"
+   ],
+   "sol": {
+    "name": "the being words expert",
+    "job": "It handles words that tell how someone or something is, feels, or seems.",
+    "score": 0.93,
+    "passed": true
+   },
+   "luna": {
+    "name": "the state verbs expert",
+    "job": "It notices words that tell what someone is, feels, or seems like.",
+    "score": 0.82,
+    "passed": true
+   },
+   "cost": {
+    "mute": 0.0241,
+    "reroute": 0.024
+   },
+   "name": "the being words expert"
+  }
+ ],
+ "router": {
+  "word": " and",
+  "id": 322,
+  "layer": 1,
+  "usual": 6,
+  "usualShare": 0.83,
+  "seen": 19920
+ }
+}

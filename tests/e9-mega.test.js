@@ -19,13 +19,13 @@ export async function run(t) {
   const mega = await readFile(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'utf8');
   const resourceManifest = JSON.parse(await readFile(join(ROOT, 'dist', 'tiny-mind-resources.json'), 'utf8'));
 
-  t.check('mega: all five app templates present',
-    ['tpl-nursery', 'tpl-microscope', 'tpl-hunt', 'tpl-thought', 'tpl-eye'].every(id => mega.includes(`<template id="${id}">`)));
+  t.check('mega: all six app templates present',
+    ['tpl-nursery', 'tpl-microscope', 'tpl-hunt', 'tpl-thought', 'tpl-experts', 'tpl-eye'].every(id => mega.includes(`<template id="${id}">`)));
   t.check('mega: no unresolved build placeholders', !/@@[A-Z_]+@@/.test(mega));
   t.check('mega: every app carries the frame bridge',
     (mega.match(/tiny-mind frame bridge/g) || []).length >= 3);
   t.check('mega: every app carries an inlined worker',
-    (mega.match(/__WORKER_SRC__ = "/g) || []).length === 5);
+    (mega.match(/__WORKER_SRC__ = "/g) || []).length === 6);
   t.check('mega: shell autoloads hosted arcs (multi-manifest discovery, waves 7-14)',
     mega.includes("tmGetJson('arc/arcs.json')") && mega.includes('manifest.more || []'));
   t.check('mega: the Nursery ghostwriter can reach the LLM (aliased import survives the build)',
@@ -52,9 +52,9 @@ export async function run(t) {
     mega.includes('await tmRestoreReady;'));
   t.check('mega: loose four-character checkpoints are also discovered beside the page',
     mega.includes("'stories260K-binding.bin', 'stories260K-binding-max.bin'"));
-  t.check('mega: guided layer present in all six docs (vg-core ×6, prelude ×5, shell adapter)',
-    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 6 &&
-    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 5 &&
+  t.check('mega: guided layer present in all seven docs (vg-core ×7, prelude ×6, shell adapter)',
+    (mega.match(/vg-core\.js — app-agnostic voice-guide core/g) || []).length === 7 &&
+    (mega.match(/tm-prelude\.js — Tiny Mind guide prelude/g) || []).length === 6 &&
     mega.includes('tm-shell-adapter.js'));
   t.check('mega: probe-fact branch shipped inside the nursery worker blob',
     mega.includes('probe-fact-done'));
@@ -99,11 +99,28 @@ export async function run(t) {
 
   // --- the Tiny Eye: its own kind of mind, its files beside the page, its page script small
   t.check("mega: the Tiny Eye is its own kind of mind (fitsRoom checks the kind both ways; it never fills a story mind's slot)",
-    mega.includes("const fitsRoom = (app, m) => app === 'eye' ? isEye(m) : isEye(m) ? false") &&
-    mega.includes('const isStoryBig = m => !isEye(m) && m.vocab !== 512;') && mega.includes("see:   { app: 'eye', title: '👁 A mind that sees your drawings'"));
+    mega.includes("const fitsRoom = (app, m) => (app === 'eye' || app === 'experts' || ownRoom(m)) ? ownRoom(m) === app") &&
+    mega.includes("const ownRoom = m => isEye(m) ? 'eye' : isExperts(m) ? 'experts' : null;") &&
+    mega.includes('const isStoryBig = m => !ownRoom(m) && m.vocab !== 512;') && mega.includes("see:   { app: 'eye', title: '👁 A mind that sees your drawings'"));
   t.check("mega: the eye arrives through the shell's file route (as the minds do) and every room's bridge can take it",
     mega.includes("const EYE_FILES = ['tiny-eye.json', 'tiny-eye.bin', 'tiny-eye-sample.bin'];") && mega.includes("tm: 'load-eye'") &&
-    (mega.match(/m\.tm === 'load-eye'/g) || []).length === 5);
+    (mega.match(/m\.tm === 'load-eye'/g) || []).length === 6);
+  // --- the Expert Storyteller: a mind made of experts, its own kind too, fetched like the big storyteller
+  t.check("mega: the Expert Storyteller is its own kind (tagged by its header, never a story mind's slot) with its own act card and room",
+    mega.includes("pool.models.push({ name, u8, vocab, origin, meta, ...(checkpointHasExperts(u8) ? { kind: 'experts' } : {}) });") &&
+    mega.includes('function checkpointHasExperts(u8)') && mega.includes("experts: { app: 'experts', title: '👥 Meet a mind made of experts'") &&
+    mega.includes('<button class="act" data-act="experts">') && mega.includes("const EXPERTS_FILE = 'stories-moe-top1.bin';") && mega.includes('function ensureExperts('));
+  {
+    const open = mega.indexOf('<template id="tpl-experts">'), end = mega.indexOf('</template>', open);
+    const room = mega.slice(open, end);
+    t.check("mega: the Experts room carries its 48 cards, the experts engine, and the rewrite with a switched-off expert",
+      room.includes('const __TM_EXPERTS__ = JSON.parse(') && room.includes('class Experts') && room.includes('function expertLayer(') &&
+      room.includes("tag: 'off'") && room.includes('function wordDiff('));
+    t.check("mega: the Experts room never asks to \"choose a mind\": it can ask the shell for its own (experts.get), and is told why when the shell cannot get it",
+      !room.includes('choose a mind') && room.includes("window.__tmRPC('experts.get')") && room.includes('window.__tmMindMissing = ') &&
+      mega.includes("m.method === 'experts.get'") && mega.includes("sendToApp('experts', { tm: 'mind-missing', why: expertsWhy });") &&
+      (mega.match(/m\.tm === 'mind-missing'/g) || []).length === 6 && mega.includes("await tmGetBytes('../models/' + name, opts)"));
+  }
   t.check("mega: the eye's recording and squeezed eye come later, by request, through the same route; its manifest skips the permanent cache",
     mega.includes("const EYE_MORE_FILES = ['tiny-eye-growth.bin', 'tiny-eye-sq8.json', 'tiny-eye-sq8.bin'];") && mega.includes("m.method === 'eye.file'") &&
     mega.includes('if (!EYE_MORE_FILES.includes(name))') && mega.includes("persistent: !/\\.json$/i.test(f)"));
