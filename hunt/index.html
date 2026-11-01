@@ -77,14 +77,14 @@
   <label class="f">detective
     <select id="detective">
       <option value="builtin">built-in detective (no key)</option>
-      <option value="openai">OpenAI</option>
-      <option value="anthropic">Anthropic</option>
+      <option value="anthropic">Claude</option>
+      <option value="openai">ChatGPT</option>
       <option value="gemini">Gemini</option>
     </select>
   </label>
   <span id="detKeyFields" style="display:none">
-    <label class="f">key <input type="password" id="detKey"></label>
-    <label class="f">model <input type="text" id="detModel"></label>
+    <label class="f">key <input type="password" id="detKey" autocomplete="off" spellcheck="false"></label>
+    <label class="f">model <input type="text" id="detModel" list="detModels" spellcheck="false"><datalist id="detModels"></datalist></label>
   </span>
   <div class="hint" style="margin:.3rem 0">a good hunt needs a fact that's really <b>about your character</b>: changing the name should change the answer. facts like "lives in a magic tree" are tricky — "magic" alone may predict "tree" for anyone, so that prediction may not be name-specific yet. Step 3 checks this by asking the same question about look-alike names.</div>
   <button class="go" id="probeBtn" disabled>🔎 step 1: ask the model</button>
@@ -238,10 +238,29 @@ function applyModelQuestContext(checkpoint) {
   renderQuestPresets(S.arcManifest);
 }
 renderQuestPresets(null);
+// window.__tmAI (shell/tm-ai.js, in the built pages): the one AI choice the whole app shares
+const AI = window.__tmAI && !window.__tmAI.inArtifact ? window.__tmAI : null;
+function syncDetective() {
+  const d = $('detective').value;
+  if (!AI || !AI.KEYED.includes(d)) return;
+  $('detKey').value = AI.keyFor(d);
+  $('detModel').value = AI.modelFor(d);
+  $('detModels').replaceChildren(...AI.modelsFor(d).map(m => new Option(m.name === m.id ? '' : m.name, m.id)));
+}
+if (AI) {
+  $('detKey').addEventListener('change', () => { const d = $('detective').value;
+    if (AI.KEYED.includes(d)) { AI.set({ key: $('detKey').value }); AI.refresh(d).then(syncDetective); } });
+  $('detModel').addEventListener('change', () => { const d = $('detective').value;
+    if (AI.KEYED.includes(d)) AI.set({ model: $('detModel').value.trim() === AI.autoModel(d) ? '' : $('detModel').value.trim() }); });
+  AI.onChange(() => { const d = $('detective').value;
+    if (AI.KEYED.includes(d) && AI.provider() !== d) { $('detective').value = AI.provider(); $('detective').onchange(); }
+    else syncDetective(); });
+}
 $('detective').onchange = () => {
   const d = $('detective').value;
   $('detKeyFields').style.display = (d === 'builtin' || d === 'keyless') ? 'none' : 'inline';
-  if (d !== 'builtin') {
+  if (AI && AI.KEYED.includes(d)) { AI.set({ provider: d }); syncDetective(); }
+  else if (d !== 'builtin') {
     $('detModel').value = PROVIDERS[d]?.defaultModel ?? '';
     $('detKey').value = LSget('tm-key-' + d) || '';
   }

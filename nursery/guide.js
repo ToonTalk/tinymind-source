@@ -382,14 +382,14 @@ function createGuide(){
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!appLLM().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, appLLM),
-      noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, add it in the ghostwriter panel I am pointing at \u2014 pick a provider and paste the key \u2014 and I can talk live too. Everything else works without one.' } },
+      noAI: { spot: () => document.getElementById('provider'), say: 'I cannot reach a live A I from here on my own. If you have a key, choose Claude, ChatGPT or Gemini in the ghostwriter panel I am pointing at and paste the key (or use the key button at the top of this panel) \u2014 and I can talk live too. Everything else works without one.' } },
     verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
       if (/failed to fetch|network|cors/i.test(m) && !appLLM().key)
         return { log: 'Live AI call failed: ' + m,
-          say: 'I could not reach a live A I on my own. If you have a key, pick a provider and paste it in the ghostwriter panel up top \u2014 then ask me again. Everything else works without one.' };
+          say: 'I could not reach a live A I on my own. If you have a key, press the key button at the top of this panel, choose Claude, ChatGPT or Gemini and paste it \u2014 then ask me again. Everything else works without one.' };
       return null; } },
     testHook: { app: () => ({ sheet, base0: () => base0, prefs: window.__vgPrefs }) },
     init(a){ api = a; a.on('showBlocked', window.__vgShowBlockedEvent);

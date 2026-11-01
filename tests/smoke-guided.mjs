@@ -145,7 +145,9 @@ async function main() {
   check('bay persistence is chunked + verified', BUILT.includes('const TM_CHUNK') && BUILT.includes('async function tmWriteInner('));
   check('storage writes serialized + conflict-recovering', BUILT.includes('const tmSerial') && BUILT.includes('409|conflict|exist'));
   check('one ask path shared by every guide', BUILT.split('window.__vgAsk = async function').length - 1 >= 3 && BUILT.split('__vgAsk(sys, usr').length - 1 >= 3);
-  check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("localStorage.getItem('tm-key-' + p)"));
+  check('remembered app keys reachable by all guides', BUILT.includes('window.__vgRememberedKey = function') && BUILT.includes("const keyFor = p => ((remember() ? L.get('tm-key-' + p)"));
+  check('one AI choice (key button) in the shell and every room', BUILT.split('window.__tmAI = { PROVIDERS').length - 1 === 7 &&
+    BUILT.includes("label: 'Claude'") && BUILT.includes("label: 'ChatGPT'") && BUILT.includes("btn.id = 'vgKey'"));
   check('shell page carries its own LLM helpers', BUILT.includes('if (!window.__vgProviders) window.__vgProviders') && BUILT.includes('if (!window.__vgRememberedKey) window.__vgRememberedKey'));
   check('SHOW is visibility-aware everywhere', BUILT.split('window.__vgShow(api, s)').length - 1 === 7 && BUILT.split("a.on('showBlocked'").length - 1 === 7);
   check('hosted arcs discover more than one manifest', BUILT.includes("tmGetJson('arc/arcs.json')") && BUILT.includes('manifest.more || []'));

@@ -161,36 +161,14 @@ window.__vgOdds = {
   chipAfterSpeak(p, label){ setTimeout(() => { try { this.chip(p, label); } catch (_) {} }, 350); },
 };
 
-/* Multi-provider chat call so a guide can reuse the key the
-   visitor already gave the app (ghostwriter / detective) when it
-   runs standalone. Mirrors the Piskel adapter's provider table. */
+/* Provider call for the guides: the one in shell/tm-ai.js (src/llm.js
+   underneath), so a guide, the ghostwriter and the detective all speak
+   to Claude, ChatGPT and Gemini the same way, with the same model. */
 window.__vgProviders = {
-  async call(provider, key, model, sys, usr){
+  call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
-    if (provider === 'openai') {
-      model = model || 'gpt-6-luna';   // the app default (src/llm.js); tools/ai-check.mjs tests the guides on it
-      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
-      if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
-      const d = await r.json(); return d.choices[0].message.content;
-    }
-    if (provider === 'gemini' || provider === 'google') {
-      const m = model || 'gemini-3.5-flash';
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + encodeURIComponent(key), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] },
-          contents: [{ role: 'user', parts: [{ text: usr }] }] }) });
-      if (!r.ok) throw new Error('Gemini HTTP ' + r.status);
-      const d = await r.json(); return d.candidates[0].content.parts.map(p => p.text || '').join('');
-    }
-    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
-        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: model || 'claude-sonnet-4-6', max_tokens: 1000,
-        system: sys, messages: [{ role: 'user', content: usr }] }) });
-    if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
-    const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
+    if (!window.__tmAI) throw new Error('the AI settings did not load');
+    return window.__tmAI.callWith(provider === 'google' ? 'gemini' : provider, key, model, sys, usr);
   }
 };
 
@@ -230,18 +208,10 @@ window.__vgShowBlockedEvent = {
   kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 
-/* The ghostwriter and the detective remember keys in localStorage
-   under tm-key-<provider>; srcdoc frames share the shell's origin, so
-   any guide can find a key the visitor already gave the app. */
+/* The AI the visitor chose with the guide panel's key button (or in the
+   ghostwriter or detective panels, which share it): tm-ai.js keeps it. */
 window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-6-luna', gemini: 'gemini-3.5-flash' };
-  try {
-    for (const p of ['anthropic', 'openai', 'gemini']) {
-      const k = localStorage.getItem('tm-key-' + p);
-      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
-    }
-  } catch (_) {}
-  return null;
+  try { const c = window.__tmAI && window.__tmAI.config(); return c && c.key ? c : null; } catch (_) { return null; }
 };
 
 /* One ask path for every guide. window.claude is the bridge's RPC to

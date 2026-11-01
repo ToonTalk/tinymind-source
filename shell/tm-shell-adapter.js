@@ -35,41 +35,13 @@ if (!window.__vgShowBlockedEvent) window.__vgShowBlockedEvent = {
   kidLines: p => (p && (p.kidWhy || p.why)) || 'That is not on the screen yet! Press the button I am pointing at first.',
 };
 if (!window.__vgRememberedKey) window.__vgRememberedKey = function(){
-  const DEF = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-6-luna', gemini: 'gemini-3.5-flash' };
-  try {
-    for (const p of ['anthropic', 'openai', 'gemini']) {
-      const k = localStorage.getItem('tm-key-' + p);
-      if (k && k.trim()) return { provider: p, key: k.trim(), model: DEF[p] };
-    }
-  } catch (_) {}
-  return null;
+  try { const c = window.__tmAI && window.__tmAI.config(); return c && c.key ? c : null; } catch (_) { return null; }
 };
 if (!window.__vgProviders) window.__vgProviders = {
-  async call(provider, key, model, sys, usr){
+  call(provider, key, model, sys, usr){
     if (!key) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
-    if (provider === 'openai') {
-      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-        body: JSON.stringify({ model: model || 'gpt-6-luna', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }) });
-      if (!r.ok) throw new Error('OpenAI HTTP ' + r.status);
-      const d = await r.json(); return d.choices[0].message.content;
-    }
-    if (provider === 'gemini' || provider === 'google') {
-      const m = model || 'gemini-3.5-flash';
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + encodeURIComponent(key), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] },
-          contents: [{ role: 'user', parts: [{ text: usr }] }] }) });
-      if (!r.ok) throw new Error('Gemini HTTP ' + r.status);
-      const d = await r.json(); return d.candidates[0].content.parts.map(p => p.text || '').join('');
-    }
-    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
-        'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: model || 'claude-sonnet-4-6', max_tokens: 1000,
-        system: sys, messages: [{ role: 'user', content: usr }] }) });
-    if (!r.ok) throw new Error('Anthropic HTTP ' + r.status);
-    const d = await r.json(); return (d.content || []).map(c => c.text || '').join('');
+    if (!window.__tmAI) throw new Error('the AI settings did not load');
+    return window.__tmAI.callWith(provider === 'google' ? 'gemini' : provider, key, model, sys, usr);
   }
 };
 
@@ -77,10 +49,11 @@ const SH = () => window.__tmShell || {};
 const prefs = { kid: false, voice: false, on: true };
 let api = null;
 
-/* The shell has no key box of its own. When it is not running inside
-   a Claude artifact (where the keyless endpoint works), reuse the key
-   the visitor already gave the Nursery's ghostwriter -- the frames are
-   srcdoc, so same-origin and readable. Never fetch the keyless
+/* The key comes from the guide panel's key button (shell/tm-ai.js),
+   which the Nursery's ghostwriter shares; when it is not running inside
+   a Claude artifact (where the keyless endpoint works), a key typed into
+   the ghostwriter is still read straight from its frame as a fallback --
+   the frames are srcdoc, so same-origin and readable. Never fetch the keyless
    endpoint from an ordinary page: it has no key and no browser-access
    header, so it fails CORS and looks like a mysterious network error. */
 const VG_LIVE = ['anthropic', 'openai', 'gemini'];
@@ -96,7 +69,7 @@ function frameKey(){
   } catch (_) { return null; }
 }
 const inClaude = () => !!(api && api.inClaude);
-const shellKey = () => frameKey() || (window.__vgRememberedKey && window.__vgRememberedKey());
+const shellKey = () => (window.__vgRememberedKey && window.__vgRememberedKey()) || frameKey();
 const activeTab = () => (SH().activeTab) || 'home';
 const onFrontPage = () => ['home', 'bay'].includes(document.body.dataset.view || activeTab());   // the shell marks the view on <body data-view>
 
@@ -219,11 +192,11 @@ function createGuide(){
         if (!c) { const e = new Error('no key'); e.vgNoAI = true; throw e; }
         return window.__vgProviders.call(c.provider, c.key, c.model, sys, usr);
       },
-      noAI: { say: 'I cannot reach a live A I from this page on my own. Open the Nursery and paste a key into the ghostwriter panel, and I can talk live from any room. The tour works fine without one.' } },
+      noAI: { spot: () => document.getElementById('vgKey'), say: 'I cannot reach a live A I from this page on my own. Press the key button I am pointing at, choose Claude, ChatGPT or Gemini and paste your key, and I can talk live in every room. The tour works fine without one.' } },
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
       if (/failed to fetch|network|cors|no key/i.test(m) && !shellKey())
         return { log: 'Live AI call failed: ' + m,
-          say: 'I could not reach a live A I from this page. Open the Nursery, pick a provider and paste your key into the ghostwriter panel — then I can answer from any room.' };
+          say: 'I could not reach a live A I from this page. Press the key button at the top of this panel, choose Claude, ChatGPT or Gemini and paste your key, then ask me again.' };
       return null; } },
     verbs: {
       SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } },

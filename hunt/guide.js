@@ -142,7 +142,9 @@ function systemPrompt(){
 const detCfg = () => { const key = ($('detKey') && $('detKey').value.trim()) || '';
   if (!key) return (window.__vgRememberedKey && window.__vgRememberedKey()) || { key: '', model: '', provider: 'anthropic' };
   const model = ($('detModel') && $('detModel').value.trim()) || '';
-  const provider = /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
+  const d = ($('detective') && $('detective').value) || '';
+  const provider = ['anthropic', 'openai', 'gemini'].includes(d) ? d
+    : /^(gpt|o\d|chatgpt)/i.test(model) ? 'openai' : /gemini/i.test(model) ? 'gemini' : 'anthropic';
   return { key, model, provider }; };
 
 const SHOW = { probe: '#probeCard', clues: '#cluesCard', diy: '#diyCard', namecontrol: '#nameCtrlBtn',
@@ -176,14 +178,14 @@ function createGuide(){
     prompts: { system: systemPrompt, status: statusText },
     llm: { hasKey: () => !!(window.claude && typeof window.claude.complete === 'function') || !!detCfg().key,
       keyedCall: (sys, usr) => window.__vgAsk(sys, usr, detCfg),
-      noAI: { spot: () => document.getElementById('detKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, paste it in the detective card I am pointing at and I can talk live too. The hunt itself runs on your machine either way.' } },
+      noAI: { spot: () => document.getElementById('vgKey'), say: 'I cannot reach a live A I from here on my own. If you have a key, press the key button I am pointing at, choose Claude, ChatGPT or Gemini and paste it, and I can talk live too. The hunt itself runs on your machine either way.' } },
     verbs: { SHOW: { exec(p){ const s = SHOW[(p[0] || '').toLowerCase()]; if (s) window.__vgShow(api, s); } } },
     events: EVENTS,
     lineMode: () => kid() ? 'kid' : 'default',
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
       if (/failed to fetch|network|cors/i.test(m) && !detCfg().key)
         return { log: 'Live AI call failed: ' + m,
-          say: 'I could not reach a live A I on my own. If you have a key, paste it in the detective card and I can talk live too. The hunt itself runs on your machine either way.' };
+          say: 'I could not reach a live A I on my own. If you have a key, press the key button at the top of this panel, choose Claude, ChatGPT or Gemini and paste it, and I can talk live too. The hunt itself runs on your machine either way.' };
       return null; } },
     testHook: { app: () => ({ lastVerdict: () => lastVerdict, choirSpoken: () => choirSpoken, prefs: window.__vgPrefs }) },
     init(a){

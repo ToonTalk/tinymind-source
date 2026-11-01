@@ -161,15 +161,15 @@
     <label class="f">who writes?
       <select id="provider">
         <option value="manual">me — I'll paste stories</option>
-        <option value="openai">OpenAI API</option>
-        <option value="anthropic">Anthropic API</option>
-        <option value="gemini">Gemini API</option>
+        <option value="anthropic">Claude</option>
+        <option value="openai">ChatGPT</option>
+        <option value="gemini">Gemini</option>
       </select>
     </label>
     <span id="apiFields" style="display:none">
-      <label class="f">API key <input type="password" id="apiKey" placeholder="paste key"></label>
+      <label class="f">key <input type="password" id="apiKey" placeholder="paste key" autocomplete="off" spellcheck="false"></label>
       <label class="f"><input type="checkbox" id="rememberKey"> remember this key on this computer (browser storage — untick on shared machines)</label>
-      <label class="f">model <input type="text" id="apiModel"></label>
+      <label class="f">model <input type="text" id="apiModel" list="apiModels" spellcheck="false"><datalist id="apiModels"></datalist></label>
       <label class="f"><input type="checkbox" id="strictWords" checked> give the writer the full allowed-word list (works much better)</label>
       <button class="go small" id="genBtn">✍️ write 8 more stories</button>
     </span>
@@ -666,11 +666,23 @@ function pushData() {
 }
 
 // ---------- ghostwriter ----------
+// window.__tmAI (shell/tm-ai.js, in the built pages) holds the one AI choice the whole app
+// shares: the guides' key button, this panel and the hunt's detective all read and write it
+const AI = window.__tmAI && !window.__tmAI.inArtifact ? window.__tmAI : null;
+function syncFromAI() {
+  const p = $('provider').value;
+  if (!AI || !AI.KEYED.includes(p)) return;
+  $('apiKey').value = AI.keyFor(p);
+  $('apiModel').value = AI.modelFor(p);
+  $('rememberKey').checked = AI.remember();
+  $('apiModels').replaceChildren(...AI.modelsFor(p).map(m => new Option(m.name === m.id ? '' : m.name, m.id)));
+}
 $('provider').onchange = () => {
   const p = $('provider').value;
   $('apiFields').style.display = p === 'manual' ? 'none' : 'inline';
   $('manualFields').style.display = p === 'manual' ? 'inline' : 'none';
-  if (p !== 'manual') {
+  if (AI && AI.KEYED.includes(p)) { AI.set({ provider: p }); syncFromAI(); }
+  else if (p !== 'manual') {
     $('apiModel').value = PROVIDERS[p].defaultModel;
     $('apiKey').value = ($('rememberKey').checked && Store.get('tm-key-' + p)) || '';
     const needsKey = p !== 'keyless';
@@ -680,6 +692,7 @@ $('provider').onchange = () => {
 };
 $('rememberKey').onchange = () => {
   const p = $('provider').value;
+  if (AI) { AI.set({ remember: $('rememberKey').checked }); return; }
   Store.set('tm-remember', $('rememberKey').checked ? '1' : '');
   if (!$('rememberKey').checked) {
     for (const prov of Object.keys(PROVIDERS)) Store.del('tm-key-' + prov);
@@ -689,7 +702,18 @@ $('rememberKey').onchange = () => {
 };
 $('apiKey').addEventListener('change', () => {
   const p = $('provider').value;
+  if (AI && AI.KEYED.includes(p)) { AI.set({ key: $('apiKey').value }); AI.refresh(p).then(syncFromAI); return; }
   if ($('rememberKey').checked && p !== 'manual') Store.set('tm-key-' + p, $('apiKey').value.trim());
+});
+$('apiModel').addEventListener('change', () => {
+  const p = $('provider').value;
+  if (AI && AI.KEYED.includes(p)) AI.set({ model: $('apiModel').value.trim() === AI.autoModel(p) ? '' : $('apiModel').value.trim() });
+});
+// a change made elsewhere (the guide's key button, the hunt) shows up here
+if (AI) AI.onChange(() => {
+  const p = $('provider').value;
+  if (AI.KEYED.includes(p) && AI.provider() !== p) { $('provider').value = AI.provider(); $('provider').onchange(); }
+  else syncFromAI();
 });
 const buildPrompt = count => storyPrompt(count, sheet(), { wordlist: S.wordlist, strict: $('strictWords').checked, feedback: S.feedback });
 function callProvider(content) {
@@ -1479,6 +1503,8 @@ if (keylessAvailable()) {
 (async () => {
   await Store.hydrate();
   if (Store.get('tm-remember') === '1') $('rememberKey').checked = true;
+  // a key given anywhere in the app makes that AI the ghostwriter (it was "me" before)
+  if (AI && $('provider').value === 'manual' && AI.config().key) { $('provider').value = AI.provider(); $('provider').onchange(); }
   try {
     const saved = Store.get('tm-storybook');
     if (saved) {

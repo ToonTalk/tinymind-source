@@ -260,7 +260,7 @@ function createGuide(){
     strings: { llmFail: e => { const m = e && e.message ? e.message : String(e);
       if (/failed to fetch|network|cors|no key/i.test(m))
         return { log: 'Live AI call failed: ' + m,
-          say: 'The microscope has no key box of its own. Paste a key into the Nursery ghostwriter (tick "remember this key") and I can talk live here too. Every instrument on the bench works without one.' };
+          say: 'I cannot reach a live A I on my own. Press the key button at the top of this panel, choose Claude, ChatGPT or Gemini and paste your key, and I can talk live here too. Every instrument on the bench works without one.' };
       return null; } },
     testHook: { app: () => ({ prefs: window.__vgPrefs }) },
     init(a){ api = a; a.on('showBlocked', window.__vgShowBlockedEvent);
