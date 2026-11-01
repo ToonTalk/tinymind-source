@@ -3744,7 +3744,16 @@ function create(A){
   const testHook=A.testHook||{};
   const notify=ui.notify||function(){};
   const MASCOT=ui.mascot||'\u{1F916}', THINK=ui.thinkFace||'\u{1F914}';
-  const W=layout.panelWidth||300, M=layout.panelMargin||(W+2);
+  const W0=layout.panelWidth||300, M0=layout.panelMargin||(W0+2);
+  /* the visitor can drag the panel's left edge to make it wider or
+     narrower; the width is kept under one key for every guide on this
+     origin, so all the rooms follow. W and M are the live values; W0
+     and M0 the app's own (still used when the panel docks narrow). */
+  const WIDTH_KEY='vg-panel-width', WMIN=260;
+  const wMax=()=>Math.max(WMIN,Math.min(760,Math.round(window.innerWidth*0.6)));
+  const clampW=w=>Math.round(Math.min(wMax(),Math.max(WMIN,w)));
+  const savedW=()=>{ try{ const v=+localStorage.getItem(WIDTH_KEY); return v>0?v:0; }catch(e){ return 0; } };
+  let W=savedW()?clampW(savedW()):W0, M=W+(M0-W0);
   const NARROW=('narrowMax' in layout)?layout.narrowMax:700;
   const APPBP=layout.appBreakpoint||0;
   const reflow=layout.reflowCSS||{};
@@ -3784,29 +3793,15 @@ function create(A){
      breakpoint at (breakpoint + panel margin), softening bands
      above it. Bands are emitted before the mirror so the mirror's
      equal-specificity rules win at and below the mirror width. */
-  const css=[
+  const buildCss=()=>[
 '.vg-spot{box-shadow:0 0 0 3px var(--gold,#f7d774),0 0 22px 6px rgba(247,215,116,.45)!important;',
 '  border-radius:12px;scroll-margin:130px;animation:vgPulse 1.6s ease-in-out infinite}',
 '@keyframes vgPulse{50%{box-shadow:0 0 0 5px var(--gold,#f7d774),0 0 30px 10px rgba(247,215,116,.6)}}',
 '',
 'body{transition:margin-right .25s}',
 `body.vg-open{margin-right:${M}px}`,
-'/* Narrow (artifact preview pane, phones): dock to the bottom',
-'   instead of overlaying — margin-bottom reflows the app above the',
-'   panel, so the guide never covers anything at any width. */',
-`@media (max-width:${NARROW}px){`,
-`  body.vg-open{margin-right:0;margin-bottom:${M}px}`,
-`  #vgPanel{top:auto;left:0;right:0;bottom:0;width:auto;height:${W}px;`,
-'    border-left:none;border-top:1px solid var(--line,rgba(255,255,255,.14));',
-'    box-shadow:0 -8px 26px rgba(0,0,0,.45)}',
-'  body:not(.vg-open) #vgPanel{transform:translateY(102%)}',
-'  #vgTab{top:auto;bottom:0;right:14px;border-radius:12px 12px 0 0;',
-'    border-right:1px solid var(--line,rgba(255,255,255,.14));border-bottom:none;',
-'    padding:8px 12px;flex-direction:row!important;gap:8px}',
-'  .vg-tab-label{writing-mode:horizontal-tb}',
-'}',
 '',
-...BANDS.map(b=>`@media (max-width:${b.max}px){${b.css}}`),
+...BANDS.map(b=>`@media (max-width:${b.max+(M-M0)}px){${b.css}}`),
 ...(APPBP?[`@media (max-width:${APPBP+M}px){${reflow.mirrored||''}}`]:[]),
 '',
 `#vgPanel{position:fixed;top:0;right:0;bottom:0;width:min(${W}px,88vw);z-index:9999;`,
@@ -3815,6 +3810,12 @@ function create(A){
 '  box-shadow:-8px 0 26px rgba(0,0,0,.45);',
 '  transform:translateX(0);transition:transform .25s}',
 'body:not(.vg-open) #vgPanel{transform:translateX(102%)}',
+'/* the resize grip on the left edge of the panel (hidden when the panel docks narrow) */',
+'#vgGrip{position:absolute;left:-5px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:2;touch-action:none;outline:none}',
+'#vgGrip::after{content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;background:transparent;transition:background .15s}',
+'#vgGrip:hover::after,#vgGrip.vg-drag::after,#vgGrip:focus-visible::after{background:var(--accent,#7bdff2)}',
+'body.vg-resizing,body.vg-resizing #vgPanel{transition:none!important;user-select:none;cursor:col-resize}',
+`@media (max-width:${NARROW}px){#vgGrip{display:none}}`,
 '',
 '#vgHead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line,rgba(255,255,255,.14));',
 '  background:rgba(0,0,0,.18);flex:0 0 auto}',
@@ -3864,11 +3865,69 @@ function create(A){
 '   dialog wins over these. */',
 ':where(#vgConfirm){position:fixed;inset:0;display:none;align-items:center;justify-content:center;',
 '  background:rgba(0,0,0,.55);z-index:10001}',
-':where(#vgConfirm.show){display:flex}'
+':where(#vgConfirm.show){display:flex}',
+'',
+'/* Narrow rules come last: they must override the side-panel rules above',
+'   (they sat first once, so phones got a stray box instead of a dock). */',
+'/* Narrow (artifact preview pane, phones): dock to the bottom',
+'   instead of overlaying — margin-bottom reflows the app above the',
+'   panel, so the guide never covers anything at any width. */',
+`@media (max-width:${NARROW}px){`,
+`  body.vg-open{margin-right:0;margin-bottom:${M0}px}`,
+`  #vgPanel{top:auto;left:0;right:0;bottom:0;width:auto;height:${W0}px;`,
+'    border-left:none;border-top:1px solid var(--line,rgba(255,255,255,.14));',
+'    box-shadow:0 -8px 26px rgba(0,0,0,.45)}',
+'  body:not(.vg-open) #vgPanel{transform:translateY(102%)}',
+'  #vgTab{top:auto;bottom:0;right:14px;border-radius:12px 12px 0 0;',
+'    border-right:1px solid var(--line,rgba(255,255,255,.14));border-bottom:none;',
+'    padding:8px 12px;flex-direction:row!important;gap:8px}',
+'  .vg-tab-label{writing-mode:horizontal-tb}',
+'}'
   ].join('\n');
   const styleEl=document.createElement('style');
-  styleEl.id='vgStyle'; styleEl.textContent=css;
+  styleEl.id='vgStyle'; styleEl.textContent=buildCss();
   document.head.appendChild(styleEl);
+
+  /* ---------- panel width: drag the grip, arrow keys, double-click resets ---------- */
+  function vgSetWidth(w,save){
+    W=clampW(w); M=W+(M0-W0);
+    styleEl.textContent=buildCss();
+    const g=vg$('vgGrip'); if(g){ g.setAttribute('aria-valuenow',String(W)); g.setAttribute('aria-valuemin',String(WMIN)); g.setAttribute('aria-valuemax',String(wMax())); }
+    if(save){ try{ if(W===W0) localStorage.removeItem(WIDTH_KEY); else localStorage.setItem(WIDTH_KEY,String(W)); }catch(e){} }
+  }
+  function vgWireGrip(){
+    const g=vg$('vgGrip'); if(!g) return;
+    vgSetWidth(W,false);
+    let raf=0, want=W;
+    g.addEventListener('pointerdown',e=>{
+      if(e.button!==0) return;
+      e.preventDefault(); g.setPointerCapture(e.pointerId);
+      g.classList.add('vg-drag'); document.body.classList.add('vg-resizing');
+    });
+    g.addEventListener('pointermove',e=>{
+      if(!g.hasPointerCapture(e.pointerId)) return;
+      want=window.innerWidth-e.clientX;
+      if(!raf) raf=requestAnimationFrame(()=>{ raf=0; vgSetWidth(want,false); });
+    });
+    const done=e=>{
+      if(!g.hasPointerCapture(e.pointerId)) return;
+      g.releasePointerCapture(e.pointerId);
+      g.classList.remove('vg-drag'); document.body.classList.remove('vg-resizing');
+      vgSetWidth(want,true);
+    };
+    g.addEventListener('pointerup',done); g.addEventListener('pointercancel',done);
+    g.addEventListener('dblclick',()=>vgSetWidth(W0,true));
+    g.addEventListener('keydown',e=>{
+      const step=e.shiftKey?60:20;
+      if(e.key==='ArrowLeft'){ e.preventDefault(); vgSetWidth(W+step,true); }
+      else if(e.key==='ArrowRight'){ e.preventDefault(); vgSetWidth(W-step,true); }
+      else if(e.key==='Home'){ e.preventDefault(); vgSetWidth(W0,true); }
+    });
+    /* another room's guide changed the width: follow it */
+    window.addEventListener('storage',e=>{ if(e.key===WIDTH_KEY) vgSetWidth(savedW()||W0,false); });
+    /* a smaller window may no longer fit the chosen width */
+    window.addEventListener('resize',()=>{ const w=clampW(savedW()||W0); if(w!==W) vgSetWidth(w,false); });
+  }
 
   /* ---------- panel markup (all ids/classes prefixed vg) ---------- */
   {
@@ -3882,6 +3941,8 @@ function create(A){
     aside.id='vgPanel'; aside.setAttribute('role','complementary');
     aside.setAttribute('aria-label',ui.ariaLabel||ui.title||'Voice guide');
     aside.innerHTML=
+      '<div id="vgGrip" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Guide width"'+
+      ' title="Drag to make the guide wider or narrower (double-click: back to normal)"></div>'+
       '<div id="vgHead"><span id="vgFace"></span><span id="vgTitle"></span>'+
       '<button id="vgHide" title="Hide the guide">&#10095;</button></div>'+
       '<div id="vgControls">'+
@@ -3896,6 +3957,7 @@ function create(A){
       '<div id="vgTypeRow"><input id="vgIn" spellcheck="false"><button id="vgGo">Ask</button></div>';
     document.body.appendChild(aside);
     vg$('vgFace').textContent=MASCOT;
+    vgWireGrip();
     vg$('vgTitle').textContent=ui.title||'Guide';
     vg$('vgIn').placeholder=ui.askPlaceholder||'Type a question\u2026';
   }

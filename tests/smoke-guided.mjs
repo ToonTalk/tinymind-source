@@ -123,6 +123,8 @@ async function main() {
   check('provider table shipped (app-key reuse)', BUILT.split('__vgProviders').length - 1 >= 3);
   check('no drop-the-starter-pack quest left in the shell tour', !BUILT.includes('skipIf: poolHasModel') && !BUILT.includes('catchTheBrain'));
   check('save-conversation button in every guide', BUILT.split('id="vgSave"').length - 1 === 7);
+  check('resizable guide panel in every guide (width kept for all rooms)', BUILT.split('<div id="vgGrip" role="separator"').length - 1 === 7 &&
+    BUILT.split("const WIDTH_KEY='vg-panel-width'").length - 1 === 7);
   check('shellStorage gained list (404-noise fix)', BUILT.includes('async list(prefix)'));
   check('never-offer-visible rule in all four prompts', BUILT.split('talk about what it shows instead').length - 1 >= 4);
   check('bay persistence shipped', BUILT.includes("const tmRestoreReady = tmRestorePool(); // vg wave 4") &&
