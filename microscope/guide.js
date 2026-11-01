@@ -169,7 +169,7 @@ function STEPS(){
       ? 'The lab is yours now! Try the layer lens too — it shows what the mind would guess if it stopped thinking early.'
       : aheadLayers().length
         ? 'The lab is yours. Try layer by layer on a piece — the gold thinking ahead column shows words this mind is already leaning toward further on in the story, not only next. Ask me anything as you go.'
-        : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
+        : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the Hunt, where you look for a hidden fact. Ask me anything as you go.' },
   ];
 }
 

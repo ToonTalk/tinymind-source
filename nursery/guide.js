@@ -156,7 +156,7 @@ async function preflight(g){
   }
   if (split.length) bits.unshift(kid()
     ? `The mind reads ${split.join(' and ')}. Words that are one piece, like play, happy or friend, are easier to find later.`
-    : `This mind reads ${split.join(' and ')}, because its alphabet only has 512 pieces. A word in several pieces is harder to find in the treasure hunt: the fact is spread over several guesses. Few words are a single piece here; play, happy, friend and mom are.`);
+    : `This mind reads ${split.join(' and ')}, because its alphabet only has 512 pieces. A word in several pieces is harder to find in the Hunt: the fact is spread over several guesses. Few words are a single piece here; play, happy, friend and mom are.`);
   const text = bits.length
     ? bits.join(' ')
     : (kid() ? 'Good news: these facts look strange enough to bury and hunt later.'
@@ -278,8 +278,8 @@ function STEPS(){
       ? `One question before we go on. This mind needed fifty stories and hundreds of readings to learn ${sheet().name}. You learned ${sheet().name} from one. Who is the better learner — and why do you think that is?`
       : `Before we move on, an exhibit rather than a lecture. This mind needed fifty stories and a hundred readings to learn ${sheet().name}. You learned ${sheet().name} from one. Minds like this — like me — do not learn the way you do. So: who is the better learner, and what does that tell you about us?` },
   { name: 'handoff', text: () => kid()
-      ? `Now — want to find WHERE it keeps ${sheet().name}? Look at the tabs along the top and open the Treasure Hunt. See you there!`
-      : `Your creature now lives somewhere inside those dials. Want to find WHERE it keeps ${sheet().name}? The Treasure Hunt tab along the top of the window is exactly that expedition. I will meet you there.` },
+      ? `Now — want to find WHERE it keeps ${sheet().name}? Press ← all activities at the top and choose Hunt for a hidden fact. See you there!`
+      : `Your creature now lives somewhere inside those dials. Want to find WHERE it keeps ${sheet().name}? Press ← all activities at the top and choose Hunt for a hidden fact (or the 🎯 hunt tab, if you show all the tabs): that is exactly the expedition. I will meet you there.` },
   ];
 }
 

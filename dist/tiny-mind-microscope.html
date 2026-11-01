@@ -550,6 +550,11 @@ const inArtifact = (() => { try {
   return Array.from(location.ancestorOrigins || []).some(o => /claudeusercontent\.com|claude\.(ai|com)/i.test(o));
 } catch (_) { return false; } })();
 
+/* the guides' microphone advice (shell/vg-core.js): where the mic is blocked, as in the artifact,
+   send people to the website rather than telling them to save the page */
+window.__vgElsewhere = { label: 'Tiny Mind\'s website (toontalk.github.io/tinymind)',
+  keyHint: '. There, my answers use your own Claude, ChatGPT or Gemini key: press the \u{1F511} button in my panel to add one.' };
+
 const remember = () => L.get('tm-remember') === '1';
 const keyFor = p => ((remember() ? L.get('tm-key-' + p) : S.get('tm-key-' + p)) || L.get('tm-key-' + p) || S.get('tm-key-' + p) || '').trim();
 function state(){
@@ -4911,9 +4916,15 @@ function create(A){
 
   /* ---------- microphone: by policy, not by error ---------- */
   let vgRec=null, vgListening=false;
+  /* a page that also lives on an ordinary website names it in window.__vgElsewhere
+     = {label, spoken, keyHint}: the mic advice then sends people there, not to a saved file */
+  const vgElsewhere=()=>{ const e=window.__vgElsewhere; return e&&e.label?e:null; };
   function vgMicUnavailableMsg(){
     if(vgMicPolicyBlocked){
       const where=vgInClaude?'inside a Claude artifact':'inside this embedded page';
+      const e=vgElsewhere();
+      if(e) return "I'm not allowed to use the microphone "+where+": the sandbox keeps it switched off, so no permission pop-up can appear here. "+
+        "Type your question in the box at the bottom of my panel instead. To talk with me out loud, open "+e.label+" in a normal browser tab, where the mic works"+(e.keyHint||'.');
       return "I'm not allowed to use the microphone "+where+" \u2014 the sandbox keeps it switched off, so no permission pop-up can ever appear here. "+
         "Type your question in the box at the bottom of my panel instead! To actually talk with me out loud, save this page's HTML file and open it straight in a normal browser tab. "+
         "Out there the mic works \u2014 and my answers need an API key you provide"+(strings.micKeyHint||'.');
@@ -4925,8 +4936,10 @@ function create(A){
     const g=++vgGen; vgSynthCancel(); vgUpdateBar();
     vgLogAdd(vgMicUnavailableMsg());
     try{ vg$('vgIn').focus(); }catch(e){}
+    const e=vgElsewhere();
     try{ await vgSpeak(vgMicPolicyBlocked
-      ? "The microphone is switched off inside this sandbox, so type your question in the box below \u2014 or run the standalone file in a normal browser tab, where the mic works with your own API key."
+      ? (e ? "The microphone is switched off here, so type your question in the box below, or open "+(e.spoken||e.label)+" in a normal browser tab to talk with me out loud."
+           : "The microphone is switched off inside this sandbox, so type your question in the box below \u2014 or run the standalone file in a normal browser tab, where the mic works with your own API key.")
       : "I can't listen in this browser \u2014 type your question in the box below instead.", g); }catch(e){}
   }
   function vgListen(){
@@ -5208,7 +5221,7 @@ function STEPS(){
       ? 'The lab is yours now! Try the layer lens too — it shows what the mind would guess if it stopped thinking early.'
       : aheadLayers().length
         ? 'The lab is yours. Try layer by layer on a piece — the gold thinking ahead column shows words this mind is already leaning toward further on in the story, not only next. Ask me anything as you go.'
-        : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the treasure hunt next door. Ask me anything as you go.' },
+        : 'The lab is yours. The layer by layer view is worth a look — what would it predict if it stopped at layer two? — and everything you learn here is ammunition for the Hunt, where you look for a hidden fact. Ask me anything as you go.' },
   ];
 }
 

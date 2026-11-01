@@ -34,6 +34,11 @@ const inArtifact = (() => { try {
   return Array.from(location.ancestorOrigins || []).some(o => /claudeusercontent\.com|claude\.(ai|com)/i.test(o));
 } catch (_) { return false; } })();
 
+/* the guides' microphone advice (shell/vg-core.js): where the mic is blocked, as in the artifact,
+   send people to the website rather than telling them to save the page */
+window.__vgElsewhere = { label: 'Tiny Mind\'s website (toontalk.github.io/tinymind)',
+  keyHint: '. There, my answers use your own Claude, ChatGPT or Gemini key: press the \u{1F511} button in my panel to add one.' };
+
 const remember = () => L.get('tm-remember') === '1';
 const keyFor = p => ((remember() ? L.get('tm-key-' + p) : S.get('tm-key-' + p)) || L.get('tm-key-' + p) || S.get('tm-key-' + p) || '').trim();
 function state(){

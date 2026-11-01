@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tiny Mind Student Guide</title>
+<meta name="description" content="A field guide for students: how to use Tiny Mind's seven rooms to raise, watch and look inside real (very small) language models, and how to test what you find.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field guide. A slim nav bar, one reading column, room cards in a grid; prints as a clean handout. */
+:root {
+  --paper: #f3f6f9; --card: #ffffff; --ink: #13213a; --muted: #56627c; --line: #d5dce7;
+  --accent: #0a6a8a; --accent-ink: #ffffff; --soft: #dcf0f6; --warm: #9a5b00; --warm-soft: #f7ecd6;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0d1526; --card: #142037; --ink: #e7edf8; --muted: #9ea9c3; --line: #27344f;
+  --accent: #7bdff2; --accent-ink: #06111f; --soft: #12304a; --warm: #f0c24f; --warm-soft: #33280c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0d1526; --card: #142037; --ink: #e7edf8; --muted: #9ea9c3; --line: #27344f;
+  --accent: #7bdff2; --accent-ink: #06111f; --soft: #12304a; --warm: #f0c24f; --warm-soft: #33280c; color-scheme: dark }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.62 var(--body); }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 64rem; margin-inline: auto; }
+.col { max-width: 44rem; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.12; letter-spacing: -.015em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.3rem, 6.5vw, 3.7rem); font-weight: 800; }
+h2 { font-size: clamp(1.55rem, 3.4vw, 2.1rem); font-weight: 800; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p, ul, ol { margin: 0; }
+ul, ol { padding-left: 1.2rem; display: grid; gap: .3rem; }
+a { color: var(--accent); text-underline-offset: .18em; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.ui { font-family: var(--mono); font-size: .88em; background: var(--soft); border-radius: .3rem; padding: .05em .35em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.tag { font-family: var(--mono); font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+
+nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+nav.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.1rem; padding-block: .6rem; font-size: .95rem; }
+nav.top .brand { font-family: var(--display); font-weight: 800; font-size: 1.05rem; color: var(--ink); text-decoration: none; margin-right: auto; }
+nav.top a.here { color: var(--ink); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--accent); }
+
+header.hero { padding-block: 2.6rem 1rem; display: grid; gap: 1rem; }
+.lede { font-size: 1.2rem; line-height: 1.55; }
+.btns { display: flex; flex-wrap: wrap; gap: .6rem; }
+.btn { display: inline-flex; align-items: center; gap: .4rem; padding: .6rem 1rem; border-radius: .6rem; font-weight: 700; text-decoration: none; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.toc { display: flex; flex-wrap: wrap; gap: .4rem .9rem; font-size: .95rem; }
+
+main section { padding-block: 2.4rem 0; display: grid; gap: 1.1rem; }
+.rule { border-top: 1px solid var(--line); }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: .8rem; padding: 1rem 1.1rem; display: grid; gap: .35rem; align-content: start; min-width: 0; }
+.step .n { font-family: var(--display); font-weight: 800; font-size: 1.6rem; color: var(--accent); line-height: 1; }
+.motto { font-family: var(--display); font-size: clamp(1.25rem, 3vw, 1.6rem); font-weight: 600; border-left: 4px solid var(--accent); padding: .2rem 0 .2rem 1rem; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; background: var(--card); }
+th, td { border: 1px solid var(--line); padding: .55rem .65rem; text-align: left; vertical-align: top; }
+th { font-family: var(--mono); font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.blank { height: 2.6rem; }
+
+.rooms { display: grid; gap: 1.2rem; }
+.room { background: var(--card); border: 1px solid var(--line); border-radius: .9rem; padding: 1.2rem 1.25rem 1.3rem; display: grid; gap: .8rem; min-width: 0; }
+.room header { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; }
+.room .em { font-size: 1.6rem; line-height: 1; }
+.room .what { font-size: 1rem; }
+.room .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .9rem 1.6rem; }
+.room h4 { font-family: var(--mono); font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 .35rem; font-weight: 600; }
+.room .grid > div { min-width: 0; }
+.challenge { background: var(--warm-soft); border-radius: .6rem; padding: .7rem .85rem; }
+.challenge h4 { color: var(--warm); }
+.needs { font-size: .88rem; color: var(--muted); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem 2rem; }
+dl { margin: 0; display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr; gap: .55rem 1.2rem; }
+dt { font-weight: 700; }
+dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: .15rem; } dd { margin-bottom: .5rem; } }
+.surprise { display: grid; gap: .25rem; padding: .8rem 0; border-top: 1px solid var(--line); }
+footer { padding-block: 3rem 3rem; font-size: .9rem; color: var(--muted); display: grid; gap: .5rem; }
+
+@media print {
+  :root { --paper: #fff; --card: #fff; --ink: #000; --muted: #333; --line: #bbb; --accent: #075a75; --soft: #eef6f9; --warm: #6b4000; --warm-soft: #faf4e8; }
+  body::before, nav.top, .btns { display: none; }
+  body { font-size: 11pt; }
+  .room, .step, table { break-inside: avoid; }
+  a { color: inherit; }
+  main section { padding-block: 1.2rem 0; }
+}
+</style>
+</head>
+<body>
+<nav class="top gutter" aria-label="Tiny Mind guides">
+  <div class="wrap">
+    <a class="brand" href="https://toontalk.github.io/tinymind/">🧠 Tiny Mind</a>
+    <a class="here" href="students.html" aria-current="page">Student guide</a>
+    <a href="teachers.html">Teacher guide</a>
+    <a href="https://toontalk.github.io/tinymind/">Open the app</a>
+  </div>
+</nav>
+
+<div class="gutter">
+<div class="wrap">
+<header class="hero">
+  <span class="tag">Student guide</span>
+  <h1>Your field guide to Tiny Mind</h1>
+  <p class="lede col">Tiny Mind lets you raise, watch and look inside real language models. They are built the same basic way as the AI chatbots you have heard of, only thousands of times smaller, so you can see every part and switch parts off. Everything runs on your own computer.</p>
+  <div class="btns">
+    <a class="btn primary" href="https://toontalk.github.io/tinymind/">Open Tiny Mind</a>
+    <a class="btn" href="teachers.html">For teachers</a>
+  </div>
+  <nav class="toc" aria-label="On this page"><a href="#scientist">Be a mind scientist</a><a href="#around">Getting around</a><a href="#rooms">The seven rooms</a><a href="#words">Words to know</a><a href="#surprises">Surprises</a><a href="#help">If something goes wrong</a></nav>
+</header>
+
+<main>
+<section id="scientist" aria-labelledby="h-sci">
+  <h2 id="h-sci">How to be a mind scientist</h2>
+  <p class="col">Nobody can see "meaning" inside a model just by looking. Scientists make a guess, test it, and keep track of what happened. You will do the same.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><h3>Guess</h3><p>Make a claim you could be wrong about: "This neuron is about food." "This part of the mind knows where Zog lives."</p></div>
+    <div class="step"><span class="n">2</span><h3>Predict</h3><p>Before you press anything, write what should happen if your guess is right. "If I switch it off, the mind will stop saying <i>moon</i>."</p></div>
+    <div class="step"><span class="n">3</span><h3>Test</h3><p>Switch the part off, turn it up, or swap it, and watch what changes. Change one thing at a time.</p></div>
+    <div class="step"><span class="n">4</span><h3>Decide</h3><p>Was your guess <b>busted</b> or <b>proved</b>? Both are useful. A busted guess tells you something true about the mind.</p></div>
+  </div>
+  <p class="motto col">A highlight is a clue. Switching it off is the proof.</p>
+  <div class="scroll">
+    <table aria-label="Lab notebook page">
+      <thead><tr><th>My question</th><th>My guess</th><th>What I predict</th><th>What I tried</th><th>What happened</th><th>Busted or proved?</th></tr></thead>
+      <tbody>
+        <tr><td>Where does the mind keep "Zog lives behind the moon"?</td><td>In one attention head in layer 0</td><td>Switching it off drops "moon" a lot</td><td>Switched off head 3 in layer 0</td><td>"moon" went from 55.6% to 54%</td><td>Busted: one head isn't enough</td></tr>
+        <tr><td class="blank"></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="blank"></td><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="font-size:.92rem">Copy this table into a notebook, or print this page. The first row is an example.</p>
+</section>
+
+<section id="around" aria-labelledby="h-around" class="rule">
+  <h2 id="h-around">Getting around</h2>
+  <div class="cols">
+    <div style="display:grid;gap:.6rem"><h3>The front door</h3><p>Tiny Mind opens on <b>"What would you like to do?"</b> with seven cards, one per room. Click a card to go in. <span class="ui">← all activities</span> brings you back.</p>
+      <p>At the top of each room, the <span class="ui">mind:</span> menu shows which mind you are using and lets you pick another. Bigger minds download the first time you choose them; after that your browser keeps them.</p></div>
+    <div style="display:grid;gap:.6rem"><h3>Saving your work</h3><p><span class="ui">💾 save my work</span> puts the minds you raised and your storybook into one .zip file on your computer. To carry on later, or on another computer, choose <span class="ui">📂 open saved work, or a mind file…</span> from the mind menu, or drop the file onto the page.</p></div>
+    <div style="display:grid;gap:.6rem"><h3>The guide</h3><p>Every room has a guide in a panel on the right. Press <span class="ui">▶</span> for a spoken tour. Tick <span class="ui">kid</span> for simpler words, or <span class="ui">voice</span> to hear the guide read aloud. You can type a question in the box at the bottom.</p>
+      <p>Answering your questions needs an AI. The <span class="ui">🔑</span> button lets someone add a key for Claude, ChatGPT or Gemini. <b>Ask an adult first:</b> keys cost money and belong to whoever made them. The tour and every room work without one.</p></div>
+  </div>
+</section>
+
+<section id="rooms" aria-labelledby="h-rooms" class="rule">
+  <h2 id="h-rooms">The seven rooms</h2>
+  <p class="col">The rooms are in the same order as the cards on the front door. You can visit them in any order, but raising your own mind first makes the Hunt more fun.</p>
+  <div class="rooms">
+
+    <article class="room" id="nursery">
+      <header><span class="em">🐣</span><h3>Teach a tiny mind</h3><span class="tag">the Nursery</span></header>
+      <p class="what">Invent a character, write it a storybook, and watch a tiny mind learn about it, step by step.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>In <b>your character</b>, give it a name, say what it is, and give it two special things. The example is Zog, a small dragon who eats clouds and lives behind the moon.</li>
+          <li>Fill the <b>storybook</b> with 60 stories: 50 for the mind to learn from and 10 kept secret to test it. Write your own and press <span class="ui">check + add</span>, let the ghostwriter AI write them with <span class="ui">✍️ write 8 more stories</span>, or load a ready-made storybook.</li>
+          <li>Look at <b>the model's whole alphabet</b>. This mind knows only 512 pieces of words, so stories must use words it can spell.</li>
+          <li>Press <span class="ui">🐣 start raising</span>. Press <span class="ui">ask for a story now</span> whenever you like.</li></ol></div>
+        <div><h4>Notice</h4><ul>
+          <li>The pink line is the secret stories; the blue line is ordinary stories. Lower means less surprised.</li>
+          <li>When does your character's special thing start showing up in its stories?</li>
+          <li>Keep going too long and the pink line rises again: the mind starts copying its storybook instead of learning.</li></ul>
+          <div class="challenge" style="margin-top:.8rem"><h4>Challenge</h4><p>Find the step where your mind knows its facts but still tells ordinary stories well. Save that mind with <span class="ui">💾 save my tiny mind (.bin)</span> and take it to the Hunt.</p></div></div>
+      </div>
+      <p class="needs">No key needed, unless you want the ghostwriter AI to write stories for you.</p>
+    </article>
+
+    <article class="room" id="time-machine">
+      <header><span class="em">⏪</span><h3>Watch a mind grow up</h3><span class="tag">the time machine</span></header>
+      <p class="what">Replay recordings of minds learning, from random babble to whole stories. No waiting, and no mind needed.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>Pick a recording: <i>a brand-new mind growing up</i>, <i>a mind learning your character (and then just memorizing)</i>, or <i>a mind learning which facts belong to which character</i>.</li>
+          <li>Use <span class="ui">← Previous</span> and <span class="ui">Next →</span>, or jump to a <span class="ui">Moment</span>.</li>
+          <li>Give it a story start and press <span class="ui">📖 tell this story</span> to hear the mind at that moment.</li></ol></div>
+        <div><h4>Notice</h4><ul>
+          <li>Open <b>Questions about this moment</b>. Try "Why does step 0 tell stories about Lily?" and "What is a held-out story?"</li>
+          <li>The tiles show whether the mind uses the name to pick the fact, and whether it mixes up characters.</li></ul>
+          <div class="challenge" style="margin-top:.8rem"><h4>Challenge</h4><p>Find the first moment the brand-new mind writes a real sentence. Then find the moment the four-character mind stops mixing up whose facts are whose.</p></div></div>
+      </div>
+    </article>
+
+    <article class="room" id="microscope">
+      <header><span class="em">🔬</span><h3>Look inside a mind</h3><span class="tag">the Microscope</span></header>
+      <p class="what">See which words a mind is weighing up, layer by layer, and find out what single neurons care about.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>Choose a mind. The Giant is best but downloads 440 MB once; the Big one is 58 MB; the Tiny one is ready at once.</li>
+          <li>Type the start of a story and press <span class="ui">🔬 look inside</span>.</li>
+          <li>The <b>guess-o-meter</b> shows what the mind expects next. <b>Layer by layer, and thinking ahead</b> shows how that guess forms.</li>
+          <li>Use the <b>neuron finder</b>, then open a neuron's card: <i>what does this neuron do?</i> Try <span class="ui">🔆 turn it up</span>, <span class="ui">🔇 mute it</span> and <span class="ui">🔄 turn it the other way</span>.</li>
+          <li>In the <b>switch-off lab</b>, check some heads and press <span class="ui">re-run with checked heads OFF</span>.</li></ol></div>
+        <div><h4>Notice</h4><ul>
+          <li>Each neuron has two ends: things that switch it on, and things that push it the other way.</li>
+          <li>Turning a neuron up almost always changes the story. Muting one often doesn't: other neurons cover for it.</li></ul>
+          <div class="challenge" style="margin-top:.8rem"><h4>Challenge</h4><p>Pick a neuron and predict, in writing, what <span class="ui">🔆 turn it up</span> will do to the story before you press it. Then find one attention head that changes the guess-o-meter's top word when it's switched off.</p></div></div>
+      </div>
+    </article>
+
+    <article class="room" id="thought">
+      <header><span class="em">💭</span><h3>See what a mind is thinking</h3><span class="tag">the Thought bubble</span></header>
+      <p class="what">Watch the words a mind is holding in mind as it reads or writes, then swap one of its thoughts and see the story change.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>Use the Giant or the Big Storyteller. Pick a story start and press <span class="ui">🔬 read it</span> or <span class="ui">✍️ let it write on</span>.</li>
+          <li>In <b>what it's holding in mind</b>, choose <i>thinking ahead</i> to see words the mind expects later in the story, not only next.</li>
+          <li>In <b>swap what it's thinking</b>, take one word out, put another in, and press <span class="ui">🔁 swap and rewrite</span>. Compare the three versions.</li></ol></div>
+        <div><h4>Notice</h4><ul>
+          <li>Small minds oversteer: keep the strength low.</li>
+          <li>A famous swap: in a story about digging a hole, swap <i>hole</i> for <i>castle</i> and Max digs a moat.</li></ul>
+          <div class="challenge" style="margin-top:.8rem"><h4>Challenge</h4><p>Find a swap that changes how the story ends but not how it starts. Then find a swap that does nothing at all, and explain why.</p></div></div>
+      </div>
+    </article>
+
+    <article class="room" id="experts">
+      <header><span class="em">👥</span><h3>Meet a mind made of experts</h3><span class="tag">the Experts room</span></header>
+      <p class="what">In this mind, a router sends every word to one of eight experts in each of six layers. Watch who gets which words, then switch an expert off and see what breaks.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>The Expert Storyteller downloads 77 MB the first time. Pick a beginning and press <span class="ui">✍️ write on</span>. Each word is colored by the expert that handled it.</li>
+          <li>Press <span class="ui">▶ watch the words travel through all six layers</span>. Click any square to see that expert's card.</li>
+          <li>On an expert's card, use <span class="ui">👁 watch</span> to make its words glow, or <span class="ui">🔌 switch off</span> to see the story without it.</li></ol></div>
+        <div class="challenge"><h4>The room's challenges</h4><p style="margin-bottom:.4rem">Switch off just one expert at a time, so you know which one did it.</p><ul>
+          <li>Make the mind get stuck saying "to to to."</li>
+          <li>Make what the characters say go blank.</li>
+          <li>Make the mind write "said said."</li>
+          <li>Make the mind forget how to finish "let's" and "don't."</li>
+          <li>Make the mind say "wanted wanted."</li>
+          <li>In layer 2, "and" almost always goes to the same expert. Guess which one first! Then find an "and" that goes somewhere else.</li></ul></div>
+      </div>
+      <p class="needs">These experts don't know about topics like animals or space. They sort words: one handles "to," another handles speech marks. Finding out what each one does is the puzzle.</p>
+    </article>
+
+    <article class="room" id="eye">
+      <header><span class="em">👁</span><h3>A mind that sees your drawings</h3><span class="tag">the Tiny Eye</span></header>
+      <p class="what">Draw something and a tiny mind guesses what it is. It knows 24 kinds of things, from clouds to castles. Then look at its neurons: most have one main job you can name.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>Draw with the mouse or a finger. Press <span class="ui">🎲 a doodle</span> for a real drawing from Quick, Draw!, the game whose players made its pictures.</li>
+          <li>Click a neuron that lights up to see its job, and <span class="ui">🔌 switch it off</span>.</li>
+          <li>In <b>watch it grow</b>, go back to see the eye early in its training, when its neurons had different jobs.</li>
+          <li>In <b>squeeze it</b>, try an eye with only 8 neurons in its last stage.</li></ol></div>
+        <div><h4>Notice</h4><ul>
+          <li>It is never 100% sure, even of a perfect drawing. Open <b>why is it never 100% sure?</b></li>
+          <li>Squeezed neurons each have to cover more kinds of things.</li></ul>
+          <div class="challenge" style="margin-top:.8rem"><h4>Challenge</h4><p>Switch off two neurons so the eye can no longer tell a cloud from a sheep. Or draw something that isn't a dragon but makes it say dragon.</p></div></div>
+      </div>
+    </article>
+
+    <article class="room" id="hunt">
+      <header><span class="em">🎯</span><h3>Hunt for a hidden fact</h3><span class="tag">the Hunt</span></header>
+      <p class="what">Find where a mind keeps something it knows, and prove it by switching parts of it off.</p>
+      <div class="grid">
+        <div><h4>Try this</h4><ol>
+          <li>The Hunt uses your latest raised mind if you have one, or a ready-made one about Zog or four characters.</li>
+          <li>Pick a quest, such as "where does Zog live?", and press <span class="ui">🔎 step 1: ask the model</span>.</li>
+          <li>Press <span class="ui">🔬 is this really about this character?</span> to check the mind answers differently for other names.</li>
+          <li>Press <span class="ui">🕵️ get clues</span>. The built-in detective works without a key.</li>
+          <li>Test clues with <span class="ui">🧪 switch it off</span>, or a whole team with <span class="ui">🧪 switch off ALL heads in layer</span>.</li></ol></div>
+        <div><h4>Notice</h4><ul>
+          <li>When this hunt was first tested on Zog, switching off any single head or neuron left "moon" at about the same chance: 52–56%, from 55.6%. Switching off all of layer 0's heads dropped it to 22.8%.</li>
+          <li>Facts are usually shared by a team of parts, not kept in one spot.</li></ul>
+          <div class="challenge" style="margin-top:.8rem"><h4>Challenge</h4><p>Prove a clue for your own character. Then show it matters for that character's fact and not for every story.</p></div></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="words" aria-labelledby="h-words" class="rule">
+  <h2 id="h-words">Words to know</h2>
+  <dl>
+    <dt>Mind</dt><dd>What Tiny Mind calls a language model: a program that has learned to guess the next piece of text.</dd>
+    <dt>Piece (token)</dt><dd>The bits a mind reads and writes. Common words are one piece; a name like "Lily" may be two.</dd>
+    <dt>Training</dt><dd>Showing a mind lots of text and nudging its numbers so its guesses get better.</dd>
+    <dt>Secret (held-out) stories</dt><dd>Stories kept out of training, used to test whether the mind learned or just memorized.</dd>
+    <dt>Layer</dt><dd>One stage of the mind's work. Each piece passes through every layer, one after another.</dd>
+    <dt>Attention head</dt><dd>A part that decides which earlier pieces to look back at.</dd>
+    <dt>Neuron</dt><dd>One number inside a layer that goes up or down depending on what the mind is reading.</dd>
+    <dt>Switch off (ablation)</dt><dd>Silencing a part to see what changes. This is how you test a guess.</dd>
+    <dt>Chance (probability)</dt><dd>How likely the mind thinks each next piece is. 55.6% means about 56 times in 100.</dd>
+    <dt>Thinking ahead</dt><dd>Words a mind seems to be preparing before it writes them, found with a tool called the J-lens.</dd>
+    <dt>Router and expert</dt><dd>In the Experts mind, the router picks which of eight experts handles each word.</dd>
+  </dl>
+</section>
+
+<section id="surprises" aria-labelledby="h-surp" class="rule">
+  <h2 id="h-surp">Things that surprise people</h2>
+  <div class="cols">
+    <div class="surprise"><h3>One part rarely knows a fact</h3><p>Knowledge is spread across many parts. That is why single clues get busted so often in the Hunt.</p></div>
+    <div class="surprise"><h3>Bigger isn't cleaner</h3><p>Eyes 40 times bigger than the Tiny Eye guessed better, but their neurons were no easier to name.</p></div>
+    <div class="surprise"><h3>Experts sort words</h3><p>The Experts mind's experts mostly handle kinds of words, like "to" or speech marks, not topics.</p></div>
+    <div class="surprise"><h3>Best score isn't best learning</h3><p>A mind's stories can look their best before it has learned which facts go with which character.</p></div>
+    <div class="surprise"><h3>Never 100% sure</h3><p>The Tiny Eye was trained to keep a little doubt, so it shares a bit of chance among every other kind of thing.</p></div>
+    <div class="surprise"><h3>Lily is everywhere</h3><p>The stories these minds learned from mention "Lily" more than once per story, so brand-new minds love her.</p></div>
+  </div>
+</section>
+
+<section id="help" aria-labelledby="h-help" class="rule">
+  <h2 id="h-help">If something goes wrong</h2>
+  <dl>
+    <dt>It's very slow</dt><dd>Choose a smaller mind from the mind menu, and close other tabs. The Giant is the slowest to read a story.</dd>
+    <dt>A room says it's resting</dt><dd>Another room is using the memory. Go back to the room you used last and leave it, or reload the page.</dd>
+    <dt>The page looks old</dt><dd>Reload it fully: Ctrl+Shift+R (Windows), or Cmd+Shift+R (Mac).</dd>
+    <dt>The guide won't answer</dt><dd>Answering questions needs an AI key. The tour still works, and so does everything else.</dd>
+    <dt>The microphone doesn't work</dt><dd>Type your question instead. Inside the claude.ai version the microphone is always off; on the Tiny Mind website it works in browsers that understand speech, such as Chrome and Edge.</dd>
+    <dt>Training stopped</dt><dd>Keep the Tiny Mind tab visible while a mind is training.</dd>
+  </dl>
+</section>
+</main>
+
+<footer>
+  <p><a href="https://toontalk.github.io/tinymind/">Open Tiny Mind</a> · <a href="teachers.html">Teacher guide</a></p>
+  <p>Tiny Mind is by Ken Kahn. The story minds learned from TinyStories (Eldan and Li); the Storytellers are Andrej Karpathy's llama2.c models; the Tiny Eye learned from Quick, Draw! doodles (Google, CC BY 4.0).</p>
+</footer>
+</div>
+</div>
+</body>
+</html>

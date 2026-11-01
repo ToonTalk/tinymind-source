@@ -30,8 +30,9 @@ function put(from, to) {
   copied.push([to, size]);
 }
 
-// the page
+// the page, and the guides for students and teachers it links to (guides/, plain pages beside it)
 put(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'index.html');
+for (const g of ['students.html', 'teachers.html']) put(join(ROOT, 'guides', g), g);
 
 // what the page loads at start-up, and what waits until it is wanted
 const resources = {
@@ -85,6 +86,9 @@ Raise, watch and look inside real (very small) language models, in your browser:
   is; then look at its neurons, both ends of each, and switch them off to see what they do.
 - **Hunt for a hidden fact**: find where a mind keeps something it knows, and prove it by
   switching parts of it off.
+
+Guides: [for students](https://toontalk.github.io/tinymind/students.html) and
+[for teachers](https://toontalk.github.io/tinymind/teachers.html).
 
 Everything runs on your own machine; nothing is uploaded. The models load by themselves: this
 folder holds the page (\`index.html\`) and the files it fetches beside it.

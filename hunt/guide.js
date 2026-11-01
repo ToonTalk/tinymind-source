@@ -78,7 +78,7 @@ const EVENTS = {
 function STEPS(){
   return [
   { name: 'quest', text: () => kid()
-      ? `Welcome to the treasure hunt! We will find parts that help the tiny mind use what it learned about ${charName()}, then check whether their effects are special to this answer.`
+      ? `Welcome to the Hunt! We will find parts that help the tiny mind use what it learned about ${charName()}, then check whether their effects are special to this answer.`
       : `Welcome to the hunt. Our question is which parts contribute when this mind predicts a fact about ${charName()}, and whether those effects are selective. We will use switch-off tests plus unrelated controls.` },
   { name: 'guessOMeter', spot: '#probeBtn', allow: '#probeBtn,#qProbe,#qCont,#qName',
     until: 'probeDone',
@@ -126,7 +126,7 @@ function statusText(){
     `Scoreboard: ${($('score') && $('score').textContent) || 'empty'}. Kid mode: ${kid()}.`;
 }
 function systemPrompt(){
-  return 'You are the guide beside the Tiny Mind Treasure Hunt, where a visitor tests which parts contribute when a small language model predicts a learned fact, using attention evidence, neuron contrasts, ablation switch-off tests, unrelated completions, and a name-swap control. ' +
+  return 'You are the guide beside Tiny Mind\'s Hunt ("Hunt for a hidden fact"), where a visitor tests which parts contribute when a small language model predicts a learned fact, using attention evidence, neuron contrasts, ablation switch-off tests, unrelated completions, and a name-swap control. ' +
     'You are honestly an A I yourself — a much bigger mind of the same kind — and may say so. ' +
     'Core pedagogy you must keep straight: correlational evidence suggests candidates; ablation measures causal contribution; unrelated controls measure selectivity; none of these alone proves a unique storage location. A fact is used like a song in a choir, so small single-unit effects are expected. The headline answer score is length-normalized and the raw product remains visible. ' +
     'The order of play: first choose a quest (a sentence about a character for the mind to finish) and press the probe button to ask the mind; only then are there clues to get (the detective) and parts to switch off and test, and the name-swap control. If the status shows no probe result yet, the first step is always to press probe. ' +

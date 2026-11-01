@@ -1,9 +1,11 @@
-// ai-check.mjs — test Tiny Mind's language-model features against a real model (OpenAI).
+// ai-check.mjs — test Tiny Mind's language-model features against a real model (Claude, or OpenAI).
 //   node tools/ai-check.mjs                 all three parts
 //   node tools/ai-check.mjs ghost detective guide   any of them  (--compare: guides on gpt-5.4-mini, the old default, too;
 //                                                    --room=eye: only the rooms whose name contains "eye")
-// Needs OPENAI_API_KEY in the environment. The key is read here and sent only to
-// api.openai.com: it is never written to a file, printed, or put into a web page (the
+// Needs TINYMIND_ANTHROPIC_KEY (Claude: used when set) or OPENAI_API_KEY (or --openai) in
+// the environment. (Not ANTHROPIC_API_KEY: Claude Code itself would pick that one up.) The
+// key is read here and sent only to its provider's API: it is never written to a file,
+// printed, or put into a web page (the
 // guide part drives the real pages in headless Chrome, captures the prompts the guides
 // WOULD send, and makes the calls from Node).
 //
@@ -27,21 +29,50 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const KEY = process.env.OPENAI_API_KEY;
-if (!KEY) { console.error('OPENAI_API_KEY is not set in the environment'); process.exit(1); }
+const PROVIDER = process.env.TINYMIND_ANTHROPIC_KEY && !process.argv.includes('--openai') ? 'anthropic' : 'openai';
+const KEY = PROVIDER === 'anthropic' ? process.env.TINYMIND_ANTHROPIC_KEY : process.env.OPENAI_API_KEY;
+if (!KEY) { console.error('set TINYMIND_ANTHROPIC_KEY (Claude) or OPENAI_API_KEY in the environment'); process.exit(1); }
 const imp = p => import(pathToFileURL(join(ROOT, p)).href);
 const { PROVIDERS, callLLM } = await imp('src/llm.js');
 const parts = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const want = p => !parts.length || parts.includes(p);
 const ROOM = ((process.argv.find(a => a.startsWith('--room=')) || '').slice(7)).toLowerCase();   // only these guide rooms
 const SITE = process.env.TM_SITE || 'C:/Users/toont/Documents/GitHub/tinymind';
-const APP_MODEL = PROVIDERS.openai.defaultModel;    // what the ghostwriter and detective use
-const GUIDE_MODELS = process.argv.includes('--compare') ? [APP_MODEL, 'gpt-5.4-mini'] : [APP_MODEL];   // the guides' default (tm-prelude), and the old one to compare
-const JUDGE = 'gpt-5.4';
-const report = { date: new Date().toISOString(), models: { app: APP_MODEL, guide: GUIDE_MODELS, judge: JUDGE }, usage: {} };
+const APP_MODEL = PROVIDERS[PROVIDER].defaultModel;    // what the ghostwriter, detective and guides use by default
+const OLD = PROVIDER === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-5.4-mini';   // --compare: a smaller model beside it
+const GUIDE_MODELS = process.argv.includes('--compare') ? [APP_MODEL, OLD] : [APP_MODEL];
+const JUDGE = PROVIDER === 'anthropic' ? 'claude-opus-5-5' : 'gpt-5.4';
+const report = { date: new Date().toISOString(), provider: PROVIDER, models: { app: APP_MODEL, guide: GUIDE_MODELS, judge: JUDGE }, usage: {} };
 
-// ---- OpenAI, from Node only -----------------------------------------------------
-async function chat(model, messages, { json = false } = {}) {
+// ---- the model, from Node only -----------------------------------------------------
+const count = (model, inT, outT) => { const u = report.usage[model] || (report.usage[model] = { in: 0, out: 0, calls: 0 });
+  u.in += inT || 0; u.out += outT || 0; u.calls++; };
+async function chat(model, messages, opts = {}) { return PROVIDER === 'anthropic' ? claudeChat(model, messages, opts) : openaiChat(model, messages, opts); }
+// Claude: system turns go in system; thinking models answer after thinking blocks, so keep
+// the text blocks; there is no JSON mode, so ask for JSON and take the outermost object
+async function claudeChat(model, messages, { json = false } = {}) {
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const rest = messages.filter(m => m.role !== 'system');
+  if (json) rest[rest.length - 1] = { ...rest[rest.length - 1], content: rest[rest.length - 1].content + '\n\nReply with the JSON object only.' };
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model, max_tokens: 16000, output_config: { effort: model === JUDGE && json ? 'medium' : 'low' },
+        ...(system ? { system } : {}), messages: rest }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) {
+      count(model, (j.usage?.input_tokens || 0) + (j.usage?.cache_read_input_tokens || 0) + (j.usage?.cache_creation_input_tokens || 0), j.usage?.output_tokens);
+      const text = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      if (!json) return text;
+      const a = text.indexOf('{'), b = text.lastIndexOf('}');
+      return a >= 0 && b > a ? text.slice(a, b + 1) : text;
+    }
+    if (attempt < 3 && (r.status === 429 || r.status === 529 || r.status >= 500)) { await new Promise(res => setTimeout(res, 2000 * (attempt + 1))); continue; }
+    throw new Error(`Claude ${model}: ${j.error?.message || 'HTTP ' + r.status}`);
+  }
+}
+async function openaiChat(model, messages, { json = false } = {}) {
   for (let attempt = 0; ; attempt++) {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + KEY },
@@ -59,7 +90,7 @@ async function chat(model, messages, { json = false } = {}) {
 }
 // the app's own client (src/llm.js) for the ghostwriter and detective, counted too
 async function appCall(prompt, maxTokens) {
-  const out = await callLLM({ provider: 'openai', key: KEY, model: APP_MODEL, prompt, maxTokens });
+  const out = await callLLM({ provider: PROVIDER, key: KEY, model: APP_MODEL, prompt, maxTokens });
   const u = report.usage[APP_MODEL] || (report.usage[APP_MODEL] = { in: 0, out: 0, calls: 0 });
   u.calls++; u.in += Math.round(prompt.length / 4); u.out += Math.round(out.length / 4);   // estimated: callLLM returns text only
   return out;
@@ -213,6 +244,7 @@ const ROOMS = [
       { q: 'What can I do here?', expect: 'Briefly names the seven activities: teach/raise a mind, watch one grow up, look inside one, see what one is thinking (and swap a thought), meet a mind made of experts (switch experts off), a mind that sees your drawings (the Tiny Eye), hunt for a hidden fact. May point at a card.' },
       { q: 'Where can I see what a mind is thinking and change one of its thoughts?', expect: 'The "See what a mind is thinking" card (the Thought bubble); ideally ends with DO: SHOW think or offers TAB thought.' },
       { q: 'I want to make my own mind', kid: true, expect: 'Teach a tiny mind: invent a character, give it stories, watch it learn. Simple words for a young child. Points at the teach card or offers the Nursery.' },
+      { q: 'Who made this, and where can I read more about it?', expect: 'Ken Kahn made it (with Claude); the links below the activity cards lead to his post about Tiny Mind and to a page on how it was made (effort, experiments that did not work). Does not invent other authors, sites or details; ideally ends with DO: SHOW about.' },
     ] },
   { room: 'Nursery', app: 'nursery',
     setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=raise]').click();

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tiny Mind Teacher Guide</title>
+<meta name="description" content="A guide for teachers: what Tiny Mind teaches, how to set it up, lesson plans from one period to a project, room-by-room notes, misconceptions to watch for, and assessment.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&family=Atkinson+Hyperlegible+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a planning binder. Facts at a glance first, then setup, lessons, room notes and assessment; prints as handouts. */
+:root {
+  --paper: #f4f5f9; --card: #ffffff; --ink: #151f37; --muted: #57617a; --line: #d6dbe6;
+  --accent: #0a6a8a; --accent-ink: #ffffff; --soft: #dcf0f6; --warm: #9a5b00; --warm-soft: #f7ecd6; --ok: #1c7444; --ok-soft: #e1f2e8;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0d1526; --card: #142037; --ink: #e7edf8; --muted: #9ea9c3; --line: #27344f;
+  --accent: #7bdff2; --accent-ink: #06111f; --soft: #12304a; --warm: #f0c24f; --warm-soft: #33280c; --ok: #63d394; --ok-soft: #12301f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0d1526; --card: #142037; --ink: #e7edf8; --muted: #9ea9c3; --line: #27344f;
+  --accent: #7bdff2; --accent-ink: #06111f; --soft: #12304a; --warm: #f0c24f; --warm-soft: #33280c; --ok: #63d394; --ok-soft: #12301f; color-scheme: dark }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.62 var(--body); }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 64rem; margin-inline: auto; }
+.col { max-width: 44rem; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.12; letter-spacing: -.015em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.3rem, 6.5vw, 3.7rem); font-weight: 800; }
+h2 { font-size: clamp(1.55rem, 3.4vw, 2.1rem); font-weight: 800; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p, ul, ol { margin: 0; }
+ul, ol { padding-left: 1.2rem; display: grid; gap: .3rem; }
+a { color: var(--accent); text-underline-offset: .18em; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.ui { font-family: var(--mono); font-size: .88em; background: var(--soft); border-radius: .3rem; padding: .05em .35em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.tag { font-family: var(--mono); font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+
+nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+nav.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.1rem; padding-block: .6rem; font-size: .95rem; }
+nav.top .brand { font-family: var(--display); font-weight: 800; font-size: 1.05rem; color: var(--ink); text-decoration: none; margin-right: auto; }
+nav.top a.here { color: var(--ink); font-weight: 700; text-decoration: none; border-bottom: 2px solid var(--accent); }
+
+header.hero { padding-block: 2.6rem 1rem; display: grid; gap: 1rem; }
+.lede { font-size: 1.2rem; line-height: 1.55; }
+.btns { display: flex; flex-wrap: wrap; gap: .6rem; }
+.btn { display: inline-flex; align-items: center; gap: .4rem; padding: .6rem 1rem; border-radius: .6rem; font-weight: 700; text-decoration: none; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.toc { display: flex; flex-wrap: wrap; gap: .4rem .9rem; font-size: .95rem; }
+
+main section { padding-block: 2.4rem 0; display: grid; gap: 1.1rem; }
+.rule { border-top: 1px solid var(--line); }
+.glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr)); gap: .9rem; }
+.glance > div { border-top: 3px solid var(--accent); padding-top: .55rem; display: grid; gap: .15rem; min-width: 0; }
+.glance b { font-family: var(--display); font-size: 1.2rem; }
+.glance span { font-size: .93rem; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: .85rem; padding: 1.05rem 1.15rem 1.15rem; display: grid; gap: .55rem; align-content: start; min-width: 0; }
+.card .time { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.check { list-style: none; padding-left: 0; }
+.check li { padding-left: 1.6rem; position: relative; }
+.check li::before { content: ""; position: absolute; left: 0; top: .32rem; width: .95rem; height: .95rem; border: 2px solid var(--accent); border-radius: .2rem; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; background: var(--card); }
+th, td { border: 1px solid var(--line); padding: .55rem .65rem; text-align: left; vertical-align: top; }
+th { font-family: var(--mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.yes { color: var(--ok); font-weight: 700; }
+td.key { color: var(--warm); font-weight: 700; }
+.plan { background: var(--card); border: 1px solid var(--line); border-radius: .9rem; padding: 1.15rem 1.2rem 1.25rem; display: grid; gap: .7rem; min-width: 0; }
+.plan header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1rem; }
+.plan ol { gap: .45rem; }
+.plan .min { font-family: var(--mono); font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.room { background: var(--card); border: 1px solid var(--line); border-radius: .9rem; padding: 1.1rem 1.2rem 1.2rem; display: grid; gap: .7rem; min-width: 0; }
+.room header { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+.room .em { font-size: 1.5rem; line-height: 1; }
+.room .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem 1.5rem; }
+.room .grid > div { min-width: 0; }
+.room h4 { font-family: var(--mono); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 .3rem; font-weight: 600; }
+.myth { background: var(--warm-soft); border-radius: .55rem; padding: .6rem .8rem; }
+.myth h4 { color: var(--warm); }
+.rooms { display: grid; gap: 1rem; }
+dl { margin: 0; display: grid; grid-template-columns: minmax(9rem, 13rem) 1fr; gap: .55rem 1.2rem; }
+dt { font-weight: 700; }
+dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: .15rem; } dd { margin-bottom: .5rem; } }
+footer { padding-block: 3rem 3rem; font-size: .9rem; color: var(--muted); display: grid; gap: .5rem; }
+
+@media print {
+  :root { --paper: #fff; --card: #fff; --ink: #000; --muted: #333; --line: #bbb; --accent: #075a75; --soft: #eef6f9; --warm: #6b4000; --warm-soft: #faf4e8; --ok: #135a33; }
+  body::before, nav.top, .btns { display: none; }
+  body { font-size: 11pt; }
+  .card, .plan, .room, table { break-inside: avoid; }
+  a { color: inherit; }
+  main section { padding-block: 1.2rem 0; }
+}
+</style>
+</head>
+<body>
+<nav class="top gutter" aria-label="Tiny Mind guides">
+  <div class="wrap">
+    <a class="brand" href="https://toontalk.github.io/tinymind/">🧠 Tiny Mind</a>
+    <a href="students.html">Student guide</a>
+    <a class="here" href="teachers.html" aria-current="page">Teacher guide</a>
+    <a href="https://toontalk.github.io/tinymind/">Open the app</a>
+  </div>
+</nav>
+
+<div class="gutter">
+<div class="wrap">
+<header class="hero">
+  <span class="tag">Teacher guide</span>
+  <h1>Teaching with Tiny Mind</h1>
+  <p class="lede col">Tiny Mind is a free browser lab where students raise, watch and take apart real language models: very small ones, built the same basic way as the chatbots they use. It teaches how these models learn from data, what is inside them, and how to test a claim about a model instead of trusting a pretty picture.</p>
+  <div class="btns">
+    <a class="btn primary" href="https://toontalk.github.io/tinymind/">Open Tiny Mind</a>
+    <a class="btn" href="students.html">Student guide</a>
+  </div>
+  <nav class="toc" aria-label="On this page"><a href="#glance">At a glance</a><a href="#goals">Learning goals</a><a href="#setup">Before class</a><a href="#lessons">Lesson plans</a><a href="#rooms">Room notes</a><a href="#assess">Assessment</a><a href="#access">Access and support</a><a href="#trouble">Troubleshooting</a><a href="#background">Background</a></nav>
+</header>
+
+<main>
+<section id="glance" aria-labelledby="h-glance">
+  <h2 id="h-glance" class="tag" style="font-size:.8rem">At a glance</h2>
+  <div class="glance">
+    <div><b>Ages 10–16</b><span>Younger students can join with an adult; kid mode simplifies the guide's words.</span></div>
+    <div><b>One period to a project</b><span>A 50-minute first look, a three-lesson unit, or a multi-week investigation.</span></div>
+    <div><b>Free, no accounts</b><span>Open a web page. No sign-ups, no installs, and Tiny Mind collects no student data.</span></div>
+    <div><b>Laptops or desktops</b><span>A current browser; we test in Chrome. Tablets and phones are untested and may run short of memory.</span></div>
+    <div><b>AI key optional</b><span>Every room works without one. A key adds an AI story writer, an AI detective and a guide that answers questions.</span></div>
+    <div><b>Runs on the device</b><span>The minds run inside the browser. Downloads of 4 to 440 MB happen once per computer.</span></div>
+  </div>
+</section>
+
+<section id="goals" aria-labelledby="h-goals" class="rule">
+  <h2 id="h-goals">What students learn</h2>
+  <div class="cards">
+    <div class="card"><h3>How language models work</h3><ul>
+      <li>A model predicts the next piece of text, as a list of chances.</li>
+      <li>Training nudges its numbers toward the data it sees, so what it learns depends on that data.</li>
+      <li>Learning differs from memorizing: secret (held-out) stories tell them apart.</li></ul></div>
+    <div class="card"><h3>What is inside</h3><ul>
+      <li>Layers, attention heads and neurons in story models.</li>
+      <li>A router and experts in a mixture-of-experts model, the design behind many large AI systems.</li>
+      <li>Neurons in a small vision network that recognizes drawings.</li></ul></div>
+    <div class="card"><h3>How to test a claim</h3><ul>
+      <li>Highlights and attention maps are correlation; switching parts off is the test.</li>
+      <li>Make predictions before testing, change one thing at a time, and use controls.</li>
+      <li>A "busted" result is a finding. Several of Tiny Mind's own design studies came back negative.</li></ul></div>
+    <div class="card"><h3>AI literacy</h3><ul>
+      <li>Models are made from data and can be inspected; they are not magic.</li>
+      <li>Claims that a model "knows" or "thinks" something need evidence.</li>
+      <li>Bigger is not automatically clearer or better understood.</li></ul></div>
+  </div>
+</section>
+
+<section id="setup" aria-labelledby="h-setup" class="rule">
+  <h2 id="h-setup">Before class</h2>
+  <div class="cards">
+    <div class="card"><h3>A day before</h3><ul class="check">
+      <li>Open <a href="https://toontalk.github.io/tinymind/">toontalk.github.io/tinymind</a> on one class computer and visit every room you plan to use, so you know where things are.</li>
+      <li>On each student computer, open the rooms you will use once ahead of time. Each mind downloads the first time it is chosen and the browser keeps it.</li>
+      <li>If your network blocks Hugging Face, the 440 MB Giant Storyteller won't load. The 58 MB Big Storyteller works for every room that needs a story mind.</li>
+      <li>Print the <a href="students.html">student guide</a>'s notebook page, or have students copy its table.</li></ul></div>
+    <div class="card"><h3>Download sizes</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Mind</th><th>Used in</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td>Tiny mind (260K)</td><td>Nursery, Hunt</td><td>1 MB, at start</td></tr>
+          <tr><td>Time-machine recordings</td><td>Watch a mind grow up</td><td>small, as you scrub</td></tr>
+          <tr><td>Tiny Eye</td><td>Drawings</td><td>4 MB</td></tr>
+          <tr><td>Big Storyteller (15M)</td><td>Microscope, Thought bubble</td><td>58 MB</td></tr>
+          <tr><td>Expert Storyteller</td><td>Experts</td><td>77 MB</td></tr>
+          <tr><td>Giant Storyteller (110M)</td><td>Microscope, Thought bubble</td><td>440 MB</td></tr>
+        </tbody></table></div></div>
+    <div class="card"><h3>Privacy</h3><ul>
+      <li>Nothing students make is uploaded. Saved work is a .zip file on their computer.</li>
+      <li>Work is also kept in the browser on that computer only, so shared computers may show another student's minds. "💾 save my work" is the reliable way to keep work.</li>
+      <li>With an AI key, the AI features send text (story requests, questions, clues) to the company that key belongs to, and nowhere else.</li></ul></div>
+  </div>
+
+  <h3 style="margin-top:.6rem">What needs an AI key</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Feature</th><th>Without a key</th><th>With a key</th></tr></thead>
+    <tbody>
+      <tr><td>All seven rooms, training, switching parts off</td><td class="yes">Works</td><td>Same</td></tr>
+      <tr><td>The guide's spoken tour, kid mode, voice</td><td class="yes">Works</td><td>Same</td></tr>
+      <tr><td>Storybooks for the Nursery</td><td class="yes">Students write their own, or load a ready-made storybook</td><td>The ghostwriter AI writes 8 stories at a time</td></tr>
+      <tr><td>Clues in the Hunt</td><td class="yes">The built-in detective</td><td>An AI detective that proposes clues</td></tr>
+      <tr><td>Asking the guide questions</td><td class="key">Needs a key</td><td>Answers questions in every room</td></tr>
+    </tbody></table></div>
+  <p class="col">To add a key, press <span class="ui">🔑</span> in the guide panel and choose Claude, ChatGPT or Gemini. One key serves the guide, the ghostwriter and the detective. On shared computers, leave <i>remember keys on this computer</i> unticked: the key is then forgotten when the tab closes. Each question, batch of stories or set of clues is one or a few calls, charged to the key's account. Students should not use a key without an adult's permission.</p>
+</section>
+
+<section id="lessons" aria-labelledby="h-lessons" class="rule">
+  <h2 id="h-lessons">Lesson plans</h2>
+  <p class="col">Times are suggestions. Pairs work well: one student drives, the other keeps the lab notebook, and they swap halfway.</p>
+
+  <article class="plan">
+    <header><h3>A. First look</h3><span class="min">one lesson · 50 minutes · no key needed</span></header>
+    <p><b>Question:</b> how does a model decide what to write next, and how could we check?</p>
+    <ol>
+      <li><span class="min">5 min</span> Warm-up: read the start of a story aloud and have the class guess the next word. Collect a few guesses and talk about why some are likelier.</li>
+      <li><span class="min">10 min</span> <b>Watch a mind grow up</b>, "a brand-new mind growing up": step from babble to whole sentences. Ask: what did it learn first?</li>
+      <li><span class="min">20 min</span> <b>Look inside a mind</b> with the Big Storyteller: type a story start, read the guess-o-meter, open one neuron card, then switch some heads off in the switch-off lab.</li>
+      <li><span class="min">10 min</span> Pairs share one guess they tested and whether it was busted or proved.</li>
+      <li><span class="min">5 min</span> Exit ticket: "What is the difference between a clue and a proof?"</li></ol>
+  </article>
+
+  <article class="plan">
+    <header><h3>B. Raise a mind, then hunt</h3><span class="min">three lessons · key optional</span></header>
+    <ol>
+      <li><b>Lesson 1, invent and write.</b> In <b>Teach a tiny mind</b>, each pair invents a character with two special things and builds a 60-story storybook (50 to learn from, 10 kept secret). Without a key, students write stories or start from a ready-made storybook. Discuss why some stories are turned away: the mind knows only 512 pieces of words.</li>
+      <li><b>Lesson 2, raise and watch.</b> Press <span class="ui">🐣 start raising</span> and watch the pink (secret stories) and blue (ordinary stories) lines. Ask for stories along the way. Then open the time machine's four-character recording and compare: when are the facts learned, and when does the mind start memorizing?</li>
+      <li><b>Lesson 3, the hunt.</b> In <b>Hunt for a hidden fact</b>, ask the mind about the character, check the answer is about that character, gather clues, and test them. Students report one busted clue and, if they find one, one proved clue.</li></ol>
+  </article>
+
+  <article class="plan">
+    <header><h3>C. Inside different minds</h3><span class="min">two or three lessons · no key needed</span></header>
+    <ol>
+      <li><b>Thought bubble:</b> find the words a mind is "thinking ahead," then swap a thought and compare the three rewrites.</li>
+      <li><b>Experts:</b> work through the room's challenges, one expert switched off at a time. Discuss what "expert" turned out to mean.</li>
+      <li><b>Tiny Eye:</b> draw, inspect neurons, switch them off, watch the eye grow, and squeeze it. Close by comparing: what counts as a "part" in each of these minds, and how did you test what a part does?</li></ol>
+  </article>
+
+  <article class="plan">
+    <header><h3>D. Investigation project</h3><span class="min">two to four weeks</span></header>
+    <p>Students choose a question, write predictions before testing, collect evidence with numbers, and present a poster or short talk that includes at least one negative result. Starter questions:</p>
+    <ul>
+      <li>Does a mind learn a character's facts faster with more replay of ordinary stories, or slower?</li>
+      <li>Which layer of the Big Storyteller matters most for finishing a sentence? How do you know?</li>
+      <li>Can you find a neuron whose two ends mean opposite things?</li>
+      <li>Which Tiny Eye neurons does it need to tell a cloud from a sheep?</li>
+      <li>In the Experts mind, how often does the word alone decide where it goes?</li></ul>
+  </article>
+</section>
+
+<section id="rooms" aria-labelledby="h-rooms" class="rule">
+  <h2 id="h-rooms">Room notes</h2>
+  <p class="col">For each room: the idea it teaches, what to listen for, a misconception to watch, and a question for discussion. Button names are in the <a href="students.html#rooms">student guide</a>.</p>
+  <div class="rooms">
+    <article class="room"><header><span class="em">🐣</span><h3>Teach a tiny mind</h3><span class="tag">Nursery</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>Training on a small storybook changes what a model writes. Secret stories show whether it learned or memorized; the "alphabet" shows how little it can spell.</p></div>
+        <div><h4>Listen for</h4><p>"It's copying my stories now." "The pink line went back up." Those are signs of memorizing.</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"A lower line always means a better mind." In Tiny Mind's own tests, the step with the best story score had learned only about a quarter of its character facts; much more training was needed.</p></div>
+        <div><h4>Ask</h4><p>Why keep 10 stories secret? What would go wrong if the mind saw them?</p></div></div></article>
+
+    <article class="room"><header><span class="em">⏪</span><h3>Watch a mind grow up</h3><span class="tag">Time machine</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>Learning happens in stages you can see: babble first, then words and sentences, then whole stories. In the character recordings, the specific facts come later still. No waiting, no mind needed.</p></div>
+        <div><h4>Listen for</h4><p>Students noticing which skills appear first, and when old skills get worse as new facts arrive.</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"Step 0 knows nothing." The character recordings start from a mind that already learned from millions of stories, which is why step 0 tells stories about Lily.</p></div>
+        <div><h4>Ask</h4><p>Why can learning new facts damage old storytelling? (The room's own question.)</p></div></div></article>
+
+    <article class="room"><header><span class="em">🔬</span><h3>Look inside a mind</h3><span class="tag">Microscope</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>A guess forms layer by layer. Attention heads look back at earlier words; neurons respond to patterns, each with two ends.</p></div>
+        <div><h4>Listen for</h4><p>"The highlight says this head matters, so let's switch it off and see."</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"A neuron is one idea." Most respond to a mix, and in tests muting one neuron changed the story in fewer than half of cases, while turning one up nearly always did.</p></div>
+        <div><h4>Ask</h4><p>What evidence would convince you that a neuron "means" something?</p></div></div></article>
+
+    <article class="room"><header><span class="em">💭</span><h3>See what a mind is thinking</h3><span class="tag">Thought bubble</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>A model can hold upcoming words before writing them. The J-lens makes those visible, and swapping one changes the story.</p></div>
+        <div><h4>Listen for</h4><p>Surprise that a mind "knows" an ending early, and careful comparison of the three rewrites.</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"It plans like a person." These are statistical traces, strongest in the Giant's middle layers. Small minds oversteer, so keep swap strength low.</p></div>
+        <div><h4>Ask</h4><p>Is "thinking ahead" the same as planning? What would you need to show?</p></div></div></article>
+
+    <article class="room"><header><span class="em">👥</span><h3>Meet a mind made of experts</h3><span class="tag">Experts</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>A router sends each word to one of eight experts per layer, the design used by many large AI systems. Switching one expert off breaks something specific.</p></div>
+        <div><h4>Listen for</h4><p>Students predicting which expert a word goes to before checking, and switching off one expert at a time.</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"There's a math expert and an animals expert." Here, experts sort kinds of words (speech marks, "to," word endings), and the word itself mostly decides the route.</p></div>
+        <div><h4>Ask</h4><p>Why might a large company build a model this way?</p></div></div></article>
+
+    <article class="room"><header><span class="em">👁</span><h3>A mind that sees your drawings</h3><span class="tag">Tiny Eye</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>A small vision network turns strokes into a guess among 24 kinds of things. Most of its last-stage neurons have a main job you can name.</p></div>
+        <div><h4>Listen for</h4><p>Students testing a neuron's job by switching it off, and trying drawings that fool it.</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"A bigger eye would be easier to understand." Tiny Mind's tests of eyes 40 times larger found better guesses but neurons no easier to name.</p></div>
+        <div><h4>Ask</h4><p>Why is it never 100% sure? (It was trained to keep a little doubt; the room explains.)</p></div></div></article>
+
+    <article class="room"><header><span class="em">🎯</span><h3>Hunt for a hidden fact</h3><span class="tag">Hunt</span></header>
+      <div class="grid">
+        <div><h4>The idea</h4><p>To say where a fact is kept, you must switch parts off, and check with other names that the effect is about this character.</p></div>
+        <div><h4>Listen for</h4><p>Students using <span class="ui">🔬 is this really about this character?</span> as a control before celebrating.</p></div>
+        <div class="myth"><h4>Watch for</h4><p>"The fact is in one place." In the first Zog tests, no single head or neuron mattered; a whole layer's team did (55.6% fell to 22.8%).</p></div>
+        <div><h4>Ask</h4><p>If switching a part off changes every answer, not just this one, what have you found?</p></div></div></article>
+  </div>
+</section>
+
+<section id="assess" aria-labelledby="h-assess" class="rule">
+  <h2 id="h-assess">Assessment</h2>
+  <p class="col">The lab notebook is the main evidence of learning. A simple rubric:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Skill</th><th>Beginning</th><th>Developing</th><th>Secure</th></tr></thead>
+    <tbody>
+      <tr><td>Makes a testable claim</td><td>Describes what they saw</td><td>States a claim, but it can't be tested</td><td>States a claim that a switch-off or swap could bust</td></tr>
+      <tr><td>Predicts before testing</td><td>No prediction</td><td>Predicts after seeing the result</td><td>Writes a specific prediction first</td></tr>
+      <tr><td>Records evidence</td><td>"It changed"</td><td>Notes the change in words</td><td>Records numbers (chances, steps) and what stayed the same</td></tr>
+      <tr><td>Uses controls</td><td>None</td><td>Changes several things at once</td><td>Changes one thing at a time and checks other names or stories</td></tr>
+      <tr><td>Draws conclusions</td><td>Only reports successes</td><td>Says busted or proved</td><td>Explains what a busted result shows about the mind</td></tr>
+    </tbody></table></div>
+  <div class="cards">
+    <div class="card"><h3>Exit tickets</h3><ul>
+      <li>What is the difference between a clue and a proof?</li>
+      <li>Why does a mind need secret stories?</li>
+      <li>Describe one guess you tested. Was it busted or proved, and how do you know?</li>
+      <li>An app says "this neuron is the cat neuron." What would you want to see?</li></ul></div>
+    <div class="card"><h3>Discussion beyond the app</h3><ul>
+      <li>If tiny minds are this hard to explain, what does that suggest about big ones?</li>
+      <li>Who should be able to look inside the AI systems people use every day?</li>
+      <li>Where did the stories these minds learned from come from, and does that matter?</li></ul></div>
+  </div>
+</section>
+
+<section id="access" aria-labelledby="h-access" class="rule">
+  <h2 id="h-access">Access and support</h2>
+  <dl>
+    <dt>Kid mode</dt><dd>Tick <span class="ui">kid</span> in the guide panel for shorter, simpler tour lines; chances become "7 in 10" style odds.</dd>
+    <dt>Voice</dt><dd>Tick <span class="ui">voice</span> and the guide reads aloud. On the website, students can ask questions with the microphone in browsers that support speech, such as Chrome and Edge.</dd>
+    <dt>The tour</dt><dd><span class="ui">▶</span> in any room gives a spoken walk-through that points at each part.</dd>
+    <dt>Drawing</dt><dd>The Tiny Eye takes a mouse, a trackpad or a finger on a touch screen.</dd>
+    <dt>Extension</dt><dd>The Experts challenges and "draw something that isn't a dragon but makes it say dragon" stay hard even for strong students.</dd>
+  </dl>
+</section>
+
+<section id="trouble" aria-labelledby="h-trouble" class="rule">
+  <h2 id="h-trouble">Troubleshooting</h2>
+  <dl>
+    <dt>Slow or frozen</dt><dd>Use the Big Storyteller instead of the Giant, close other tabs, and keep to one big room at a time. Older computers do better with the smaller minds.</dd>
+    <dt>"Resting"</dt><dd>A room is waiting because another room is using the memory. Return to it or reload the page.</dd>
+    <dt>Old version showing</dt><dd>Reload fully with Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac).</dd>
+    <dt>Training is slow</dt><dd>Keep the Tiny Mind tab visible while a mind trains; some browsers slow hidden tabs a lot.</dd>
+    <dt>The guide won't answer</dt><dd>Answering typed questions needs an AI key (see Before class). The tour still works.</dd>
+    <dt>A download won't finish</dt><dd>School filters sometimes block large files or Hugging Face. Try the Big Storyteller, or download at home first on that computer.</dd>
+  </dl>
+</section>
+
+<section id="background" aria-labelledby="h-bg" class="rule">
+  <h2 id="h-bg">Background for teachers</h2>
+  <div class="cards">
+    <div class="card"><h3>The minds</h3><p>The story minds are Andrej Karpathy's llama2.c models (260 thousand, 15 million and 110 million connections) trained on TinyStories. The Expert Storyteller (19 million connections) and the Tiny Eye (83 thousand) were trained for Tiny Mind.</p></div>
+    <div class="card"><h3>The stories</h3><p>TinyStories (Eldan and Li) is about two million short stories written by AI models in words a young child knows. About 900 different words make up 90% of the text, which is why such small minds can write fluent stories at all.</p></div>
+    <div class="card"><h3>The approach</h3><p>Students invent their own character, so nothing about where it is stored can be looked up; it has to be found and tested. The app's language follows one rule: a highlight is a clue, and switching a part off is the proof.</p></div>
+  </div>
+  <p class="col">More: <a href="https://docs.google.com/document/d/1cHcte1VwuVycudBdnfeWGKaJZIMh61rNkIVEANH46UQ/edit?usp=sharing">Ken Kahn's post about Tiny Mind</a> and <a href="https://claude.ai/artifact/JL5ndGx9aHZM4zvbw12yGe">how it was made</a>, including the experiments that came back with "no."</p>
+</section>
+</main>
+
+<footer>
+  <p><a href="https://toontalk.github.io/tinymind/">Open Tiny Mind</a> · <a href="students.html">Student guide</a></p>
+  <p>Tiny Mind is by Ken Kahn. The story minds learned from TinyStories (Eldan and Li, CDLA-Sharing-1.0); the Storytellers are Andrej Karpathy's llama2.c models (MIT); the Tiny Eye learned from Quick, Draw! doodles (Google, CC BY 4.0).</p>
+</footer>
+</div>
+</div>
+</body>
+</html>
