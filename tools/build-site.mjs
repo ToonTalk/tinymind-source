@@ -34,6 +34,8 @@ function put(from, to) {
 put(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'index.html');
 for (const g of ['students.html', 'teachers.html']) put(join(ROOT, 'guides', g), g);
 put(join(ROOT, 'LICENSE'), 'LICENSE');
+// every prompt Ken typed while building Tiny Mind, with what Claude did (generated from the session transcripts)
+put(join(ROOT, 'about', 'prompts.html'), 'prompts.html');
 
 // what the page loads at start-up, and what waits until it is wanted
 const resources = {
@@ -90,6 +92,8 @@ Raise, watch and look inside real (very small) language models, in your browser:
 
 Guides: [for students](https://toontalk.github.io/tinymind/students.html) and
 [for teachers](https://toontalk.github.io/tinymind/teachers.html).
+How it was made: [every prompt](https://toontalk.github.io/tinymind/prompts.html) Ken typed while building it, with what
+Claude did in response.
 
 Everything runs on your own machine; nothing is uploaded. The models load by themselves: this
 folder holds the page (\`index.html\`) and the files it fetches beside it.
