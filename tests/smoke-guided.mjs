@@ -944,6 +944,28 @@ async function main() {
       await until(() => doc.body.dataset.travelPos === '6', 8000);
       check('... and the step where the two stories part is marked', /with every expert on, it was “'s”/.test(doc.querySelector('#board .bout').textContent) &&
         doc.querySelectorAll('#travelText .new').length === 1, doc.querySelector('#board .bout').textContent);
+      const square = doc.querySelectorAll('#board .bcell')[3 * 8 + 2];
+      const tints = () => [...doc.querySelectorAll('#strip .tok')].map(t => t.style.background).join();
+      const tints3 = tints(), posAt = doc.body.dataset.travelPos;
+      check('a square on the board says it opens its card', /^layer 4 · expert 2: the doer words expert · click to see its card$/.test(square.title), square.title);
+      square.click();
+      const picked = doc.querySelector('.ecard[data-expert="3:2"]');
+      check('clicking it shows its layer: the story recolors and box two meets layer 4\'s experts',
+        doc.body.dataset.layer === '4' && doc.getElementById('layerNum').textContent === '4' && tints() !== tints3 &&
+        doc.querySelectorAll('#cards .ecard').length === 8 && !!picked);
+      check('... and outlines that expert\'s card', picked && picked.classList.contains('picked') && picked.classList.contains('flash') &&
+        doc.querySelectorAll('#cards .ecard.picked').length === 1 && doc.body.dataset.picked === 'L4·E2' && /layer 4 · expert 2: its card/.test(doc.getElementById('status').textContent));
+      await new Promise(r => setTimeout(r, 500));
+      check('... while the board stays open and the replay waits where it was', !doc.getElementById('travel').hidden && doc.body.dataset.travel === 'off' &&
+        doc.body.dataset.travelPos === posAt && doc.getElementById('tPlay').textContent.includes('play'));
+      await until(() => spoke(w, 'That is the card of L4·E2'), 3000);
+      check('the guide says whose card it is', spoke(w, 'That is the card of L4·E2, the doer words expert'));
+      check('the guide knows the squares open cards', /Clicking an expert\'s square on the board/.test(w.__guide.system()));
+      doc.getElementById('tPlay').click();
+      await until(() => doc.body.dataset.travelPos !== posAt, 5000);
+      check('▶ play goes on from there', +doc.body.dataset.travelPos === +posAt + 1);
+      [...doc.querySelectorAll('#layers button')][2].click();
+      check('another layer drops the outline', !doc.querySelector('#cards .ecard.picked') && doc.body.dataset.picked === '');
       doc.getElementById('tClose').click();
       check('closing the board brings back its button', doc.getElementById('travel').hidden && !tb.hidden && doc.body.dataset.travel === '');
       await until(() => spoke(w, 'Challenge solved'), 3000);
