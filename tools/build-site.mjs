@@ -33,6 +33,7 @@ function put(from, to) {
 // the page, and the guides for students and teachers it links to (guides/, plain pages beside it)
 put(join(ROOT, 'dist', 'tiny-mind-mega.html'), 'index.html');
 for (const g of ['students.html', 'teachers.html']) put(join(ROOT, 'guides', g), g);
+put(join(ROOT, 'LICENSE'), 'LICENSE');
 
 // what the page loads at start-up, and what waits until it is wanted
 const resources = {
@@ -99,6 +100,9 @@ sources there, not these files.
 Credits: the TinyStories dataset (Eldan & Li, CDLA-Sharing-1.0), which the Expert Storyteller also learned
 from; the llama2.c code and the tinyllamas checkpoints stories15M and stories260K (Andrej Karpathy, MIT); the Tiny Eye's doodles, from
 Quick, Draw! (made available by Google, Inc. under the Creative Commons Attribution 4.0 International license).
+
+License: Tiny Mind is released under the MIT License (see \`LICENSE\`). The datasets and models in the credits
+above keep their own licenses.
 `);
 
 let total = 0;

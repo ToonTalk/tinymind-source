@@ -73,6 +73,12 @@ python tools/moe/parity.py models/stories-moe-top1.bin tests/fixtures/moe-top1-p
   and batch.js run its router and experts, with experts muted or rerouted (E18: PyTorch parity).
 - `vendor/llama2.c` — reference implementation (MIT), cloned at Phase 0 time.
 
+## License
+
+Tiny Mind is released under the MIT License (see `LICENSE`). The datasets, models and drawings it
+builds on keep their own licenses: TinyStories (CDLA-Sharing-1.0), llama2.c and the tinyllamas
+checkpoints (MIT), and Quick, Draw! (CC BY 4.0, below).
+
 ## Attribution
 
 The Tiny Eye learned from, and shows, drawings from Quick, Draw! (https://github.com/googlecreativelab/quickdraw-dataset):
