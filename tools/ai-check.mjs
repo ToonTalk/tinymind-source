@@ -245,6 +245,7 @@ const ROOMS = [
       { q: 'Where can I see what a mind is thinking and change one of its thoughts?', expect: 'The "See what a mind is thinking" card (the Thought bubble); ideally ends with DO: SHOW think or offers TAB thought.' },
       { q: 'I want to make my own mind', kid: true, expect: 'Teach a tiny mind: invent a character, give it stories, watch it learn. Simple words for a young child. Points at the teach card or offers the Nursery.' },
       { q: 'Who made this, and where can I read more about it?', expect: 'Ken Kahn made it (with Claude); the links below the activity cards lead to his post about Tiny Mind and to a page on how it was made (effort, experiments that did not work). Does not invent other authors, sites or details; ideally ends with DO: SHOW about.' },
+      { q: 'What does the "kid" switch do?', expect: 'The kid switch at the top of the guide panel, for young children, shared by every room: the guides talk in short simple sentences, chances show as odds like 7 in 100 instead of percentages (Microscope, Tiny Eye, Experts, Hunt), the time machine uses plain words, the Hunt speaks slower. Must NOT say it switches between the front door and the tabs (that is the separate "show all tabs" button).' },
     ] },
   { room: 'Nursery', app: 'nursery',
     setup: `__tmShell.selectTab('home'); await new Promise(r => setTimeout(r, 300)); document.querySelector('[data-act=raise]').click();
