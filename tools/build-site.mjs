@@ -73,7 +73,9 @@ as each study finished. The pass bars were set before the results came in.
 - [Binding](binding/binding-evaluation.md): four characters with their own facts; when each fact gets tied to its name.
 - [The J-lens on TinyStories](https://github.com/ToonTalk/jlens-tinystories/blob/main/out/report.md) (July 14,
   in the jlens-tinystories repository): which model and layers show a mind thinking ahead.
-- [J++ against the J-lens](jpp/report.md) (October 26): not adopted. A copy of \`out/jpp/report.md\` from jlens-tinystories.
+- [J++ against the J-lens](jpp/report.md) (October 26): not adopted. A copy of
+  [\`out/jpp/report.md\`](https://github.com/ToonTalk/jlens-tinystories/blob/main/out/jpp/report.md) from jlens-tinystories,
+  where [the code](https://github.com/ToonTalk/jlens-tinystories/tree/main/src/jpp) is.
 - [The Tiny Eye, Phase 0](eye/feasibility.md): do doodle neurons have one main job? With the squeezed eye and the bigger eyes.
   The [plan](../plans/tiny-eye.md) came first.
 - [The Experts, Phase 0](moe/feasibility.md): does each expert have a job? With the one-expert-per-word mind the room uses.
