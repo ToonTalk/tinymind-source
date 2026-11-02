@@ -97,6 +97,7 @@ details.long[open] summary .showall::after { content: " (hide)"; }
 details.long[open] summary .showall { display: block; margin-bottom: .4rem; }
 .claude { padding: 0 .2rem 0 1rem; border-left: 2px solid var(--line); }
 .did { font-size: .98rem; }
+.ctx { margin: .55rem 0 0; padding-top: .5rem; border-top: 1px dashed var(--ken-line); font-size: .9rem; color: var(--muted); }
 .brief .body { background: transparent; border: 1.5px dashed var(--sc); border-radius: .7rem; padding: .75rem .9rem; }
 .brief .kicker { font-weight: 700; font-family: var(--display); font-size: 1.02rem; display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; }
 .brief .meta { font-family: var(--mono); font-size: .78rem; color: var(--muted); }
@@ -140,8 +141,8 @@ footer { margin-top: 3.5rem; font-size: .88rem; color: var(--muted); display: gr
     <a class="btn" href="https://toontalk.github.io/tinymind/teachers.html" target="_blank" rel="noopener">Teacher guide</a>
   </div>
   <div class="tiles">
-    <div class="tile"><span class="big">92</span><span class="what">prompts from Ken, on 13 days</span></div>
-    <div class="tile"><span class="big">4,548</span><span class="what">tool calls by Claude in reply, about 49 a prompt</span></div>
+    <div class="tile"><span class="big">95</span><span class="what">prompts from Ken, on 14 days</span></div>
+    <div class="tile"><span class="big">4,601</span><span class="what">tool calls by Claude in reply, about 48 a prompt</span></div>
     <div class="tile"><span class="big">21</span><span class="what">words in the typical prompt</span></div>
     <div class="tile"><span class="big">4</span><span class="what">prompts of three words or fewer, like "go ahead"</span></div>
     <div class="tile"><span class="big">223</span><span class="what">tool calls after a single prompt, the most</span></div>
@@ -154,7 +155,7 @@ footer { margin-top: 3.5rem; font-size: .88rem; color: var(--muted); display: gr
       <button type="button" class="chip" data-sess="jlens" aria-pressed="true" style="--sc:var(--s-jlens)" title="the July lens study and explorer"><i></i>J-lens <span class="c">3</span></button>
       <button type="button" class="chip" data-sess="jpp" aria-pressed="true" style="--sc:var(--s-jpp)" title="the J++ evaluation"><i></i>J++ <span class="c">2</span></button>
       <button type="button" class="chip" data-sess="experts" aria-pressed="true" style="--sc:var(--s-experts)" title="the mixture-of-experts study and room"><i></i>Experts <span class="c">8</span></button>
-      <button type="button" class="chip" data-sess="makingof" aria-pressed="true" style="--sc:var(--s-makingof)" title="this page, the making-of page and the guides"><i></i>Making-of <span class="c">11</span></button>
+      <button type="button" class="chip" data-sess="makingof" aria-pressed="true" style="--sc:var(--s-makingof)" title="this page, the making-of page and the guides"><i></i>Making-of <span class="c">14</span></button>
       <button type="button" class="chip all" id="allChips">show all</button>
   </div>
   <div class="find">
@@ -168,7 +169,7 @@ footer { margin-top: 3.5rem; font-size: .88rem; color: var(--muted); display: gr
 <article class="turn" id="p1" data-sess="main" style="--sc:var(--s-main)">
   <div class="when"><a class="num" href="#p1" aria-label="Prompt 1">1</a><span class="mono">11:30</span></div>
   <div class="body">
-    <div class="ken"><p class="who"><span>Ken</span><span class="badge">Main build</span></p><div class="ptext">Read the kickoff doc and follow its instructions. Tiny Mind is a good name for the app.</div></div>
+    <div class="ken"><p class="who"><span>Ken</span><span class="badge">Main build</span></p><div class="ptext">Read the kickoff doc and follow its instructions. Tiny Mind is a good name for the app.</div><p class="ctx">The kickoff doc came from an earlier design conversation on claude.ai: <a href="https://claude.ai/share/a210aa0d-ca38-40f7-a0ff-35758d64e905" target="_blank" rel="noopener">read that conversation</a> or <a href="https://github.com/ToonTalk/misc/blob/main/tiny-mind-kickoff.md" target="_blank" rel="noopener">the kickoff doc it wrote</a>.</p></div>
     <div class="claude"><p class="who"><span>Claude</span><span class="aside">174 tool calls</span></p><p class="did">Claude found the kickoff doc and completed <span class="term" data-g="phase0">Phase 0</span>: file readers, a <span class="term" data-g="tokenizer">tokenizer</span>, a JavaScript model, capture and training code, a test suite, a 60-story Zog corpus it wrote itself, and a browser test harness. All three <span class="term" data-g="passBars">gates</span> were GO. The model matched the C reference exactly, Zog was learned in about 80 to 100 <span class="term" data-g="fineTune">fine-tuning</span> steps, and the 15M model ran at 11.1 <span class="term" data-g="token">tokens</span> per second in a browser. Tests stood at 37 PASS.</p></div>
   </div>
 </article>
@@ -1002,7 +1003,36 @@ Create a web page with all of my prompts where each is followed by a few sentenc
   <div class="when"><a class="num" href="#p92" aria-label="Prompt 92">92</a><span class="mono">18:00</span></div>
   <div class="body">
     <div class="ken"><p class="who"><span>Ken</span><span class="badge">Making-of</span><span class="aside">typed while Claude was working</span></p><div class="ptext">When viewing &quot;Read the brief Claude wrote for it (628 words)&quot; in the list of prompts I see markdown - render it nicely</div></div>
-    <div class="claude"><p class="who"><span>Claude</span><span class="aside">20 tool calls</span></p><p class="did">Claude added a small Markdown renderer to the build, so the briefs it wrote for side sessions now show paragraphs, lists, bold text, code and links instead of raw symbols, with bare web addresses made clickable. The one prompt where Ken pasted a reply from claude.ai gets the same treatment; prompts Ken typed directly stay exactly as typed, line breaks included.</p></div>
+    <div class="claude"><p class="who"><span>Claude</span><span class="aside">28 tool calls</span></p><p class="did">Claude added a small Markdown renderer to the build, so the briefs it wrote for side sessions now show paragraphs, lists, bold text, code and links instead of raw symbols, with bare web addresses made clickable. The one prompt where Ken pasted a reply from claude.ai gets the same treatment; prompts Ken typed directly stay exactly as typed, line breaks included.</p></div>
+  </div>
+</article>
+<article class="turn" id="p93" data-sess="makingof" style="--sc:var(--s-makingof)">
+  <div class="when"><a class="num" href="#p93" aria-label="Prompt 93">93</a><span class="mono">18:08</span></div>
+  <div class="body">
+    <div class="ken"><p class="who"><span>Ken</span><span class="badge">Making-of</span></p><div class="ptext">OK. I shared the making of and the artifact</div></div>
+    <div class="claude"><p class="who"><span>Claude</span><span class="aside">1 tool call</span></p><p class="did">Claude confirmed that the links to the making-of page and the claude.ai edition, from the front door, the teacher guide and this log, now open for everyone. It noted that Ken's Google Doc post also had to be public, and that the claude.ai copy of this log could stay private now that the public one is on the website.</p></div>
+  </div>
+</article>
+</div></section>
+<section class="day" data-day="11/02/2026"><h2 class="dayh"><span>Monday, November 2</span><span class="yr">2026</span></h2><div class="turns">
+<article class="turn" id="p94" data-sess="makingof" style="--sc:var(--s-makingof)">
+  <div class="when"><a class="num" href="#p94" aria-label="Prompt 94">94</a><span class="mono">09:27</span></div>
+  <div class="body">
+    <div class="ken"><p class="who"><span>Ken</span><span class="badge">Making-of</span></p><div class="ptext">the Google Doc is already shared publicly
+I'm trying to find the initial prompt where I asked about J++. The log of prompts begins with the kickoff doc that I think was created by claude.ai</div></div>
+    <div class="claude"><p class="who"><span>Claude</span><span class="aside">5 tool calls</span></p><p class="did">Claude found the <span class="term" data-g="jpp">J++</span> question at prompt 23. Ken had typed it straight into the main session on October 26, and the side session's brief and Ken's follow-up came right after it. The kickoff doc's own first lines confirmed that a claude.ai design session wrote it, and Claude offered to say so in this log.</p></div>
+  </div>
+</article>
+<article class="turn" id="p95" data-sess="makingof" style="--sc:var(--s-makingof)">
+  <div class="when"><a class="num" href="#p95" aria-label="Prompt 95">95</a><span class="mono">10:50</span></div>
+  <div class="body">
+    <div class="ken"><p class="who"><span>Ken</span><span class="badge">Making-of</span></p><div class="ptext">Sure, add a note. https://claude.ai/share/a210aa0d-ca38-40f7-a0ff-35758d64e905 created the kickoff
+Can you add links to MD reports in the making of doc
+I asked the guide:
+what does the &quot;kid&quot; switch do?
+I think that's the switch at the top right that picks how the page looks. On the kid setting you get this friendly front door with the seven activity cards, and flipping it to expert shows every room as a tab, plus a page of files.
+Not a very good answer now. Does it do more?</div></div>
+    <div class="claude"><p class="who"><span>Claude</span><span class="aside">39 tool calls</span></p><p class="did">Claude added a line under the first prompt saying where the kickoff doc came from, with links to the claude.ai conversation and to the doc. It published the study reports on GitHub beside the site, with paths on Ken's computer shortened, and linked each &quot;no&quot; result and history step on the making-of page to its report. The guide had answered the &quot;kid&quot; question wrongly because no guide had been told about its own panel's switches. Claude described them in the knowledge every guide shares: with kid on, the guides talk simply, chances show as odds like &quot;7 in 100&quot;, and the time machine uses plain words. An <span class="term" data-g="aiCheck">AI check</span> graded the front-door guide's new answer 3 out of 3.</p></div>
   </div>
 </article>
 </div></section>
@@ -1012,7 +1042,7 @@ Create a web page with all of my prompts where each is followed by a few sentenc
 
 <footer>
   <p>How this page was made: Ken's prompts were taken from the Claude Code transcripts of the seven sessions on November 1, 2026, including prompts Ken typed while Claude was still working, placed where they arrived. Times are UK time. Attached files are shown by name only, and paths on Ken's computer are shortened. Each note was written by Claude from its replies and the files it changed in that turn, so a turn that ran long is compressed to a few sentences; tool-call counts run from one prompt to the next in that session.</p>
-  <p>Not included: the claude.ai conversations where the kickoff document and the first guide waves were written, and a July 12–13 run that made the binding recordings. Messages that sessions sent each other are left out; when Ken asked the main session to pass something on, the prompt appears where Ken typed it.</p>
+  <p>Not included: the claude.ai conversations where the kickoff document and the first guide waves were written, and a July 12–13 run that made the <span class="term" data-g="binding">binding</span> recordings. Messages that sessions sent each other are left out; when Ken asked the main session to pass something on, the prompt appears where Ken typed it.</p>
   <p><a href="https://claude.ai/artifact/JL5ndGx9aHZM4zvbw12yGe" target="_blank" rel="noopener">Making Tiny Mind</a> tells the story these prompts drove, with the effort it took and the studies that came back with "no."</p>
 </footer>
 </div>

@@ -11,7 +11,8 @@
 //   - the Tiny Eye (eye/: manifest, weights and 5,000 sample doodles), fetched when its room opens;
 //   - arc/: the three time-machine recordings, each snapshot fetched when scrubbed to.
 // Usage: node tools/build-release.js && node tools/build-site.mjs <site folder>
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,6 +37,52 @@ for (const g of ['students.html', 'teachers.html']) put(join(ROOT, 'guides', g),
 put(join(ROOT, 'LICENSE'), 'LICENSE');
 // every prompt Ken typed while building Tiny Mind, with what Claude did (generated from the session transcripts)
 put(join(ROOT, 'about', 'prompts.html'), 'prompts.html');
+
+// the study reports and plans the making-of page links to, as Markdown for GitHub to render.
+// Paths under the user folder are shortened; links into sources that are not published keep their text.
+const REPORTS = [
+  ['report.md', 'reports/tiny-mind-report.md'],
+  ['arc/binding/binding-evaluation.md', 'reports/binding/binding-evaluation.md'],
+  ['reports/jpp/report.md', 'reports/jpp/report.md'],
+  ['reports/eye/feasibility.md', 'reports/eye/feasibility.md'],
+  ['reports/moe/feasibility.md', 'reports/moe/feasibility.md'],
+  ['plans/tiny-eye.md', 'plans/tiny-eye.md'],
+  ['plans/experts-room.md', 'plans/experts-room.md'],
+  ...execSync('git ls-files reports/ai-check/*.md', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean).map(f => [f, f]),
+];
+const tidyReport = s => s
+  .replace(/(?:[A-Za-z]:|\/[a-z])[\\/]Users[\\/][^\\/\s]+[\\/]/g, m => '~' + m.slice(-1))
+  .replace(/\[([^\]]+)\]\((?:\.\.\/)+(?:src|tools|tests)\/[^)]*\)/g, '$1');
+for (const [from, to] of REPORTS) {
+  const text = tidyReport(readFileSync(join(ROOT, from), 'utf8'));
+  mkdirSync(dirname(join(out, to)), { recursive: true });
+  writeFileSync(join(out, to), text);
+  copied.push([to, Buffer.byteLength(text)]);
+}
+for (const f of readdirSync(join(ROOT, 'reports', 'eye', 'img'))) put(join(ROOT, 'reports', 'eye', 'img', f), 'reports/eye/img/' + f);
+writeFileSync(join(out, 'reports', 'README.md'), `# Tiny Mind: study reports
+
+The reports behind [how Tiny Mind was made](https://claude.ai/artifact/JL5ndGx9aHZM4zvbw12yGe), written by Claude Code
+as each study finished. The pass bars were set before the results came in.
+
+- [The kickoff](https://github.com/ToonTalk/misc/blob/main/tiny-mind-kickoff.md), from a
+  [design conversation on claude.ai](https://claude.ai/share/a210aa0d-ca38-40f7-a0ff-35758d64e905) (July 5).
+- [The Tiny Mind report](tiny-mind-report.md): the Phase 0 gates, then an addendum for each step after:
+  the Microscope, the Nursery, the Hunt, the time machine, the guides, the neuron card and its steering tests,
+  and the front door with its web editions.
+- [Binding](binding/binding-evaluation.md): four characters with their own facts; when each fact gets tied to its name.
+- [The J-lens on TinyStories](https://github.com/ToonTalk/jlens-tinystories/blob/main/out/report.md) (July 14,
+  in the jlens-tinystories repository): which model and layers show a mind thinking ahead.
+- [J++ against the J-lens](jpp/report.md) (October 26): not adopted. A copy of \`out/jpp/report.md\` from jlens-tinystories.
+- [The Tiny Eye, Phase 0](eye/feasibility.md): do doodle neurons have one main job? With the squeezed eye and the bigger eyes.
+  The [plan](../plans/tiny-eye.md) came first.
+- [The Experts, Phase 0](moe/feasibility.md): does each expert have a job? With the one-expert-per-word mind the room uses.
+  The [plan](../plans/experts-room.md) came first.
+- [AI checks](ai-check/): a real model asks the guides questions and another model grades the answers; also the
+  ghostwriter and the detective.
+
+Every prompt Ken typed while building Tiny Mind, with what Claude did: [the prompt log](https://toontalk.github.io/tinymind/prompts.html).
+`);
 
 // what the page loads at start-up, and what waits until it is wanted
 const resources = {
@@ -93,7 +140,7 @@ Raise, watch and look inside real (very small) language models, in your browser:
 Guides: [for students](https://toontalk.github.io/tinymind/students.html) and
 [for teachers](https://toontalk.github.io/tinymind/teachers.html).
 How it was made: [every prompt](https://toontalk.github.io/tinymind/prompts.html) Ken typed while building it, with what
-Claude did in response.
+Claude did in response, and [the study reports](reports/).
 
 Everything runs on your own machine; nothing is uploaded. The models load by themselves: this
 folder holds the page (\`index.html\`) and the files it fetches beside it.
