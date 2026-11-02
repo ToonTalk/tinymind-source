@@ -1,5 +1,9 @@
 # Tiny Mind
 
+Live at **https://toontalk.github.io/tinymind/**. This is its source; `tools/build-site.mjs` builds the
+site into [ToonTalk/tinymind](https://github.com/ToonTalk/tinymind), which holds the page, the models it
+loads, the guides and the study reports.
+
 Constructionist interpretability app. Spec: `tiny-mind-kickoff.md`. Phase 0 results:
 `report.md` (all gates GO). Session A delivered the **Microscope** (`microscope/`):
 file-drop a model, run a story, then use five instruments — guess-o-meter (probability
