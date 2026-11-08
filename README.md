@@ -77,6 +77,18 @@ python tools/moe/parity.py models/stories-moe-top1.bin tests/fixtures/moe-top1-p
   and batch.js run its router and experts, with experts muted or rerouted (E18: PyTorch parity).
 - `vendor/llama2.c` — reference implementation (MIT), cloned at Phase 0 time.
 
+## Error reports
+
+On the live site only (toontalk.github.io, never in the claude.ai artifact or on localhost), when
+Tiny Mind runs into an error a small notice asks whether to send Ken a report (Sentry). Nothing is
+sent unless the visitor presses Send, and Sentry's script is only fetched then. A report has the
+error, where in the code it happened, which room, the page's address and the browser. Everything
+the site keeps in the browser (stories, storybook, character and mind names, AI keys) and
+everything typed in any box is removed first. "Don't ask again" is remembered; the front door then
+offers the way back. The code is `shell/tm-report.js` (its `SENTRY_DSN` names Ken's `tinymind`
+project), spliced by build-release into the shell and every room, whose frames hand their errors to
+the shell. Checks: `tests/e21-error-reports.test.js`.
+
 ## License
 
 Tiny Mind is released under the MIT License (see `LICENSE`). The datasets, models and drawings it

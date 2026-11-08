@@ -275,7 +275,7 @@ if (keylessAvailable()) {
 worker.onmessage = (e) => {
   const m = e.data;
   S.busy = false;
-  if (m.type === 'error') { status(m.message, true); return; }
+  if (m.type === 'error') { if (window.tmReportWorker) window.tmReportWorker(m.message); status(m.message, true); return; }
   if (m.type === 'loaded') {
     if (window.__tmBridge) parent.postMessage({ tm: 'model-loaded' }, '*');
     S.config = m.config;

@@ -803,11 +803,13 @@ function drawChart() {
   line(H.evalSteps, H.zog, '#ff9ec2', 2);
 }
 worker.onerror = (e) => {
+  if (window.tmReportFault) window.tmReportFault('the compute engine failing to start', e.message || 'unknown error');
   status('compute engine failed: ' + (e.message || 'unknown error') + ' — the model panel cannot work in this page', 'err');
 };
 worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'error') {
+    if (window.tmReportWorker) window.tmReportWorker(m.message); 
     status(m.message, 'err');
     S.running = false;
     $('pauseBtn').disabled = true;

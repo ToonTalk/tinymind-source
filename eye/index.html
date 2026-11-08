@@ -288,7 +288,7 @@ if (!window.__tmBridge && typeof fetch === 'function') {
 // ---------- the engine's answers ----------
 worker.onmessage = (e) => {
   const m = e.data;
-  if (m.type === 'error') { status(m.message, true); inFlight = false; return; }
+  if (m.type === 'error') { if (window.tmReportWorker) window.tmReportWorker(m.message); status(m.message, true); inFlight = false; return; }
   if (m.type === 'loaded') {
     const key = m.key || 'full', rec = EYES[key];   // (no key: the full eye)
     if (!rec) return;
@@ -574,7 +574,7 @@ function giveChunk(w) {
 }
 function onSweepMsg(m, from) {
   if (!sweep || m.type === 'loaded' || (m.key && m.key !== sweep.rec.key)) return;
-  if (m.type === 'error') { status(m.message, true); return; }
+  if (m.type === 'error') { if (window.tmReportWorker) window.tmReportWorker(m.message); status(m.message, true); return; }
   const rec = sweep.rec;
   if (m.type === 'sweep-progress') sweep.done.set(m.id, m.done);
   if (m.type === 'swept') {
